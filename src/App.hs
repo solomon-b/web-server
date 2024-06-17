@@ -84,7 +84,7 @@ runApp =
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg tracer appConfigSmtp))
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg tracer appConfigSmtp ()))
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -119,63 +119,64 @@ shutdownHandler closeSocket =
 
 --------------------------------------------------------------------------------
 
-data AppContext = AppContext
+data AppContext context = AppContext
   { appLogger :: Log.Logger,
     appDbPool :: HSQL.Pool,
     appJwtSetttings :: Servant.Auth.JWTSettings,
     appTracer :: OTEL.Tracer,
-    appSmtpConfig :: SmtpConfig
+    appSmtpConfig :: SmtpConfig,
+    appCustom :: context
   }
 
-instance Has.Has Log.Logger AppContext where
+instance Has.Has Log.Logger (AppContext ctx) where
   getter = appLogger
   modifier f ctx@AppContext {appLogger} = ctx { appLogger = f appLogger }
 
-instance Has.Has HSQL.Pool AppContext where
+instance Has.Has HSQL.Pool (AppContext ctx) where
   getter = appDbPool
   modifier f ctx@AppContext {appDbPool} = ctx { appDbPool = f appDbPool }
 
-instance Has.Has Servant.Auth.JWTSettings AppContext where
+instance Has.Has Servant.Auth.JWTSettings (AppContext ctx) where
   getter = appJwtSetttings
   modifier f ctx@AppContext {appJwtSetttings} = ctx { appJwtSetttings = f appJwtSetttings }
 
-instance Has.Has OTEL.Tracer AppContext where
+instance Has.Has OTEL.Tracer (AppContext ctx) where
   getter = appTracer
   modifier f ctx@AppContext {appTracer} = ctx { appTracer = f appTracer }
 
-instance Has.Has SmtpConfig AppContext where
+instance Has.Has SmtpConfig (AppContext ctx) where
   getter = appSmtpConfig
   modifier f ctx@AppContext {appSmtpConfig} = ctx { appSmtpConfig = f appSmtpConfig }
 
 type ServantContext = '[Servant.Auth.BasicAuthCfg, Auth.Server.CookieSettings, Auth.Server.JWTSettings]
 
-newtype AppM a = AppM {runAppM' :: AppContext -> Log.LoggerEnv -> IO a}
+newtype AppM ctx a = AppM {runAppM' :: AppContext ctx -> Log.LoggerEnv -> IO a}
   deriving
-    (Functor, Applicative, Monad, MonadReader AppContext, MonadIO, MonadThrow, MonadCatch, MonadUnliftIO, Log.MonadLog)
-    via ReaderT AppContext (Log.LogT IO)
+    (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO, Log.MonadLog)
+    via ReaderT (AppContext ctx) (Log.LogT IO)
 
-instance MonadDB AppM where
-  runDB :: HSQL.Session a -> AppM (Either HSQL.Pool.UsageError a)
+instance MonadDB (AppM ctx) where
+  runDB :: HSQL.Session a -> AppM ctx (Either HSQL.Pool.UsageError a)
   runDB s = do
     pool <- Reader.asks Has.getter
     liftIO $ HSQL.Pool.use pool s
 
-  execStatement :: HSQL.Statement () a -> AppM (Either HSQL.Pool.UsageError a)
+  execStatement :: HSQL.Statement () a -> AppM ctx (Either HSQL.Pool.UsageError a)
   execStatement = runDB . HSQL.statement ()
 
-instance MonadEmail AppM where
-  sendEmail :: Mime.Mail -> AppM ()
+instance MonadEmail (AppM ctx) where
+  sendEmail :: Mime.Mail -> AppM ctx ()
   sendEmail mail = do
     SmtpConfig {..} <- Reader.asks Has.getter
     liftIO $ SMTP.sendMailWithLoginTLS (Text.unpack smtpConfigServer) (Text.unpack smtpConfigUsername) (Text.unpack smtpConfigPassword) mail
 
 --------------------------------------------------------------------------------
 
-interpret :: AppContext -> AppM x -> Servant.Handler x
+interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
 interpret ctx@AppContext {appLogger} (AppM appM) =
   Servant.Handler $ ExceptT $ catch (Right <$> appM ctx (Log.LoggerEnv appLogger "kpbj-backend" [] [] Log.defaultLogLevel)) $ \(e :: Servant.ServerError) -> pure $ Left e
 
-mkApp :: Environment -> Servant.Context ServantContext -> AppContext -> Servant.Application
+mkApp :: Environment -> Servant.Context ServantContext -> AppContext ctx -> Servant.Application
 mkApp env cfg ctx =
   Servant.serveWithContext (Proxy @API) cfg $
     Servant.hoistServerWithContext
