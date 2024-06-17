@@ -1,0 +1,141 @@
+cabal-version:      3.0
+name:               web-server
+version:            0.1.0.0
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Solomon Bothwell
+maintainer:         ssbothwell@gmail.com
+build-type:         Simple
+
+--------------------------------------------------------------------------------
+
+common common-extensions
+  default-extensions:
+      DataKinds
+      DerivingStrategies
+      DeriveAnyClass
+      DerivingVia
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      InstanceSigs
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      RankNTypes
+      RecordWildCards
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+
+--------------------------------------------------------------------------------
+
+executable web-server
+  import:           common-extensions
+  main-is:          Main.hs
+  build-depends:    base ^>=4.18.1.0
+                  , web-server
+  hs-source-dirs:   app
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded -rtsopts -with-rtsopts=-N
+
+--------------------------------------------------------------------------------
+
+executable gen-jwk
+  import:           common-extensions
+  main-is:          Main.hs
+  build-depends:    aeson
+                  , base ^>=4.18.1.0
+                  , bytestring
+                  , crypton
+                  , jose
+                  , lens
+                  , text
+                  , x509
+                  , x509-store
+  hs-source-dirs:   jwk-gen
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded -rtsopts -with-rtsopts=-N
+
+--------------------------------------------------------------------------------
+
+library
+  import: common-extensions
+  build-depends:  , aeson
+                  , barbies
+                  , base ^>=4.18.1.0
+                  , base64
+                  , bytestring
+                  , case-insensitive
+                  , cfg
+                  , clock
+                  , containers
+                  , data-has
+                  , deriving-aeson
+                  , exceptions
+                  , email-validate
+                  , hasql
+                  , hasql-pool
+                  , hs-opentelemetry-api
+                  , hs-opentelemetry-exporter-handle
+                  , hs-opentelemetry-instrumentation-wai
+                  , hs-opentelemetry-sdk
+                  , hs-opentelemetry-utils-exceptions
+                  , http-api-data
+                  , http-types
+                  , jose
+                  , log-base
+                  , lucid
+                  , megaparsec
+                  , mtl
+		  , mime-mail
+                  , opaleye
+                  , pretty-simple
+                  , rel8
+                  , servant-auth
+                  , servant-auth-server
+                  , servant-lucid
+                  , servant-server
+		  , smtp-mail
+                  , text
+                  , text-display
+                  , time
+                  , transformers
+                  , unix
+                  , unliftio-core
+                  , unordered-containers
+                  , wai
+                  , warp
+  exposed-modules:
+    App
+    Auth
+    Config
+    Domain.Types.AdminStatus
+    Domain.Types.DisplayName
+    Domain.Types.Email
+    Domain.Types.Password
+    Domain.Types.User
+    API
+    API.MailingList
+    API.SplashPage
+    API.User
+    API.User.Current
+    API.User.Login
+    API.User.Register
+    Effects.Database.Class
+    Effects.Database.Queries.User
+    Effects.Database.Queries.MailingList
+    Effects.Database.Tables.User
+    Effects.Database.Tables.MailingList
+    Effects.Database.Utils
+    Effects.Email.Class
+    Errors
+    Tracing
+    Utils
+
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded
