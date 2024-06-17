@@ -84,7 +84,7 @@ runApp =
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (stdOutLogger, pgPool, jwkCfg, tracer, appConfigSmtp))
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg tracer appConfigSmtp))
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -119,7 +119,33 @@ shutdownHandler closeSocket =
 
 --------------------------------------------------------------------------------
 
-type AppContext = (Log.Logger, HSQL.Pool, Servant.Auth.JWTSettings, OTEL.Tracer, SmtpConfig)
+data AppContext = AppContext
+  { appLogger :: Log.Logger,
+    appDbPool :: HSQL.Pool,
+    appJwtSetttings :: Servant.Auth.JWTSettings,
+    appTracer :: OTEL.Tracer,
+    appSmtpConfig :: SmtpConfig
+  }
+
+instance Has.Has Log.Logger AppContext where
+  getter = appLogger
+  modifier f ctx@AppContext {appLogger} = ctx { appLogger = f appLogger }
+
+instance Has.Has HSQL.Pool AppContext where
+  getter = appDbPool
+  modifier f ctx@AppContext {appDbPool} = ctx { appDbPool = f appDbPool }
+
+instance Has.Has Servant.Auth.JWTSettings AppContext where
+  getter = appJwtSetttings
+  modifier f ctx@AppContext {appJwtSetttings} = ctx { appJwtSetttings = f appJwtSetttings }
+
+instance Has.Has OTEL.Tracer AppContext where
+  getter = appTracer
+  modifier f ctx@AppContext {appTracer} = ctx { appTracer = f appTracer }
+
+instance Has.Has SmtpConfig AppContext where
+  getter = appSmtpConfig
+  modifier f ctx@AppContext {appSmtpConfig} = ctx { appSmtpConfig = f appSmtpConfig }
 
 type ServantContext = '[Servant.Auth.BasicAuthCfg, Auth.Server.CookieSettings, Auth.Server.JWTSettings]
 
@@ -146,8 +172,8 @@ instance MonadEmail AppM where
 --------------------------------------------------------------------------------
 
 interpret :: AppContext -> AppM x -> Servant.Handler x
-interpret ctx@(logger, _, _, _, _) (AppM appM) =
-  Servant.Handler $ ExceptT $ catch (Right <$> appM ctx (Log.LoggerEnv logger "kpbj-backend" [] [] Log.defaultLogLevel)) $ \(e :: Servant.ServerError) -> pure $ Left e
+interpret ctx@AppContext {appLogger} (AppM appM) =
+  Servant.Handler $ ExceptT $ catch (Right <$> appM ctx (Log.LoggerEnv appLogger "kpbj-backend" [] [] Log.defaultLogLevel)) $ \(e :: Servant.ServerError) -> pure $ Left e
 
 mkApp :: Environment -> Servant.Context ServantContext -> AppContext -> Servant.Application
 mkApp env cfg ctx =

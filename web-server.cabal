@@ -24,6 +24,7 @@ common common-extensions
       InstanceSigs
       LambdaCase
       MultiParamTypeClasses
+      NamedFieldPuns
       OverloadedStrings
       RankNTypes
       RecordWildCards
