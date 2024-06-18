@@ -43,9 +43,28 @@
               pkgs.ormolu
               pkgs.openssl
               pkgs.postgresql
+              pkgs.pkg-config
               pkgs.shellcheck
               pkgs.sqlx-cli
               pkgs.zlib
+              pkgs.zlib.dev
+            ];
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+              pkgs.cabal-install
+              pkgs.flyctl
+              pkgs.haskell.compiler.${compiler}
+              pkgs.haskell.packages.${compiler}.haskell-language-server
+              pkgs.haskell.packages.${compiler}.hlint
+              pkgs.just
+              pkgs.nixpkgs-fmt
+              pkgs.ormolu
+              pkgs.openssl
+              pkgs.postgresql
+              pkgs.pkg-config
+              pkgs.shellcheck
+              pkgs.sqlx-cli
+              pkgs.zlib
+              pkgs.zlib.dev
             ];
           };
 

@@ -71,7 +71,6 @@ library
                   , base64
                   , bytestring
                   , case-insensitive
-                  , cfg
                   , clock
                   , containers
                   , data-has
@@ -90,7 +89,6 @@ library
                   , jose
                   , log-base
                   , lucid
-                  , megaparsec
                   , mtl
 		  , mime-mail
                   , opaleye
@@ -114,6 +112,7 @@ library
     App
     Auth
     Config
+    Config.Fetchers
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
     Domain.Types.Email

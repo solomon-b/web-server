@@ -15,7 +15,6 @@ TODO:
 
 import API
 import Auth (checkAuth)
-import Cfg.Env (getEnvConfig)
 import Config
 import Control.Exception (catch)
 import Control.Monad (void)
@@ -63,13 +62,13 @@ import Tracing (withTracer)
 
 --------------------------------------------------------------------------------
 
-runApp :: IO ()
-runApp =
+runApp :: ctx -> IO ()
+runApp ctx =
   Log.withJsonStdOutLogger $ \stdOutLogger -> do
-    getEnvConfig @AppConfig >>= \case
-      Left err ->
-        Log.runLogT "kpbj-backend" stdOutLogger Log.defaultLogLevel $ Log.logAttention "Config Failure" (show err)
-      Right AppConfig {..} -> do
+    getConfig >>= \case
+      Nothing ->
+        Log.runLogT "kpbj-backend" stdOutLogger Log.defaultLogLevel $ Log.logAttention "Config Failure" (show ())
+      Just AppConfig {..} -> do
         let PostgresConfig {..} = appConfigPostgresSettings
         -- TODO: Is it weird to be instantiating 'LogT' multiple times?
         Log.runLogT "kpbj-backend" stdOutLogger Log.defaultLogLevel $
@@ -84,8 +83,8 @@ runApp =
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg tracer appConfigSmtp ()))
-
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg tracer appConfigSmtp ctx))
+    
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
   Warp.defaultSettings
@@ -130,23 +129,23 @@ data AppContext context = AppContext
 
 instance Has.Has Log.Logger (AppContext ctx) where
   getter = appLogger
-  modifier f ctx@AppContext {appLogger} = ctx { appLogger = f appLogger }
+  modifier f ctx@AppContext {appLogger} = ctx {appLogger = f appLogger}
 
 instance Has.Has HSQL.Pool (AppContext ctx) where
   getter = appDbPool
-  modifier f ctx@AppContext {appDbPool} = ctx { appDbPool = f appDbPool }
+  modifier f ctx@AppContext {appDbPool} = ctx {appDbPool = f appDbPool}
 
 instance Has.Has Servant.Auth.JWTSettings (AppContext ctx) where
   getter = appJwtSetttings
-  modifier f ctx@AppContext {appJwtSetttings} = ctx { appJwtSetttings = f appJwtSetttings }
+  modifier f ctx@AppContext {appJwtSetttings} = ctx {appJwtSetttings = f appJwtSetttings}
 
 instance Has.Has OTEL.Tracer (AppContext ctx) where
   getter = appTracer
-  modifier f ctx@AppContext {appTracer} = ctx { appTracer = f appTracer }
+  modifier f ctx@AppContext {appTracer} = ctx {appTracer = f appTracer}
 
 instance Has.Has SmtpConfig (AppContext ctx) where
   getter = appSmtpConfig
-  modifier f ctx@AppContext {appSmtpConfig} = ctx { appSmtpConfig = f appSmtpConfig }
+  modifier f ctx@AppContext {appSmtpConfig} = ctx {appSmtpConfig = f appSmtpConfig}
 
 type ServantContext = '[Servant.Auth.BasicAuthCfg, Auth.Server.CookieSettings, Auth.Server.JWTSettings]
 
