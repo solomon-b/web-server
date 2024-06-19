@@ -59,3 +59,23 @@ insertUserQuery newUser =
           onConflict = Rel8.Abort,
           returning = Rel8.Returning User.umId
         }
+
+deleteUser ::
+  ( Log.MonadLog m,
+    MonadDB m,
+    MonadThrow m
+  ) =>
+  User.Id ->
+  m ()
+deleteUser = execQuerySpanThrowMessage "Failed to delete user" . deleteUserQuery
+
+deleteUserQuery :: User.Id -> HSQL.Statement () ()
+deleteUserQuery uid =
+  Rel8.run_ $
+    Rel8.delete $
+      Rel8.Delete
+        { from = User.schema,
+          using = pure (),
+          deleteWhere = \_ um -> User.umId um ==. Rel8.litExpr uid,
+          returning = Rel8.NoReturning
+        }

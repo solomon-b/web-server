@@ -3,6 +3,7 @@ module API.User where
 --------------------------------------------------------------------------------
 
 import API.User.Current qualified as Current
+import API.User.Delete qualified as Delete
 import API.User.Login (Login)
 import API.User.Login qualified as Login
 import API.User.Register
@@ -35,7 +36,9 @@ type UserAPI =
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> "current" :> Servant.Get '[Servant.JSON] User
     :<|> "register" :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] Auth.JWTToken
     :<|> "login" :> Servant.ReqBody '[Servant.JSON] Login :> Servant.Post '[Servant.JSON] Auth.JWTToken
-    :<|> "delete" :> Servant.Delete '[Servant.JSON] ()
+    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
+
+-- :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> "over" :>  Servant.Capture "id" User.Id :> Servant.Post '[Servant.JSON] User
 
 --------------------------------------------------------------------------------
 -- Handler
@@ -51,7 +54,7 @@ userHandler ::
     MonadCatch m
   ) =>
   Servant.ServerT UserAPI m
-userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> pure ()
+userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> Delete.handler
 
 usersHandler ::
   ( Log.MonadLog m,

@@ -84,7 +84,7 @@ runApp ctx =
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
           Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg tracer appConfigSmtp ctx))
-    
+
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
   Warp.defaultSettings
