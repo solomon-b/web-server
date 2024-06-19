@@ -48,7 +48,7 @@ checkAuth pool logger (Servant.Auth.BasicAuthData email' pass') =
       pass = Password $ Text.Encoding.decodeUtf8 pass'
    in HSQL.use pool (HSQL.statement () (selectUserByCredentialQuery email pass)) >>= \case
         Left err -> do
-          Log.runLogT "kpbj-backend" logger Log.defaultLogLevel $
+          Log.runLogT "webserver-backend" logger Log.defaultLogLevel $
             Log.logAttention "SQL Error" (show err)
           pure Servant.Auth.Indefinite
         Right (Just (parseModel -> user)) ->

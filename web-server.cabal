@@ -119,6 +119,7 @@ library
     Domain.Types.Password
     Domain.Types.User
     API
+    API.Admin
     API.MailingList
     API.SplashPage
     API.User

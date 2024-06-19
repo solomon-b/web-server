@@ -2,6 +2,7 @@ module API where
 
 --------------------------------------------------------------------------------
 
+import API.Admin
 import API.MailingList
 import API.SplashPage
 import API.User
@@ -26,6 +27,7 @@ type API =
   SplashPageAPI
     :<|> "mailing-list" :> MailingListAPI
     :<|> "user" :> UserAPI
+    :<|> "admin" :> AdminAPI
 
 server ::
   ( MonadReader env m,
@@ -43,4 +45,8 @@ server ::
   ) =>
   Environment ->
   Servant.ServerT API m
-server env = splashPageHandler env :<|> mailingListHandler :<|> userHandler
+server env =
+  splashPageHandler env
+    :<|> mailingListHandler
+    :<|> userHandler
+    :<|> adminPageHandler env
