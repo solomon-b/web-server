@@ -125,6 +125,7 @@ library
     API.User.Current
     API.User.Delete
     API.User.Login
+    API.User.PasswordReset
     API.User.Register
     Effects.Database.Class
     Effects.Database.Queries.User

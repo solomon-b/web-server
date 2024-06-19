@@ -4,6 +4,7 @@ module Effects.Database.Queries.User where
 
 import Control.Monad.Catch (MonadThrow)
 import Data.CaseInsensitive qualified as CI
+import Data.Coerce (coerce)
 import Domain.Types.AdminStatus
 import Domain.Types.DisplayName
 import Domain.Types.Email
@@ -78,4 +79,27 @@ deleteUserQuery uid =
           using = pure (),
           deleteWhere = \_ um -> User.umId um ==. Rel8.litExpr uid,
           returning = Rel8.NoReturning
+        }
+
+changeUserPassword ::
+  ( Log.MonadLog m,
+    MonadDB m,
+    MonadThrow m
+  ) =>
+  User.Id ->
+  Password ->
+  Password ->
+  m (Maybe User.Id)
+changeUserPassword uid oldPassword = execQuerySpanThrowMessage "Failed to change user password" . changeUserPasswordQuery uid oldPassword
+
+changeUserPasswordQuery :: User.Id -> Password -> Password -> HSQL.Statement () (Maybe User.Id)
+changeUserPasswordQuery uid oldPassword newPassword =
+  Rel8.runMaybe $
+    Rel8.update $
+      Rel8.Update
+        { target = User.schema,
+          from = pure (),
+          set = \_ um -> um {User.umPassword = Rel8.litExpr (coerce newPassword)},
+          updateWhere = \_ um -> User.umId um ==. Rel8.litExpr uid &&. User.umPassword um ==. Rel8.litExpr (coerce oldPassword),
+          returning = Rel8.Returning User.umId
         }

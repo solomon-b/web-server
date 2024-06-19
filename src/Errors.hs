@@ -11,6 +11,9 @@ import Servant.Server qualified as Servant
 throw301 :: (MonadThrow m) => BL.ByteString -> m a
 throw301 err = throwM (Servant.err301 {Servant.errBody = err})
 
+throw400 :: (MonadThrow m) => BL.ByteString -> m a
+throw400 err = throwM (Servant.err400 {Servant.errBody = err})
+
 throw401 :: (MonadThrow m) => BL.ByteString -> m a
 throw401 err = throwM (Servant.err401 {Servant.errBody = err})
 

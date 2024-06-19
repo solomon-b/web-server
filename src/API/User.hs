@@ -6,6 +6,8 @@ import API.User.Current qualified as Current
 import API.User.Delete qualified as Delete
 import API.User.Login (Login)
 import API.User.Login qualified as Login
+import API.User.PasswordReset (PasswordReset)
+import API.User.PasswordReset qualified as PasswordReset
 import API.User.Register
 import API.User.Register qualified as Register
 import Auth qualified
@@ -37,6 +39,7 @@ type UserAPI =
     :<|> "register" :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] Auth.JWTToken
     :<|> "login" :> Servant.ReqBody '[Servant.JSON] Login :> Servant.Post '[Servant.JSON] Auth.JWTToken
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
+    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> Servant.Capture "id" User.Id :> "password-reset" :> Servant.ReqBody '[Servant.JSON] PasswordReset :> Servant.Post '[Servant.JSON] ()
 
 -- :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> "over" :>  Servant.Capture "id" User.Id :> Servant.Post '[Servant.JSON] User
 
@@ -54,7 +57,7 @@ userHandler ::
     MonadCatch m
   ) =>
   Servant.ServerT UserAPI m
-userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> Delete.handler
+userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> Delete.handler :<|> PasswordReset.handler
 
 usersHandler ::
   ( Log.MonadLog m,
