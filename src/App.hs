@@ -14,7 +14,6 @@ TODO:
 --------------------------------------------------------------------------------
 
 import API
-import Auth (checkAuth)
 import Config
 import Control.Exception (catch)
 import Control.Monad (void)
@@ -79,11 +78,11 @@ runApp ctx =
         pgPool <- HSQL.Pool.acquire poolSettings
 
         let jwkCfg = Auth.Server.defaultJWTSettings $ getJwk appConfigJwk
-            cfg = checkAuth pgPool stdOutLogger :. Auth.Server.defaultCookieSettings :. jwkCfg :. Servant.EmptyContext
+            cfg = Auth.Server.defaultCookieSettings :. jwkCfg :. Servant.EmptyContext
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg tracer appConfigSmtp ctx))
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg Auth.Server.defaultCookieSettings tracer appConfigSmtp ctx))
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -122,6 +121,7 @@ data AppContext context = AppContext
   { appLogger :: Log.Logger,
     appDbPool :: HSQL.Pool,
     appJwtSetttings :: Servant.Auth.JWTSettings,
+    appCookieSettings :: Servant.Auth.CookieSettings,
     appTracer :: OTEL.Tracer,
     appSmtpConfig :: SmtpConfig,
     appCustom :: context
@@ -139,6 +139,10 @@ instance Has.Has Servant.Auth.JWTSettings (AppContext ctx) where
   getter = appJwtSetttings
   modifier f ctx@AppContext {appJwtSetttings} = ctx {appJwtSetttings = f appJwtSetttings}
 
+instance Has.Has Servant.Auth.CookieSettings (AppContext ctx) where
+  getter = appCookieSettings
+  modifier f ctx@AppContext {appCookieSettings} = ctx {appCookieSettings = f appCookieSettings}
+
 instance Has.Has OTEL.Tracer (AppContext ctx) where
   getter = appTracer
   modifier f ctx@AppContext {appTracer} = ctx {appTracer = f appTracer}
@@ -147,7 +151,7 @@ instance Has.Has SmtpConfig (AppContext ctx) where
   getter = appSmtpConfig
   modifier f ctx@AppContext {appSmtpConfig} = ctx {appSmtpConfig = f appSmtpConfig}
 
-type ServantContext = '[Servant.Auth.BasicAuthCfg, Auth.Server.CookieSettings, Auth.Server.JWTSettings]
+type ServantContext = '[Auth.Server.CookieSettings, Auth.Server.JWTSettings]
 
 newtype AppM ctx a = AppM {runAppM' :: AppContext ctx -> Log.LoggerEnv -> IO a}
   deriving

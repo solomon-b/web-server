@@ -34,7 +34,7 @@ import Servant.Auth.Server qualified
 import Servant.Auth.Server qualified as Servant.Auth
 
 --------------------------------------------------------------------------------
--- User Auth
+-- Basic User Auth
 
 type instance Servant.Auth.BasicAuthCfg = Servant.Auth.BasicAuthData -> IO (Servant.Auth.AuthResult User)
 
@@ -83,3 +83,5 @@ generateJWTToken a = do
     Left _err -> throw500'
     Right jwt ->
       pure $ JWTToken $ Text.Encoding.decodeUtf8 $ BL.toStrict jwt
+
+--------------------------------------------------------------------------------

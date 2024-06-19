@@ -35,13 +35,13 @@ import Servant.Auth.Server qualified as SAS
 type UserAPI =
   Servant.Get '[Servant.JSON] [User]
     :<|> Servant.Capture "id" User.Id :> Servant.Get '[Servant.JSON] User
-    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> "current" :> Servant.Get '[Servant.JSON] User
+    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> "current" :> Servant.Get '[Servant.JSON] User
     :<|> "register" :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] Auth.JWTToken
-    :<|> "login" :> Servant.ReqBody '[Servant.JSON] Login :> Servant.Post '[Servant.JSON] Auth.JWTToken
-    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
-    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> Servant.Capture "id" User.Id :> "password-reset" :> Servant.ReqBody '[Servant.JSON] PasswordReset :> Servant.Post '[Servant.JSON] ()
+    :<|> "login" :> Servant.ReqBody '[Servant.JSON] Login :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" SAS.SetCookie, Servant.Header "Set-Cookie" SAS.SetCookie] Servant.NoContent)
+    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
+    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "password-reset" :> Servant.ReqBody '[Servant.JSON] PasswordReset :> Servant.Post '[Servant.JSON] ()
 
--- :<|> Auth '[Servant.Auth.JWT, Servant.Auth.BasicAuth] User :> "over" :>  Servant.Capture "id" User.Id :> Servant.Post '[Servant.JSON] User
+-- :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> "over" :>  Servant.Capture "id" User.Id :> Servant.Post '[Servant.JSON] User
 
 --------------------------------------------------------------------------------
 -- Handler
@@ -49,6 +49,7 @@ type UserAPI =
 userHandler ::
   ( MonadReader env m,
     Has SAS.JWTSettings env,
+    Has SAS.CookieSettings env,
     Has OTEL.Tracer env,
     Log.MonadLog m,
     MonadDB m,

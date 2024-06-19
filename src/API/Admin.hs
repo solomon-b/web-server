@@ -1,26 +1,24 @@
--- |
 module API.Admin where
 
 --------------------------------------------------------------------------------
 
 import Config (Environment (..))
+import Control.Monad.Catch (MonadThrow)
 import Domain.Types.User
 import Errors (throw401')
 import Lucid qualified
-import Servant.HTML.Lucid qualified as Lucid
 import Servant ((:>))
 import Servant qualified
 import Servant.Auth (Auth)
 import Servant.Auth qualified
-import qualified Servant.Auth.Server as SAS
-import Control.Monad.Catch (MonadThrow)
+import Servant.Auth.Server qualified as SAS
+import Servant.HTML.Lucid qualified as Lucid
 
 --------------------------------------------------------------------------------
 -- Route
 
 type AdminAPI =
-  Auth '[Servant.Auth.JWT, Servant.Auth.Cookie, Servant.Auth.BasicAuth] User :> Servant.Get '[Lucid.HTML] AdminPage
-
+  Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Get '[Lucid.HTML] AdminPage
 
 data AdminPage = AdminPage
 

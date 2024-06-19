@@ -41,7 +41,8 @@ server ::
     MonadIO m,
     MonadThrow m,
     MonadUnliftIO m,
-    MonadCatch m
+    MonadCatch m,
+    Has Servant.Auth.CookieSettings env
   ) =>
   Environment ->
   Servant.ServerT API m
