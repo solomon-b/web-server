@@ -6,6 +6,7 @@ import API.User.Current qualified as Current
 import API.User.Delete qualified as Delete
 import API.User.Login (Login)
 import API.User.Login qualified as Login
+import API.User.Logout qualified as Logout
 import API.User.PasswordReset (PasswordReset)
 import API.User.PasswordReset qualified as PasswordReset
 import API.User.Register
@@ -39,8 +40,9 @@ type UserAPI =
     :<|> Servant.Capture "id" User.Id :> Servant.Get '[Servant.JSON] User
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> "current" :> Servant.Get '[Servant.JSON] User
     :<|> "register" :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] Auth.JWTToken
-    :<|> "login" :> Servant.ReqBody '[Servant.FormUrlEncoded, Servant.JSON] Login :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" SAS.SetCookie, Servant.Header "Set-Cookie" SAS.SetCookie] Servant.NoContent)
+    :<|> "login" :> Servant.ReqBody '[Servant.FormUrlEncoded, Servant.JSON] Login :> Servant.Verb 'Servant.POST 301 '[Servant.JSON] (Servant.Headers '[Servant.Header "Location" String, Servant.Header "Set-Cookie" SAS.SetCookie, Servant.Header "Set-Cookie" SAS.SetCookie] Servant.NoContent)
     :<|> "login" :> Servant.Get '[Lucid.HTML] (Lucid.Html ())
+    :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> "logout" :> Servant.Get '[Lucid.HTML] (Servant.Headers '[Servant.Header "Set-Cookie" SAS.SetCookie, Servant.Header' '[Servant.Optional, Servant.Strict] "Set-Cookie" SAS.SetCookie] (Lucid.Html ()))
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "password-reset" :> Servant.ReqBody '[Servant.JSON] PasswordReset :> Servant.Post '[Servant.JSON] ()
 
@@ -61,7 +63,7 @@ userHandler ::
     MonadCatch m
   ) =>
   Servant.ServerT UserAPI m
-userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> pure Login.getHandler :<|> Delete.handler :<|> PasswordReset.handler
+userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> pure Login.getHandler :<|> Logout.handler :<|> Delete.handler :<|> PasswordReset.handler
 
 usersHandler ::
   ( Log.MonadLog m,

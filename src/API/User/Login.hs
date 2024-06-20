@@ -105,7 +105,8 @@ handler ::
   Login ->
   m
     ( Servant.Headers
-        '[ Servant.Header "Set-Cookie" Servant.Auth.Server.SetCookie,
+        '[ Servant.Header "Location" String,
+           Servant.Header "Set-Cookie" Servant.Auth.Server.SetCookie,
            Servant.Header "Set-Cookie" Servant.Auth.Server.SetCookie
          ]
         Servant.NoContent
@@ -119,7 +120,7 @@ handler req@Login {..} = do
         Log.logInfo "Login Attempt" ulEmail
         liftIO (Servant.Auth.Server.acceptLogin cookieSettings jwtSettings (parseModel @_ @User user)) >>= \case
           Nothing -> throw401'
-          Just applyCookie -> pure $ applyCookie Servant.NoContent
+          Just applyCookie -> pure $ Servant.addHeader "http://localhost:3000/user/current" $ applyCookie Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail
         throw401 "Invalid Credentials."
