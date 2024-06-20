@@ -3,7 +3,6 @@ module API.Admin where
 --------------------------------------------------------------------------------
 
 import API.User (usersHandler)
-import Config (Environment (..))
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadThrow)
 import Data.String (IsString (..))
@@ -102,9 +101,8 @@ adminPageHandler ::
     MonadDB m,
     MonadThrow m
   ) =>
-  Environment ->
   Servant.ServerT AdminAPI m
-adminPageHandler _ (SAS.Authenticated User {..}) = do
+adminPageHandler (SAS.Authenticated User {..}) = do
   unless userIsAdmin throw401'
   AdminPage <$> usersHandler <*> selectMailingListEntries
-adminPageHandler _ _ = throw401'
+adminPageHandler _ = throw401'

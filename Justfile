@@ -120,7 +120,7 @@ gen-keys:
   openssl genrsa -out backend/keys/private.pem 4096
   openssl rsa -in backend/keys/private.pem -out backend/keys/public.pem -pubout
   openssl req -key backend/keys/private.pem -new -x509 -days 3650 -subj "/C=FI/ST=Helsinki/O=Rule of Tech/OU=Information unit/CN=ruleoftech.com" -out backend/keys/cert.pem
-  openssl pkcs12 -export -inkey backend/keys/private.pem -in backend/keys/cert.pem -out backend/keys/keys.pfx -name "kpbj-backend"
+  openssl pkcs12 -export -inkey backend/keys/private.pem -in backend/keys/cert.pem -out backend/keys/keys.pfx -name "webserver-backend"
 
 #-------------------------------------------------------------------------------
 ## Database

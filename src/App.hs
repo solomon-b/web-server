@@ -66,13 +66,14 @@ runApp ctx =
   Log.withJsonStdOutLogger $ \stdOutLogger -> do
     getConfig >>= \case
       Nothing ->
-        Log.runLogT "kpbj-backend" stdOutLogger Log.defaultLogLevel $ Log.logAttention "Config Failure" (show ())
+        Log.runLogT "webserver-backend" stdOutLogger Log.defaultLogLevel $ Log.logAttention "Config Failure" (show ())
       Just AppConfig {..} -> do
         let PostgresConfig {..} = appConfigPostgresSettings
         -- TODO: Is it weird to be instantiating 'LogT' multiple times?
-        Log.runLogT "kpbj-backend" stdOutLogger Log.defaultLogLevel $
+        Log.runLogT "webserver-backend" stdOutLogger Log.defaultLogLevel $
           Log.logInfo "Launching Service" (KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment])
 
+        let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname "localhost:3000"
         let hsqlSettings = HSQL.settings (fold postgresConfigHost) (fromMaybe 0 postgresConfigPort) (fold postgresConfigUser) (fold postgresConfigPassword) (fold postgresConfigDB)
         let poolSettings = HSQL.Pool.Config.settings [HSQL.Pool.Config.staticConnectionSettings hsqlSettings]
         pgPool <- HSQL.Pool.acquire poolSettings
@@ -82,7 +83,7 @@ runApp ctx =
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg cookieConfig tracer appConfigSmtp ctx))
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg cookieConfig tracer appConfigSmtp hostname ctx))
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -96,7 +97,7 @@ warpSettings logger' WarpConfig {..} =
 warpStructuredLogger :: Log.Logger -> Wai.Request -> Status.Status -> Maybe Integer -> IO ()
 warpStructuredLogger logger' req s sz = do
   reqBody <- Wai.getRequestBodyChunk req
-  Log.runLogT "kpbj-backend" logger' Log.defaultLogLevel $
+  Log.runLogT "webserver-backend" logger' Log.defaultLogLevel $
     Log.logInfo "Request" $
       KeyMap.fromList $
         [ "statusCode" .= Status.statusCode s,
@@ -132,6 +133,7 @@ data AppContext context = AppContext
     appCookieSettings :: Servant.Auth.CookieSettings,
     appTracer :: OTEL.Tracer,
     appSmtpConfig :: SmtpConfig,
+    appHostname :: Hostname,
     appCustom :: context
   }
 
@@ -159,6 +161,10 @@ instance Has.Has SmtpConfig (AppContext ctx) where
   getter = appSmtpConfig
   modifier f ctx@AppContext {appSmtpConfig} = ctx {appSmtpConfig = f appSmtpConfig}
 
+instance Has.Has Hostname (AppContext ctx) where
+  getter = appHostname
+  modifier f ctx@AppContext {appHostname} = ctx {appHostname = f appHostname}
+
 type ServantContext = '[Auth.Server.CookieSettings, Auth.Server.JWTSettings]
 
 newtype AppM ctx a = AppM {runAppM' :: AppContext ctx -> Log.LoggerEnv -> IO a}
@@ -185,7 +191,7 @@ instance MonadEmail (AppM ctx) where
 
 interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
 interpret ctx@AppContext {appLogger} (AppM appM) =
-  Servant.Handler $ ExceptT $ catch (Right <$> appM ctx (Log.LoggerEnv appLogger "kpbj-backend" [] [] Log.defaultLogLevel)) $ \(e :: Servant.ServerError) -> pure $ Left e
+  Servant.Handler $ ExceptT $ catch (Right <$> appM ctx (Log.LoggerEnv appLogger "webserver-backend" [] [] Log.defaultLogLevel)) $ \(e :: Servant.ServerError) -> pure $ Left e
 
 mkApp :: Environment -> Servant.Context ServantContext -> AppContext ctx -> Servant.Application
 mkApp env cfg ctx =

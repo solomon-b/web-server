@@ -6,7 +6,7 @@ import API.Admin
 import API.MailingList
 import API.SplashPage
 import API.User
-import Config (Environment, SmtpConfig)
+import Config (Environment, Hostname, SmtpConfig)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -35,6 +35,7 @@ server ::
     Has Servant.Auth.JWTSettings env,
     Has OTEL.Tracer env,
     Has SmtpConfig env,
+    Has Hostname env,
     Log.MonadLog m,
     MonadDB m,
     MonadEmail m,
@@ -50,4 +51,4 @@ server env =
   splashPageHandler env
     :<|> mailingListHandler
     :<|> userHandler
-    :<|> adminPageHandler env
+    :<|> adminPageHandler

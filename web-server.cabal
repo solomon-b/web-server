@@ -111,14 +111,6 @@ library
   exposed-modules:
     App
     Auth
-    Config
-    Config.Fetchers
-    Domain.Types.AdminStatus
-    Domain.Types.DisplayName
-    Domain.Types.Email
-    Domain.Types.MailingListEntry
-    Domain.Types.Password
-    Domain.Types.User
     API
     API.Admin
     API.MailingList
@@ -130,6 +122,14 @@ library
     API.User.Logout
     API.User.PasswordReset
     API.User.Register
+    Config
+    Config.Fetchers
+    Domain.Types.AdminStatus
+    Domain.Types.DisplayName
+    Domain.Types.Email
+    Domain.Types.MailingListEntry
+    Domain.Types.Password
+    Domain.Types.User
     Effects.Database.Class
     Effects.Database.Queries.User
     Effects.Database.Queries.MailingList
@@ -138,6 +138,7 @@ library
     Effects.Database.Utils
     Effects.Email.Class
     Errors
+    OrphanInstances
     Tracing
     Utils
 

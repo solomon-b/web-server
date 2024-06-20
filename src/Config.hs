@@ -20,6 +20,7 @@ import Data.Either (fromRight)
 import Data.Functor.Compose (Compose)
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.Display (Display)
 import Data.Text.Encoding.Base64 (decodeBase64Lenient)
 import Data.Text.Lazy qualified as Text.Lazy
 import Data.Text.Lazy.Encoding qualified as Text.Lazy.Encoding
@@ -31,6 +32,17 @@ import GHC.Generics
 data Environment = Development | Production
   deriving (Generic, Show)
   deriving anyclass (ToJSON)
+
+isProduction :: Environment -> Bool
+isProduction = \case
+  Development -> False
+  Production -> True
+
+--------------------------------------------------------------------------------
+
+newtype Hostname = Hostname Text
+  deriving (Generic)
+  deriving newtype (Show, Display, ToJSON)
 
 --------------------------------------------------------------------------------
 
@@ -196,7 +208,8 @@ data AppConfig = AppConfig
     appConfigEnvironment :: Environment,
     appConfigObservability :: ObservabilityConfig,
     appConfigJwk :: JwkConfig,
-    appConfigSmtp :: SmtpConfig
+    appConfigSmtp :: SmtpConfig,
+    appConfigHostname :: Hostname
   }
   deriving stock (Generic, Show)
 
@@ -206,7 +219,8 @@ data AppConfigF f = AppConfigF
     appConfigFEnvironment :: f Environment,
     appConfigFObservability :: ObservabilityConfigF f,
     appConfigFJwk :: JwkConfigF f,
-    appConfigFSmtp :: SmtpConfigF f
+    appConfigFSmtp :: SmtpConfigF f,
+    appConfigFHostname :: f Hostname
   }
   deriving stock (Generic)
   deriving anyclass (FunctorB, ApplicativeB, TraversableB, ConstraintsB)
@@ -222,12 +236,13 @@ instance FetchHKD AppConfigF where
         appConfigFPostgresSettings = fromEnv,
         appConfigFObservability = fromEnv,
         appConfigFJwk = fromEnv,
-        appConfigFSmtp = fromEnv
+        appConfigFSmtp = fromEnv,
+        appConfigFHostname = readEnv Hostname "APP_HOSTNAME"
       }
 
   toConcrete :: (Applicative f) => AppConfigF f -> f (Concrete AppConfigF)
   toConcrete AppConfigF {..} =
-    AppConfig <$> toConcrete appConfigFWarpSettings <*> toConcrete appConfigFPostgresSettings <*> appConfigFEnvironment <*> toConcrete appConfigFObservability <*> toConcrete appConfigFJwk <*> toConcrete appConfigFSmtp
+    AppConfig <$> toConcrete appConfigFWarpSettings <*> toConcrete appConfigFPostgresSettings <*> appConfigFEnvironment <*> toConcrete appConfigFObservability <*> toConcrete appConfigFJwk <*> toConcrete appConfigFSmtp <*> appConfigFHostname
 
 getConfig :: IO (Maybe AppConfig)
 getConfig = toConcrete @AppConfigF <$> bsequence fromEnv

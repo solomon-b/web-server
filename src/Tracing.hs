@@ -61,7 +61,7 @@ withTracer env f =
           providerOpts <- snd <$> OTEL.getTracerProviderInitializationOptions
           processor <-
             simpleProcessor . SimpleProcessorConfig $
-              stdoutExporter' (formatter "kpbj-backend")
+              stdoutExporter' (formatter "webserver-backend")
           OTEL.createTracerProvider [processor] providerOpts
       release = OTEL.shutdownTracerProvider
       work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "kpbj-fm"

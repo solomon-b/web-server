@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module API.User.Login where
 
 --------------------------------------------------------------------------------
@@ -13,7 +11,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Has (Has)
 import Data.Has qualified as Has
 import Data.Text.Display (Display (..), RecordInstance (..), display)
-import Data.Text.Internal.Builder qualified as Text
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.Email
 import Domain.Types.Password
@@ -24,23 +21,12 @@ import GHC.Generics (Generic)
 import Log qualified
 import Lucid qualified
 import OpenTelemetry.Trace qualified as OTEL
+import OrphanInstances ()
 import Servant qualified
 import Servant.Auth.Server qualified
 import Tracing (handlerSpan)
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
-
---------------------------------------------------------------------------------
-
--- TODO: Move into Orphans Module
-instance (Display a) => Display (Servant.Headers x a) where
-  displayBuilder :: (Display a) => Servant.Headers x a -> Text.Builder
-  displayBuilder Servant.Headers {..} = displayBuilder getResponse
-
--- TODO: Move into Orphans Module
-instance Display Servant.NoContent where
-  displayBuilder :: Servant.NoContent -> Text.Builder
-  displayBuilder Servant.NoContent = displayBuilder ()
 
 --------------------------------------------------------------------------------
 
@@ -118,7 +104,7 @@ handler req@Login {..} = do
         Log.logInfo "Login Attempt" ulEmail
         liftIO (Servant.Auth.Server.acceptLogin cookieSettings jwtSettings user) >>= \case
           Nothing -> throw401'
-          Just applyCookie -> pure $ Servant.addHeader "http://localhost:3000/user/current" $ applyCookie Servant.NoContent
+          Just applyCookie -> pure $ Servant.addHeader "current" $ applyCookie Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail
         throw401 "Invalid Credentials."

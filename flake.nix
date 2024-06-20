@@ -78,7 +78,7 @@
           apps = {
             web-server = {
               type = "app";
-              program = "${self.packages.${system}.kpbj-backend}/bin/web-server";
+              program = "${self.packages.${system}.webserver-backend}/bin/web-server";
             };
 
             default = self.apps.${system}.web-server;
