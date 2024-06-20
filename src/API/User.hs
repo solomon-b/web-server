@@ -20,7 +20,6 @@ import Domain.Types.User
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Queries.User
 import Effects.Database.Tables.User qualified as User
-import Effects.Database.Utils
 import Errors (throw403')
 import Log qualified
 import Lucid qualified
@@ -71,7 +70,7 @@ usersHandler ::
     MonadThrow m
   ) =>
   m [User]
-usersHandler = fmap parseModel <$> execQuerySpanThrowMessage "Failed to query users table" selectUsersQuery
+usersHandler = selectUsers
 
 userProfileHandler ::
   ( Log.MonadLog m,
@@ -81,6 +80,6 @@ userProfileHandler ::
   User.Id ->
   m User
 userProfileHandler uid =
-  execQuerySpanThrowMessage "Failed to query users table" (selectUserQuery uid) >>= \case
+  selectUser uid >>= \case
     Nothing -> throw403'
-    Just user -> pure $ parseModel user
+    Just user -> pure user

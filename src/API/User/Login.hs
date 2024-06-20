@@ -17,10 +17,8 @@ import Data.Text.Internal.Builder qualified as Text
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.Email
 import Domain.Types.Password
-import Domain.Types.User (User)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Queries.User
-import Effects.Database.Utils
 import Errors (throw401, throw401')
 import GHC.Generics (Generic)
 import Log qualified
@@ -115,10 +113,10 @@ handler req@Login {..} = do
   handlerSpan "/user/login" req display $ do
     cookieSettings <- Reader.asks Has.getter
     jwtSettings <- Reader.asks Has.getter
-    execQuerySpanThrowMessage "Failed to query users table" (selectUserByCredentialQuery ulEmail ulPassword) >>= \case
+    selectUserByCredential ulEmail ulPassword >>= \case
       Just user -> do
         Log.logInfo "Login Attempt" ulEmail
-        liftIO (Servant.Auth.Server.acceptLogin cookieSettings jwtSettings (parseModel @_ @User user)) >>= \case
+        liftIO (Servant.Auth.Server.acceptLogin cookieSettings jwtSettings user) >>= \case
           Nothing -> throw401'
           Just applyCookie -> pure $ Servant.addHeader "http://localhost:3000/user/current" $ applyCookie Servant.NoContent
       Nothing -> do

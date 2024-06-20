@@ -9,7 +9,7 @@ import Domain.Types.AdminStatus
 import Domain.Types.DisplayName
 import Domain.Types.Email
 import Domain.Types.Password
-import Domain.Types.User ()
+import Domain.Types.User (User)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Tables.User qualified as User
 import Effects.Database.Utils
@@ -20,11 +20,34 @@ import Rel8 qualified
 
 --------------------------------------------------------------------------------
 
+selectUser ::
+  ( Log.MonadLog f,
+    MonadDB f,
+    MonadThrow f
+  ) =>
+  User.Id ->
+  f (Maybe User)
+selectUser uid =
+  execQuerySpanThrowMessage' "Failed to query users table" (selectUserQuery uid)
+
 selectUserQuery :: User.Id -> HSQL.Statement () (Maybe (User.Model Rel8.Result))
 selectUserQuery uid = Rel8.runMaybe . Rel8.select $ do
   um <- Rel8.each User.schema
   Rel8.where_ $ User.umId um ==. Rel8.litExpr uid
   pure um
+
+--------------------------------------------------------------------------------
+
+selectUserByCredential ::
+  ( Log.MonadLog f,
+    MonadDB f,
+    MonadThrow f
+  ) =>
+  EmailAddress ->
+  Password ->
+  f (Maybe User)
+selectUserByCredential email password =
+  execQuerySpanThrowMessage' "Failed to query users table" (selectUserByCredentialQuery email password)
 
 selectUserByCredentialQuery :: EmailAddress -> Password -> HSQL.Statement () (Maybe (User.Model Rel8.Result))
 selectUserByCredentialQuery (EmailAddress email) (Password pass) = Rel8.runMaybe . Rel8.select $ do
@@ -32,14 +55,39 @@ selectUserByCredentialQuery (EmailAddress email) (Password pass) = Rel8.runMaybe
   Rel8.where_ $ User.umEmail um ==. Rel8.litExpr (CI.original email) &&. User.umPassword um ==. Rel8.litExpr pass
   pure um
 
+--------------------------------------------------------------------------------
+
+selectUserByEmail ::
+  ( Log.MonadLog f,
+    MonadDB f,
+    MonadThrow f
+  ) =>
+  EmailAddress ->
+  f (Maybe User)
+selectUserByEmail email =
+  execQuerySpanThrowMessage' "Failed to query users table" (selectUserByEmailQuery email)
+
 selectUserByEmailQuery :: EmailAddress -> HSQL.Statement () (Maybe (User.Model Rel8.Result))
 selectUserByEmailQuery (EmailAddress email) = Rel8.runMaybe . Rel8.select $ do
   um <- Rel8.each User.schema
   Rel8.where_ $ User.umEmail um ==. Rel8.litExpr (CI.original email)
   pure um
 
+--------------------------------------------------------------------------------
+
+selectUsers ::
+  ( Log.MonadLog f,
+    MonadDB f,
+    MonadThrow f
+  ) =>
+  f [User]
+selectUsers =
+  execQuerySpanThrowMessage' "Failed to query users table" selectUsersQuery
+
 selectUsersQuery :: HSQL.Statement () [User.Model Rel8.Result]
 selectUsersQuery = Rel8.run . Rel8.select $ Rel8.each User.schema
+
+--------------------------------------------------------------------------------
 
 insertUser ::
   ( Log.MonadLog m,
@@ -61,6 +109,8 @@ insertUserQuery newUser =
           returning = Rel8.Returning User.umId
         }
 
+--------------------------------------------------------------------------------
+
 deleteUser ::
   ( Log.MonadLog m,
     MonadDB m,
@@ -80,6 +130,8 @@ deleteUserQuery uid =
           deleteWhere = \_ um -> User.umId um ==. Rel8.litExpr uid,
           returning = Rel8.NoReturning
         }
+
+--------------------------------------------------------------------------------
 
 changeUserPassword ::
   ( Log.MonadLog m,

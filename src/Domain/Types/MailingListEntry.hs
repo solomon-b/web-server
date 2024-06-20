@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Domain.Types.MailingListEntry where
 
 --------------------------------------------------------------------------------
@@ -10,11 +11,11 @@ import Data.CaseInsensitive qualified as CI
 import Data.Coerce (coerce)
 import Data.Text.Display (Display (..), RecordInstance (..))
 import Domain.Types.Email
+import Effects.Database.Tables.MailingList qualified as MailingList
 import Effects.Database.Utils
 import GHC.Generics
 import Rel8 qualified
 import Servant.Auth.JWT (FromJWT, ToJWT)
-import qualified Effects.Database.Tables.MailingList as MailingList
 
 --------------------------------------------------------------------------------
 -- Domain

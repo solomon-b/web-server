@@ -69,13 +69,14 @@ execQuerySpanThrowMessage msg statement = do
     Right res -> pure res
 
 execQuerySpanThrowMessage' ::
-  ( Log.MonadLog m,
+  ( Functor f,
+    Log.MonadLog m,
     MonadDB m,
-    ModelParser result domain,
+    ModelParser model domain,
     MonadThrow m
   ) =>
   BL.ByteString ->
-  HSQL.Statement () (result Rel8.Result) ->
-  m domain
+  HSQL.Statement () (f (model Rel8.Result)) ->
+  m (f domain)
 execQuerySpanThrowMessage' msg statement =
-  parseModel <$> execQuerySpanThrowMessage msg statement
+  fmap parseModel <$> execQuerySpanThrowMessage msg statement

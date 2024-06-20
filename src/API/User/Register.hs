@@ -60,7 +60,7 @@ handler ::
 handler req@Register {..} = do
   handlerSpan "/user/register" req display $ do
     unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original $ coerce urEmail) $ throw401 "Invalid Email Address"
-    execQuerySpanThrowMessage "Failed to query users table" (selectUserByEmailQuery urEmail) >>= \case
+    selectUserByEmail urEmail >>= \case
       Just _ -> do
         Log.logInfo "Email address is already registered" urEmail
         throw401 "Email address is already registered"

@@ -5,6 +5,7 @@ module Effects.Database.Queries.MailingList where
 import Control.Monad.Catch (MonadThrow)
 import Data.CaseInsensitive qualified as CI
 import Domain.Types.Email
+import Domain.Types.MailingListEntry (MailingListEntry)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Tables.MailingList qualified as MailingList
 import Effects.Database.Utils
@@ -42,9 +43,9 @@ selectMailingListEntries ::
     MonadDB m,
     MonadThrow m
   ) =>
-  m [MailingList.Model Rel8.Result]
+  m [MailingListEntry]
 selectMailingListEntries =
-  execQuerySpanThrowMessage "Failed to select mailing list entries" selectMailingListEntriesQuery
+  execQuerySpanThrowMessage' "Failed to select mailing list entries" selectMailingListEntriesQuery
 
 selectMailingListEntriesQuery :: HSQL.Statement () [MailingList.Model Rel8.Result]
 selectMailingListEntriesQuery = Rel8.run . Rel8.select $ Rel8.each MailingList.schema

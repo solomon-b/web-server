@@ -13,7 +13,6 @@ import Domain.Types.MailingListEntry (MailingListEntry (..))
 import Domain.Types.User
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Queries.MailingList (selectMailingListEntries)
-import Effects.Database.Utils (parseModel)
 import Errors (throw401')
 import Log qualified
 import Lucid qualified
@@ -107,5 +106,5 @@ adminPageHandler ::
   Servant.ServerT AdminAPI m
 adminPageHandler _ (SAS.Authenticated User {..}) = do
   unless userIsAdmin throw401'
-  AdminPage <$> usersHandler <*> (fmap parseModel <$> selectMailingListEntries)
+  AdminPage <$> usersHandler <*> selectMailingListEntries
 adminPageHandler _ _ = throw401'
