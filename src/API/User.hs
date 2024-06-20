@@ -45,6 +45,7 @@ type UserAPI =
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "password-reset" :> Servant.ReqBody '[Servant.JSON] PasswordReset :> Servant.Post '[Servant.JSON] ()
 
+-- TODO: Generic route for modifying Users:
 -- :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> "over" :>  Servant.Capture "id" User.Id :> Servant.Post '[Servant.JSON] User
 
 --------------------------------------------------------------------------------

@@ -9,6 +9,8 @@ TODO:
 - Rate Limiting
 - Caching
 - Test suite
+- OpenAPI Spec
+- HTMX
 -}
 
 --------------------------------------------------------------------------------

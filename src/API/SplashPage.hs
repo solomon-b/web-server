@@ -9,7 +9,7 @@ import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
 
 --------------------------------------------------------------------------------
--- Route
+-- HTML
 
 data SplashPage = SplashPage
 
