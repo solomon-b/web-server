@@ -34,3 +34,17 @@ insertEmailAddressSql EmailAddress {..} =
           Rel8.onConflict = Rel8.Abort,
           Rel8.returning = Rel8.Returning MailingList.mlId
         }
+
+--------------------------------------------------------------------------------
+
+selectMailingListEntries ::
+  ( Log.MonadLog m,
+    MonadDB m,
+    MonadThrow m
+  ) =>
+  m [MailingList.Model Rel8.Result]
+selectMailingListEntries =
+  execQuerySpanThrowMessage "Failed to select mailing list entries" selectMailingListEntriesQuery
+
+selectMailingListEntriesQuery :: HSQL.Statement () [MailingList.Model Rel8.Result]
+selectMailingListEntriesQuery = Rel8.run . Rel8.select $ Rel8.each MailingList.schema

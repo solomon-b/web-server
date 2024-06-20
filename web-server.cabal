@@ -116,6 +116,7 @@ library
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
     Domain.Types.Email
+    Domain.Types.MailingListEntry
     Domain.Types.Password
     Domain.Types.User
     API
