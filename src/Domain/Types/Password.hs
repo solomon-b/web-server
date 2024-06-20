@@ -6,9 +6,10 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import Data.Text.Display (Display)
 import GHC.Generics
+import Servant qualified
 
 --------------------------------------------------------------------------------
 
 newtype Password = Password Text
   deriving stock (Show, Generic, Eq)
-  deriving newtype (FromJSON, ToJSON, Display)
+  deriving newtype (FromJSON, ToJSON, Display, Servant.FromHttpApiData)

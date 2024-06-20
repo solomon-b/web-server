@@ -78,11 +78,11 @@ runApp ctx =
         pgPool <- HSQL.Pool.acquire poolSettings
 
         let jwkCfg = Auth.Server.defaultJWTSettings $ getJwk appConfigJwk
-            cfg = Auth.Server.defaultCookieSettings :. jwkCfg :. Servant.EmptyContext
+            cfg = cookieConfig :. jwkCfg :. Servant.EmptyContext
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg Auth.Server.defaultCookieSettings tracer appConfigSmtp ctx))
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg cookieConfig tracer appConfigSmtp ctx))
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -114,6 +114,14 @@ warpStructuredLogger logger' req s sz = do
 shutdownHandler :: IO () -> IO ()
 shutdownHandler closeSocket =
   void $ Posix.installHandler Posix.sigTERM (Posix.CatchOnce closeSocket) Nothing
+
+cookieConfig :: Servant.Auth.CookieSettings
+cookieConfig =
+  Servant.Auth.defaultCookieSettings
+    { Servant.Auth.cookieIsSecure = Servant.Auth.NotSecure,
+      Servant.Auth.cookieSameSite = Servant.Auth.SameSiteStrict,
+      Servant.Auth.cookieXsrfSetting = Nothing
+    }
 
 --------------------------------------------------------------------------------
 

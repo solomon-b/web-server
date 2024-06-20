@@ -22,12 +22,14 @@ import Effects.Database.Tables.User qualified as User
 import Effects.Database.Utils
 import Errors (throw403')
 import Log qualified
+import Lucid qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:<|>) (..), (:>))
 import Servant qualified
 import Servant.Auth (Auth)
 import Servant.Auth qualified
 import Servant.Auth.Server qualified as SAS
+import Servant.HTML.Lucid qualified as Lucid
 
 --------------------------------------------------------------------------------
 -- Route
@@ -37,7 +39,8 @@ type UserAPI =
     :<|> Servant.Capture "id" User.Id :> Servant.Get '[Servant.JSON] User
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> "current" :> Servant.Get '[Servant.JSON] User
     :<|> "register" :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] Auth.JWTToken
-    :<|> "login" :> Servant.ReqBody '[Servant.JSON] Login :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" SAS.SetCookie, Servant.Header "Set-Cookie" SAS.SetCookie] Servant.NoContent)
+    :<|> "login" :> Servant.ReqBody '[Servant.FormUrlEncoded, Servant.JSON] Login :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" SAS.SetCookie, Servant.Header "Set-Cookie" SAS.SetCookie] Servant.NoContent)
+    :<|> "login" :> Servant.Get '[Lucid.HTML] (Lucid.Html ())
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
     :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Capture "id" User.Id :> "password-reset" :> Servant.ReqBody '[Servant.JSON] PasswordReset :> Servant.Post '[Servant.JSON] ()
 
@@ -58,7 +61,7 @@ userHandler ::
     MonadCatch m
   ) =>
   Servant.ServerT UserAPI m
-userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> Delete.handler :<|> PasswordReset.handler
+userHandler = usersHandler :<|> userProfileHandler :<|> Current.handler :<|> Register.handler :<|> Login.handler :<|> pure Login.getHandler :<|> Delete.handler :<|> PasswordReset.handler
 
 usersHandler ::
   ( Log.MonadLog m,
