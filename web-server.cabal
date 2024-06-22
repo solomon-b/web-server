@@ -89,6 +89,7 @@ library
                   , jose
                   , log-base
                   , lucid
+                  , lucid-htmx
                   , mtl
 		  , mime-mail
                   , opaleye
@@ -137,6 +138,7 @@ library
     Effects.Database.Tables.MailingList
     Effects.Database.Utils
     Effects.Email.Class
+    Effects.FormBuilder
     Errors
     OrphanInstances
     Tracing

@@ -1,0 +1,7 @@
+packages: *
+
+source-repository-package
+  type: git
+  location: https://github.com/monadicsystems/lucid-htmx.git
+  tag: f1c2a3575661cda07aa6dfc0741975b3784fb9f6
+  subdir: lucid

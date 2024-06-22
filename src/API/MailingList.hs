@@ -7,15 +7,13 @@ import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
-import Control.Monad.Reader qualified as Reader
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.CaseInsensitive qualified as CI
 import Data.Has (Has)
-import Data.Has qualified as Has
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Display (Display, display)
+import Data.Text.Display (Display)
 import Data.Text.Encoding qualified as Text.Encoding
 import Domain.Types.Email (EmailAddress (..))
 import Effects.Database.Class (MonadDB)
@@ -24,12 +22,14 @@ import Effects.Email.Class
 import Errors (throw401)
 import GHC.Generics (Generic)
 import Log qualified
+import Lucid qualified
 import Network.Mail.Mime qualified as Mime
 import Network.Mail.SMTP qualified as SMTP
 import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances ()
 import Servant ((:>))
 import Servant qualified
+import Servant.HTML.Lucid qualified as Lucid
 import Text.Email.Validate qualified as Email
 import Tracing (handlerSpan)
 import Web.FormUrlEncoded (FromForm)
@@ -44,7 +44,7 @@ newtype MailingListForm = MailingListForm
   deriving anyclass (FromJSON, ToJSON, FromForm)
 
 type MailingListAPI =
-  "signup" :> Servant.ReqBody '[Servant.JSON, Servant.FormUrlEncoded] MailingListForm :> Servant.Verb 'Servant.POST 301 '[Servant.JSON] (Servant.Headers '[Servant.Header "Location" Text] Servant.NoContent)
+  "signup" :> Servant.ReqBody '[Servant.JSON, Servant.FormUrlEncoded] MailingListForm :> Servant.Post '[Lucid.HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 -- Handler
@@ -62,9 +62,9 @@ mailingListHandler ::
     MonadUnliftIO m
   ) =>
   MailingListForm ->
-  m (Servant.Headers '[Servant.Header "Location" Text] Servant.NoContent)
+  m (Lucid.Html ())
 mailingListHandler req@(MailingListForm e@(EmailAddress {..})) = do
-  handlerSpan "/mailing-list" req display $ do
+  handlerSpan "/mailing-list" req (const ()) $ do
     unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original emailAddress) $ throw401 "Invalid Email Address"
 
     _pid <- MailingList.insertEmailAddress e
@@ -72,9 +72,7 @@ mailingListHandler req@(MailingListForm e@(EmailAddress {..})) = do
 
     -- sendConfirmationEmail e
 
-    Hostname hostname <- Reader.asks Has.getter
-
-    pure $ Servant.addHeader hostname Servant.NoContent
+    pure $ Lucid.p_ "You have been added to the mailing list!"
 
 sendConfirmationEmail :: (MonadEmail m) => EmailAddress -> m ()
 sendConfirmationEmail EmailAddress {..} =
