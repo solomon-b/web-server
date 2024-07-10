@@ -4,12 +4,16 @@ module Errors where
 
 import Control.Monad.Catch (MonadThrow (..))
 import Data.ByteString.Lazy qualified as BL
+import Network.HTTP.Types (Header)
 import Servant.Server qualified as Servant
 
 --------------------------------------------------------------------------------
 
 throw301 :: (MonadThrow m) => BL.ByteString -> m a
 throw301 err = throwM (Servant.err301 {Servant.errBody = err})
+
+throw307 :: (MonadThrow m) => BL.ByteString -> [Header] -> m a
+throw307 err headers = throwM (Servant.err307 {Servant.errBody = err, Servant.errHeaders = headers})
 
 throw400 :: (MonadThrow m) => BL.ByteString -> m a
 throw400 err = throwM (Servant.err400 {Servant.errBody = err})

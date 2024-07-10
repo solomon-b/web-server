@@ -6,82 +6,77 @@ module Auth where
 
 --------------------------------------------------------------------------------
 
-import Control.Monad.Catch (MonadThrow (..))
+import Auth.Network (sockAddrToNetAddr)
+import Control.Error (note)
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.Reader (MonadReader)
-import Control.Monad.Reader qualified as Reader
-import Data.Aeson (FromJSON, ToJSON)
-import Data.ByteString.Lazy qualified as BL
-import Data.CaseInsensitive qualified as CI
-import Data.Has (Has)
-import Data.Has qualified as Has
+import Data.Coerce
 import Data.Text (Text)
-import Data.Text.Display (Display)
-import Data.Text.Encoding qualified as Text.Encoding
-import Deriving.Aeson qualified as Deriving
-import Domain.Types.Email
-import Domain.Types.Password
+import Data.Time (getCurrentTime)
+import Data.Time.Clock qualified as Clock
+import Domain.Types.ServerSessions (ServerSession, SessionId (..), parseSessionId)
 import Domain.Types.User (User)
-import Effects.Database.Queries.User
+import Effects.Database.Class (MonadDB)
+import Effects.Database.Queries.ServerSessions (expireServerSession, insertServerSession, selectServerSessionQuery)
+import Effects.Database.Tables.ServerSessions qualified as Session
+import Effects.Database.Tables.User qualified as User
 import Effects.Database.Utils
-import Errors (throw500')
-import GHC.Generics (Generic)
+import Errors (throw307, throw500)
 import Hasql.Pool qualified as HSQL
 import Hasql.Session qualified as HSQL
 import Log qualified
-import Servant.Auth.JWT (ToJWT)
-import Servant.Auth.Server qualified
-import Servant.Auth.Server qualified as Servant.Auth
-
---------------------------------------------------------------------------------
--- Basic User Auth
-
-type instance Servant.Auth.BasicAuthCfg = Servant.Auth.BasicAuthData -> IO (Servant.Auth.AuthResult User)
-
-instance Servant.Auth.FromBasicAuthData User where
-  fromBasicAuthData authData authCheckFunction = authCheckFunction authData
-
--- TODO: Hash password!
-checkAuth :: HSQL.Pool -> Log.Logger -> Servant.Auth.BasicAuthData -> IO (Servant.Auth.AuthResult User)
-checkAuth pool logger (Servant.Auth.BasicAuthData email' pass') =
-  let email = EmailAddress $ CI.mk $ Text.Encoding.decodeUtf8 email'
-      pass = Password $ Text.Encoding.decodeUtf8 pass'
-   in HSQL.use pool (HSQL.statement () (selectUserByCredentialQuery email pass)) >>= \case
-        Left err -> do
-          Log.runLogT "webserver-backend" logger Log.defaultLogLevel $
-            Log.logAttention "SQL Error" (show err)
-          pure Servant.Auth.Indefinite
-        Right (Just (parseModel -> user)) ->
-          pure $ Servant.Auth.Authenticated user
-        Right Nothing ->
-          pure Servant.Auth.NoSuchUser
+import Network.Socket (SockAddr)
+import Network.Wai (Request (..))
+import Servant qualified
+import Servant.Server.Experimental.Auth (mkAuthHandler)
+import Servant.Server.Experimental.Auth qualified as Servant
+import Web.Cookie (parseCookies)
 
 --------------------------------------------------------------------------------
 
-newtype JWTToken = JWTToken {getJWTToken :: Text}
-  deriving stock (Generic)
-  deriving newtype (Display)
-  deriving
-    (FromJSON, ToJSON)
-    via Deriving.CustomJSON '[Deriving.FieldLabelModifier '[Deriving.StripPrefix "getJWT", Deriving.CamelToSnake]] JWTToken
+type instance Servant.AuthServerData (Servant.AuthProtect "cookie-auth") = Authz
 
---------------------------------------------------------------------------------
+data Authz = Authz
+  { authzUser :: User,
+    authzSession :: ServerSession
+  }
 
-generateJWTToken ::
-  ( MonadReader env m,
-    Has Servant.Auth.Server.JWTSettings env,
-    Log.MonadLog m,
-    MonadIO m,
-    ToJWT a,
-    MonadThrow m
-  ) =>
-  a ->
-  m JWTToken
-generateJWTToken a = do
-  jwtSettings <- Reader.asks Has.getter
-  liftIO (Servant.Auth.Server.makeJWT a jwtSettings Nothing) >>= \case
-    Left _err -> throw500'
-    Right jwt ->
-      pure $ JWTToken $ Text.Encoding.decodeUtf8 $ BL.toStrict jwt
+data AuthErr
+  = MissingCookieHeader
+  | MissingCookieValue
+  | MalformedSessionId
+  deriving (Show)
 
---------------------------------------------------------------------------------
+authHandler :: HSQL.Pool -> Servant.AuthHandler Request Authz
+authHandler pool = mkAuthHandler $ \req ->
+  let eSession = do
+        cookie <- note MissingCookieHeader $ lookup "cookie" $ requestHeaders req
+        sessionId <- note MissingCookieValue $ lookup "session-id" $ parseCookies cookie
+        note MalformedSessionId $ parseSessionId sessionId
+   in case eSession of
+        Right sessionId ->
+          liftIO (HSQL.use pool (HSQL.statement () $ selectServerSessionQuery $ coerce sessionId)) >>= \case
+            Left err -> do
+              liftIO $ print err
+              throw500 "Something went wrong"
+            Right Nothing ->
+              throw307 "forbidden" [("Location", "/login")]
+            Right (Just (userModel, sessionModel)) ->
+              pure $ Authz (parseModel userModel) (parseModel sessionModel)
+        Left MissingCookieHeader -> throw307 "No cookie sent in request" [("Location", "/login")]
+        Left MissingCookieValue -> throw307 "Invalid cookie" [("Location", "/login")]
+        Left MalformedSessionId -> throw307 "Bad session data" [("Location", "/login")]
+
+login ::
+  (MonadDB m, Log.MonadLog m) => User.Id -> SockAddr -> Maybe Text -> m (Either HSQL.UsageError SessionId)
+login uid sockAddr mUserAgent = do
+  -- TODO: Add clock effect:
+  now <- liftIO getCurrentTime
+  let sessionExpiration = Clock.addUTCTime Clock.nominalDay now
+      sessionToInsert = (uid, sockAddrToNetAddr sockAddr, mUserAgent, sessionExpiration)
+  insertServerSession sessionToInsert
+
+expireSession ::
+  (MonadDB m, Log.MonadLog m) =>
+  SessionId ->
+  m (Either HSQL.UsageError ())
+expireSession = expireServerSession . coerce

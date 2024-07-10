@@ -2,19 +2,19 @@ module API.User.Logout where
 
 --------------------------------------------------------------------------------
 
+import Auth qualified
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Control.Monad.Reader (MonadReader)
-import Control.Monad.Reader qualified as Reader
+import Control.Monad.Reader (MonadIO (..), MonadReader)
 import Data.Has (Has)
-import Data.Has qualified as Has
-import Data.Text.Display (display)
-import Domain.Types.User (User)
+import Data.Text (Text)
+import Domain.Types.ServerSessions qualified as ServerSessions
+import Effects.Database.Class (MonadDB)
+import Errors (throw500)
 import Log qualified
 import Lucid qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant qualified
-import Servant.Auth.Server qualified as SAS
 import Tracing qualified
 
 --------------------------------------------------------------------------------
@@ -48,17 +48,23 @@ instance Lucid.ToHtml Page where
 handler ::
   ( Log.MonadLog m,
     MonadReader env m,
-    Has SAS.CookieSettings env,
     Has OTEL.Tracer env,
+    MonadDB m,
     MonadThrow m,
     MonadCatch m,
     MonadUnliftIO m
   ) =>
-  SAS.AuthResult User ->
-  m (Servant.Headers '[Servant.Header "Set-Cookie" SAS.SetCookie, Servant.Header' '[Servant.Optional, Servant.Strict] "Set-Cookie" SAS.SetCookie] (Lucid.Html ()))
-handler authResult =
-  Tracing.handlerSpan "/user/logout" () (const $ display ()) $ do
-    cookieSettings <- Reader.asks Has.getter
-    case authResult of
-      SAS.Authenticated _user -> pure $ SAS.clearSession cookieSettings $ Lucid.toHtml Authenticated
-      _ -> pure $ SAS.clearSession cookieSettings $ Lucid.toHtml NotAuthenticated
+  Auth.Authz ->
+  m
+    ( Servant.Headers
+        '[ Servant.Header "HX-Redirect" Text
+         ]
+        Servant.NoContent
+    )
+handler Auth.Authz {authzSession} =
+  Tracing.handlerSpan "/user/logout" () (\_ -> show ()) $ do
+    Auth.expireSession (ServerSessions.serverSessionId authzSession) >>= \case
+      Left _ ->
+        throw500 "Something went wrong"
+      Right _ ->
+        pure $ Servant.addHeader "/user/current" Servant.NoContent

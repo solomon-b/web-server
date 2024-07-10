@@ -9,6 +9,7 @@ import Control.Applicative (Const (..))
 import Control.Monad.Identity (Identity (..))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
+import Data.Password.Argon2 (Argon2, PasswordHash)
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -16,6 +17,7 @@ import Data.Text.Display (Display, display)
 import Effects.FormBuilder (FormBuilder (..), ToForm (..))
 import GHC.Generics
 import Lucid qualified
+import OrphanInstances ()
 import Rel8 qualified
 import Servant qualified
 import Servant.Auth.JWT (FromJWT, ToJWT)
@@ -32,13 +34,17 @@ newtype Id = Id Int64
 data Model f = Model
   { umId :: f Id,
     umEmail :: f Text,
-    umPassword :: f Text,
+    umPassword :: f (PasswordHash Argon2),
     umDisplayName :: f Text,
     umAvatarUrl :: f (Maybe Text),
     umIsAdmin :: f Bool
   }
   deriving stock (Generic)
   deriving anyclass (Rel8.Rel8able, FunctorB, TraversableB, ApplicativeB, ConstraintsB)
+
+instance ToJSON (Model Identity)
+
+instance ToJWT (Model Identity)
 
 schema :: Rel8.TableSchema (Model Rel8.Name)
 schema =
@@ -69,7 +75,7 @@ instance FormBuilder Model where
     Model
       { umId = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
         umEmail = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
-        umPassword = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
+        umPassword = ToForm $ \x -> Lucid.td_ (fromString $ show x),
         umDisplayName = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
         umAvatarUrl = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
         umIsAdmin = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x)

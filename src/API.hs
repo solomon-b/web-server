@@ -19,7 +19,6 @@ import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:<|>) (..), (:>))
 import Servant qualified
-import Servant.Auth.Server qualified as Servant.Auth
 
 --------------------------------------------------------------------------------
 
@@ -27,12 +26,12 @@ type API =
   SplashPageAPI
     :<|> "mailing-list" :> MailingListAPI
     :<|> "user" :> UserAPI
+    :<|> Servant.AuthProtect "cookie-auth" :> "user" :> UserProtectedAPI
     :<|> "admin" :> AdminAPI
 
 server ::
   ( MonadReader env m,
     Has HSQL.Pool env,
-    Has Servant.Auth.JWTSettings env,
     Has OTEL.Tracer env,
     Has SmtpConfig env,
     Has Hostname env,
@@ -42,8 +41,7 @@ server ::
     MonadIO m,
     MonadThrow m,
     MonadUnliftIO m,
-    MonadCatch m,
-    Has Servant.Auth.CookieSettings env
+    MonadCatch m
   ) =>
   Environment ->
   Servant.ServerT API m
@@ -51,4 +49,5 @@ server env =
   splashPageHandler env
     :<|> mailingListHandler
     :<|> userHandler
+    :<|> userProtectedHandler
     :<|> adminPageHandler

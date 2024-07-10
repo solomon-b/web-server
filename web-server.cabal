@@ -71,12 +71,14 @@ library
                   , base64
                   , bytestring
                   , case-insensitive
+                  , cookie
                   , clock
                   , containers
                   , data-has
                   , deriving-aeson
                   , exceptions
                   , email-validate
+                  , errors
                   , hasql
                   , hasql-pool
                   , hs-opentelemetry-api
@@ -92,7 +94,10 @@ library
                   , lucid-htmx
                   , mtl
 		  , mime-mail
+                  , network
+                  , network-ip
                   , opaleye
+                  , password
                   , pretty-simple
                   , rel8
                   , servant-auth
@@ -104,6 +109,7 @@ library
                   , text-display
                   , time
                   , transformers
+                  , uuid
                   , unix
                   , unliftio-core
                   , unordered-containers
@@ -112,6 +118,7 @@ library
   exposed-modules:
     App
     Auth
+    Auth.Network
     API
     API.Admin
     API.MailingList
@@ -129,13 +136,15 @@ library
     Domain.Types.DisplayName
     Domain.Types.Email
     Domain.Types.MailingListEntry
-    Domain.Types.Password
     Domain.Types.User
+    Domain.Types.ServerSessions
     Effects.Database.Class
     Effects.Database.Queries.User
     Effects.Database.Queries.MailingList
+    Effects.Database.Queries.ServerSessions
     Effects.Database.Tables.User
     Effects.Database.Tables.MailingList
+    Effects.Database.Tables.ServerSessions
     Effects.Database.Utils
     Effects.Email.Class
     Effects.FormBuilder

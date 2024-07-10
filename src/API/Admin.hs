@@ -2,7 +2,6 @@ module API.Admin where
 
 --------------------------------------------------------------------------------
 
-import API.User (usersHandler)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.Identity (Identity (..))
@@ -32,7 +31,7 @@ import Servant.HTML.Lucid qualified as Lucid
 -- Route
 
 type AdminAPI =
-  Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> Servant.Get '[Lucid.HTML] AdminPage
+  {- Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> -} Servant.Get '[Lucid.HTML] AdminPage
 
 --------------------------------------------------------------------------------
 
@@ -84,7 +83,9 @@ adminPageHandler ::
     MonadThrow m
   ) =>
   Servant.ServerT AdminAPI m
-adminPageHandler (SAS.Authenticated User {..}) = do
-  unless userIsAdmin throw401'
-  AdminPage <$> execQuerySpanThrowMessage "Failed to query users table" selectUsersQuery <*> selectMailingListEntries
-adminPageHandler _ = throw401'
+adminPageHandler = throw401'
+
+-- adminPageHandler (SAS.Authenticated User {..}) = do
+--   unless userIsAdmin throw401'
+--   AdminPage <$> execQuerySpanThrowMessage "Failed to query users table" selectUsersQuery <*> selectMailingListEntries
+-- adminPageHandler _ = throw401'

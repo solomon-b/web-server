@@ -16,6 +16,10 @@ TODO:
 --------------------------------------------------------------------------------
 
 import API
+-- import Servant.Auth.Server qualified as Auth.Server
+-- import Servant.Auth.Server qualified as Servant.Auth
+
+import Auth (Authz, authHandler)
 import Config
 import Control.Exception (catch)
 import Control.Monad (void)
@@ -56,8 +60,7 @@ import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
 import OpenTelemetry.Trace qualified as OTEL
 import Servant (Context ((:.)))
 import Servant qualified
-import Servant.Auth.Server qualified as Auth.Server
-import Servant.Auth.Server qualified as Servant.Auth
+import Servant.Server.Experimental.Auth (AuthHandler)
 import System.Posix.Signals qualified as Posix
 import Tracing (withTracer)
 
@@ -80,12 +83,11 @@ runApp ctx =
         let poolSettings = HSQL.Pool.Config.settings [HSQL.Pool.Config.staticConnectionSettings hsqlSettings]
         pgPool <- HSQL.Pool.acquire poolSettings
 
-        let jwkCfg = Auth.Server.defaultJWTSettings $ getJwk appConfigJwk
-            cfg = cookieConfig :. jwkCfg :. Servant.EmptyContext
+        let cfg = authHandler pgPool :. Servant.EmptyContext
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool jwkCfg cookieConfig tracer appConfigSmtp hostname ctx))
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname ctx))
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -118,21 +120,11 @@ shutdownHandler :: IO () -> IO ()
 shutdownHandler closeSocket =
   void $ Posix.installHandler Posix.sigTERM (Posix.CatchOnce closeSocket) Nothing
 
-cookieConfig :: Servant.Auth.CookieSettings
-cookieConfig =
-  Servant.Auth.defaultCookieSettings
-    { Servant.Auth.cookieIsSecure = Servant.Auth.NotSecure,
-      Servant.Auth.cookieSameSite = Servant.Auth.SameSiteStrict,
-      Servant.Auth.cookieXsrfSetting = Nothing
-    }
-
 --------------------------------------------------------------------------------
 
 data AppContext context = AppContext
   { appLogger :: Log.Logger,
     appDbPool :: HSQL.Pool,
-    appJwtSetttings :: Servant.Auth.JWTSettings,
-    appCookieSettings :: Servant.Auth.CookieSettings,
     appTracer :: OTEL.Tracer,
     appSmtpConfig :: SmtpConfig,
     appHostname :: Hostname,
@@ -147,14 +139,6 @@ instance Has.Has HSQL.Pool (AppContext ctx) where
   getter = appDbPool
   modifier f ctx@AppContext {appDbPool} = ctx {appDbPool = f appDbPool}
 
-instance Has.Has Servant.Auth.JWTSettings (AppContext ctx) where
-  getter = appJwtSetttings
-  modifier f ctx@AppContext {appJwtSetttings} = ctx {appJwtSetttings = f appJwtSetttings}
-
-instance Has.Has Servant.Auth.CookieSettings (AppContext ctx) where
-  getter = appCookieSettings
-  modifier f ctx@AppContext {appCookieSettings} = ctx {appCookieSettings = f appCookieSettings}
-
 instance Has.Has OTEL.Tracer (AppContext ctx) where
   getter = appTracer
   modifier f ctx@AppContext {appTracer} = ctx {appTracer = f appTracer}
@@ -167,7 +151,7 @@ instance Has.Has Hostname (AppContext ctx) where
   getter = appHostname
   modifier f ctx@AppContext {appHostname} = ctx {appHostname = f appHostname}
 
-type ServantContext = '[Auth.Server.CookieSettings, Auth.Server.JWTSettings]
+type ServantContext = '[AuthHandler Wai.Request Authz]
 
 newtype AppM ctx a = AppM {runAppM' :: AppContext ctx -> Log.LoggerEnv -> IO a}
   deriving

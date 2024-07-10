@@ -2,28 +2,35 @@ module API.User.Login where
 
 --------------------------------------------------------------------------------
 
+import Auth qualified
+import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
+import Control.Monad.Identity (Identity (..))
 import Control.Monad.Reader (MonadReader)
-import Control.Monad.Reader qualified as Reader
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Coerce (coerce)
 import Data.Has (Has)
-import Data.Has qualified as Has
+import Data.Password.Argon2 (Password, PasswordCheck (..), checkPassword, mkPassword)
+import Data.Text (Text)
 import Data.Text.Display (Display (..), RecordInstance (..), display)
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.Email
-import Domain.Types.Password
+import Domain.Types.ServerSessions (ServerSession (..), serverSessionId)
 import Effects.Database.Class (MonadDB)
+import Effects.Database.Queries.ServerSessions (selectServerSessionByUser)
 import Effects.Database.Queries.User
-import Errors (throw401, throw401')
+import Effects.Database.Tables.User (umPassword)
+import Effects.Database.Tables.User qualified as User
+import Errors (throw401, throw401', throw500)
 import GHC.Generics (Generic)
 import Log qualified
 import Lucid qualified
+import Network.Socket
 import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances ()
 import Servant qualified
-import Servant.Auth.Server qualified
 import Tracing (handlerSpan)
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
@@ -71,40 +78,44 @@ instance FormUrlEncoded.FromForm Login where
   fromForm f =
     Login
       <$> FormUrlEncoded.parseUnique "email" f
-      <*> FormUrlEncoded.parseUnique "password" f
+      <*> fmap mkPassword (FormUrlEncoded.parseUnique "password" f)
 
 handler ::
   ( MonadReader env m,
-    Has Servant.Auth.Server.JWTSettings env,
-    Has Servant.Auth.Server.CookieSettings env,
     MonadIO m,
     Log.MonadLog m,
     MonadDB m,
     MonadThrow m,
     MonadUnliftIO m,
     MonadCatch m,
-    Has OTEL.Tracer env,
-    Display (Servant.Headers [Servant.Header "Set-Cookie" Servant.Auth.Server.SetCookie, Servant.Header "Set-Cookie" Servant.Auth.Server.SetCookie] Servant.NoContent)
+    Has OTEL.Tracer env
   ) =>
+  SockAddr ->
+  Maybe Text ->
   Login ->
   m
     ( Servant.Headers
-        '[ Servant.Header "Location" String,
-           Servant.Header "Set-Cookie" Servant.Auth.Server.SetCookie,
-           Servant.Header "Set-Cookie" Servant.Auth.Server.SetCookie
+        '[ Servant.Header "Set-Cookie" Text,
+           Servant.Header "HX-Redirect" Text
          ]
         Servant.NoContent
     )
-handler req@Login {..} = do
+handler sockAddr mUserAgent req@Login {..} = do
   handlerSpan "/user/login" req display $ do
-    cookieSettings <- Reader.asks Has.getter
-    jwtSettings <- Reader.asks Has.getter
-    selectUserByCredential ulEmail ulPassword >>= \case
+    selectUserByEmail ulEmail >>= \case
       Just user -> do
         Log.logInfo "Login Attempt" ulEmail
-        liftIO (Servant.Auth.Server.acceptLogin cookieSettings jwtSettings user) >>= \case
-          Nothing -> throw401'
-          Just applyCookie -> pure $ Servant.addHeader "current" $ applyCookie Servant.NoContent
+        unless (checkPassword ulPassword (runIdentity (umPassword user)) == PasswordCheckSuccess) throw401'
+        selectServerSessionByUser (coerce $ User.umId user) >>= \case
+          Nothing -> do
+            Auth.login (coerce $ User.umId user) sockAddr mUserAgent >>= \case
+              Left _err ->
+                throw500 "Something went wrong"
+              Right sessionId ->
+                pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
+          Just session ->
+            let sessionId = serverSessionId session
+             in pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail
         throw401 "Invalid Credentials."

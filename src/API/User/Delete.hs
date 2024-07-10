@@ -2,6 +2,7 @@ module API.User.Delete where
 
 --------------------------------------------------------------------------------
 
+import Auth qualified
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -15,7 +16,6 @@ import Effects.Database.Tables.User qualified as User
 import Errors (throw401')
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
-import Servant.Auth.Server qualified as SAS
 import Tracing (handlerSpan)
 
 --------------------------------------------------------------------------------
@@ -29,11 +29,10 @@ handler ::
     MonadDB m,
     MonadUnliftIO m
   ) =>
-  SAS.AuthResult User ->
+  Auth.Authz ->
   User.Id ->
   m ()
-handler (SAS.Authenticated User {userId, userIsAdmin}) uid =
+handler (Auth.Authz User {userId, userIsAdmin} _) uid =
   handlerSpan "/user/:id/delete" () display $ do
     unless (userId == uid || userIsAdmin) throw401'
     deleteUser uid
-handler _ _ = throw401'

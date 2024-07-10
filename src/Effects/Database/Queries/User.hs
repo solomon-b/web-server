@@ -4,11 +4,10 @@ module Effects.Database.Queries.User where
 
 import Control.Monad.Catch (MonadThrow)
 import Data.CaseInsensitive qualified as CI
-import Data.Coerce (coerce)
+import Data.Password.Argon2 (Argon2, PasswordHash)
 import Domain.Types.AdminStatus
 import Domain.Types.DisplayName
 import Domain.Types.Email
-import Domain.Types.Password
 import Domain.Types.User (User)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Tables.User qualified as User
@@ -44,13 +43,13 @@ selectUserByCredential ::
     MonadThrow f
   ) =>
   EmailAddress ->
-  Password ->
+  PasswordHash Argon2 ->
   f (Maybe User)
 selectUserByCredential email password =
   execQuerySpanThrowMessage' "Failed to query users table" (selectUserByCredentialQuery email password)
 
-selectUserByCredentialQuery :: EmailAddress -> Password -> HSQL.Statement () (Maybe (User.Model Rel8.Result))
-selectUserByCredentialQuery (EmailAddress email) (Password pass) = Rel8.runMaybe . Rel8.select $ do
+selectUserByCredentialQuery :: EmailAddress -> PasswordHash Argon2 -> HSQL.Statement () (Maybe (User.Model Rel8.Result))
+selectUserByCredentialQuery (EmailAddress email) pass = Rel8.runMaybe . Rel8.select $ do
   um <- Rel8.each User.schema
   Rel8.where_ $ User.umEmail um ==. Rel8.litExpr (CI.original email) &&. User.umPassword um ==. Rel8.litExpr pass
   pure um
@@ -63,9 +62,9 @@ selectUserByEmail ::
     MonadThrow f
   ) =>
   EmailAddress ->
-  f (Maybe User)
+  f (Maybe (User.Model Rel8.Result))
 selectUserByEmail email =
-  execQuerySpanThrowMessage' "Failed to query users table" (selectUserByEmailQuery email)
+  execQuerySpanThrowMessage "Failed to query users table" (selectUserByEmailQuery email)
 
 selectUserByEmailQuery :: EmailAddress -> HSQL.Statement () (Maybe (User.Model Rel8.Result))
 selectUserByEmailQuery (EmailAddress email) = Rel8.runMaybe . Rel8.select $ do
@@ -94,11 +93,11 @@ insertUser ::
     MonadDB m,
     MonadThrow m
   ) =>
-  (EmailAddress, Password, DisplayName, AdminStatus) ->
+  (EmailAddress, PasswordHash Argon2, DisplayName, AdminStatus) ->
   m User.Id
 insertUser = execQuerySpanThrowMessage "Failed to insert user" . insertUserQuery
 
-insertUserQuery :: (EmailAddress, Password, DisplayName, AdminStatus) -> HSQL.Statement () User.Id
+insertUserQuery :: (EmailAddress, PasswordHash Argon2, DisplayName, AdminStatus) -> HSQL.Statement () User.Id
 insertUserQuery newUser =
   Rel8.run1 $
     Rel8.insert $
@@ -139,19 +138,19 @@ changeUserPassword ::
     MonadThrow m
   ) =>
   User.Id ->
-  Password ->
-  Password ->
+  PasswordHash Argon2 ->
+  PasswordHash Argon2 ->
   m (Maybe User.Id)
 changeUserPassword uid oldPassword = execQuerySpanThrowMessage "Failed to change user password" . changeUserPasswordQuery uid oldPassword
 
-changeUserPasswordQuery :: User.Id -> Password -> Password -> HSQL.Statement () (Maybe User.Id)
+changeUserPasswordQuery :: User.Id -> PasswordHash Argon2 -> PasswordHash Argon2 -> HSQL.Statement () (Maybe User.Id)
 changeUserPasswordQuery uid oldPassword newPassword =
   Rel8.runMaybe $
     Rel8.update $
       Rel8.Update
         { target = User.schema,
           from = pure (),
-          set = \_ um -> um {User.umPassword = Rel8.litExpr (coerce newPassword)},
-          updateWhere = \_ um -> User.umId um ==. Rel8.litExpr uid &&. User.umPassword um ==. Rel8.litExpr (coerce oldPassword),
+          set = \_ um -> um {User.umPassword = Rel8.litExpr newPassword},
+          updateWhere = \_ um -> User.umId um ==. Rel8.litExpr uid &&. User.umPassword um ==. Rel8.litExpr oldPassword,
           returning = Rel8.Returning User.umId
         }
