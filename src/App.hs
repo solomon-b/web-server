@@ -16,9 +16,6 @@ TODO:
 --------------------------------------------------------------------------------
 
 import API
--- import Servant.Auth.Server qualified as Auth.Server
--- import Servant.Auth.Server qualified as Servant.Auth
-
 import Auth (Authz, authHandler)
 import Config
 import Control.Exception (catch)

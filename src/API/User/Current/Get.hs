@@ -1,4 +1,4 @@
-module API.User.Current where
+module API.User.Current.Get where
 
 --------------------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ import Data.Text.Display (display)
 import Domain.Types.User (User)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
-import Tracing (handlerSpan)
+import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -26,4 +26,4 @@ handler ::
   Authz ->
   m User
 handler (Authz user _) =
-  handlerSpan "/user/current" () display $ pure user
+  Tracing.handlerSpan "/user/current" () display $ pure user

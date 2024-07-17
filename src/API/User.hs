@@ -2,15 +2,16 @@ module API.User where
 
 --------------------------------------------------------------------------------
 
-import API.User.Current qualified as Current
+import API.User.Current.Get qualified as Current.Get
 import API.User.Delete qualified as Delete
-import API.User.Login (Login)
-import API.User.Login qualified as Login
-import API.User.Logout qualified as Logout
-import API.User.PasswordReset (PasswordReset)
-import API.User.PasswordReset qualified as PasswordReset
-import API.User.Register
-import API.User.Register qualified as Register
+import API.User.Login.Get qualified as Login.Get
+import API.User.Login.Post (Login)
+import API.User.Login.Post qualified as Login.Post
+import API.User.Logout.Get qualified as Logout.Get
+import API.User.PasswordReset.Post (PasswordReset)
+import API.User.PasswordReset.Post qualified as PasswordReset.Post
+import API.User.Register.Post (Register)
+import API.User.Register.Post qualified as Register.Post
 import Auth qualified
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -32,26 +33,23 @@ import Servant.HTML.Lucid qualified as Lucid
 --------------------------------------------------------------------------------
 -- Route
 
-type UserAPI =
+type API =
   Servant.Get '[Servant.JSON] [User]
     :<|> Servant.Capture "id" User.Id :> Servant.Get '[Servant.JSON] User
     :<|> "register" :> Servant.RemoteHost :> Servant.Header "User-Agent" Text :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
     :<|> "login" :> Servant.RemoteHost :> Servant.Header "User-Agent" Text :> Servant.ReqBody '[Servant.FormUrlEncoded, Servant.JSON] Login :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
     :<|> "login" :> Servant.Get '[Lucid.HTML] (Lucid.Html ())
 
-type UserProtectedAPI =
+type ProtectedAPI =
   "current" :> Servant.Get '[Servant.JSON] User
     :<|> "logout" :> Servant.Get '[Lucid.HTML] (Servant.Headers '[Servant.Header "HX-Redirect" Text] Servant.NoContent)
     :<|> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
     :<|> Servant.Capture "id" User.Id :> "password-reset" :> Servant.ReqBody '[Servant.JSON] PasswordReset :> Servant.Post '[Servant.JSON] ()
 
--- TODO: Generic route for modifying Users:
--- :<|> Auth '[Servant.Auth.JWT, Servant.Auth.Cookie] User :> "over" :>  Servant.Capture "id" User.Id :> Servant.Post '[Servant.JSON] User
-
 --------------------------------------------------------------------------------
 -- Handler
 
-userHandler ::
+handler ::
   ( MonadReader env m,
     Has OTEL.Tracer env,
     Log.MonadLog m,
@@ -60,10 +58,10 @@ userHandler ::
     MonadUnliftIO m,
     MonadCatch m
   ) =>
-  Servant.ServerT UserAPI m
-userHandler = usersHandler :<|> userProfileHandler :<|> Register.handler :<|> Login.handler :<|> pure Login.getHandler
+  Servant.ServerT API m
+handler = usersHandler :<|> userProfileHandler :<|> Register.Post.handler :<|> Login.Post.handler :<|> Login.Get.handler
 
-userProtectedHandler ::
+protectedHandler ::
   ( MonadReader env m,
     Has OTEL.Tracer env,
     Log.MonadLog m,
@@ -73,8 +71,8 @@ userProtectedHandler ::
     MonadCatch m
   ) =>
   Auth.Authz ->
-  Servant.ServerT UserProtectedAPI m
-userProtectedHandler authz = Current.handler authz :<|> Logout.handler authz :<|> Delete.handler authz :<|> PasswordReset.handler authz
+  Servant.ServerT ProtectedAPI m
+protectedHandler authz = Current.Get.handler authz :<|> Logout.Get.handler authz :<|> Delete.handler authz :<|> PasswordReset.Post.handler authz
 
 usersHandler ::
   ( Log.MonadLog m,

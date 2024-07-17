@@ -20,7 +20,6 @@ import Effects.Database.Utils
 import GHC.Generics
 import OrphanInstances ()
 import Rel8 qualified
-import Servant.Auth.JWT (FromJWT, ToJWT)
 
 --------------------------------------------------------------------------------
 -- Domain
@@ -34,7 +33,7 @@ data User = User
   }
   deriving stock (Show, Generic, Eq)
   deriving (Display) via (RecordInstance User)
-  deriving anyclass (FromJSON, ToJSON, ToJWT, FromJWT)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance ModelParser User.Model User where
   parseModel :: User.Model Rel8.Result -> User

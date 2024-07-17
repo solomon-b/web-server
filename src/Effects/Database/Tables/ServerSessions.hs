@@ -13,7 +13,6 @@ import Network.IP.Addr (IP, NetAddr)
 import OrphanInstances ()
 import Rel8 qualified
 import Servant qualified
-import Servant.Auth.JWT (FromJWT, ToJWT)
 
 --------------------------------------------------------------------------------
 -- Model
@@ -21,7 +20,6 @@ import Servant.Auth.JWT (FromJWT, ToJWT)
 newtype Id = Id UUID
   deriving stock (Generic)
   deriving newtype (Show, Eq, Ord, Servant.FromHttpApiData, Rel8.DBEq, Rel8.DBType, ToJSON, FromJSON)
-  deriving anyclass (ToJWT, FromJWT)
 
 -- | Database Model for the `user` table.
 data Model f = Model

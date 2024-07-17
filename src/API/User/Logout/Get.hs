@@ -1,11 +1,11 @@
-module API.User.Logout where
+module API.User.Logout.Get where
 
 --------------------------------------------------------------------------------
 
 import Auth qualified
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Control.Monad.Reader (MonadIO (..), MonadReader)
+import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Text (Text)
 import Domain.Types.ServerSessions qualified as ServerSessions

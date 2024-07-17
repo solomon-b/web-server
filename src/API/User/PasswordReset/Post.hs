@@ -1,4 +1,4 @@
-module API.User.PasswordReset where
+module API.User.PasswordReset.Post where
 
 --------------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ import Errors (throw400, throw401')
 import GHC.Generics (Generic)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
-import Tracing (handlerSpan)
+import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ handler ::
   PasswordReset ->
   m ()
 handler (Auth.Authz User {userId, userIsAdmin} _) uid PasswordReset {..} =
-  handlerSpan "/user/:id/password-reset" () display $ do
+  Tracing.handlerSpan "/user/:id/password-reset" () display $ do
     unless (userId == uid || userIsAdmin) throw401'
     hashedPrPassword <- liftIO $ hashPassword prPassword
     hashedPrNewPassword <- liftIO $ hashPassword prNewPassword

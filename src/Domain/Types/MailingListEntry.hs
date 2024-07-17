@@ -15,7 +15,6 @@ import Effects.Database.Tables.MailingList qualified as MailingList
 import Effects.Database.Utils
 import GHC.Generics
 import Rel8 qualified
-import Servant.Auth.JWT (FromJWT, ToJWT)
 
 --------------------------------------------------------------------------------
 -- Domain
@@ -26,7 +25,7 @@ data MailingListEntry = MailingListEntry
   }
   deriving stock (Show, Generic, Eq)
   deriving (Display) via (RecordInstance MailingListEntry)
-  deriving anyclass (FromJSON, ToJSON, ToJWT, FromJWT)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance ModelParser MailingList.Model MailingListEntry where
   parseModel :: MailingList.Model Rel8.Result -> MailingListEntry

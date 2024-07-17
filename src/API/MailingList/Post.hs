@@ -1,4 +1,4 @@
-module API.MailingList where
+module API.MailingList.Post where
 
 --------------------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
 import Text.Email.Validate qualified as Email
-import Tracing (handlerSpan)
+import Tracing qualified
 import Web.FormUrlEncoded (FromForm)
 
 --------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ type MailingListAPI =
 --------------------------------------------------------------------------------
 -- Handler
 
-mailingListHandler ::
+handler ::
   ( Log.MonadLog m,
     MonadReader env m,
     Has OTEL.Tracer env,
@@ -63,8 +63,8 @@ mailingListHandler ::
   ) =>
   MailingListForm ->
   m (Lucid.Html ())
-mailingListHandler req@(MailingListForm e@(EmailAddress {..})) = do
-  handlerSpan "/mailing-list" req (const ()) $ do
+handler req@(MailingListForm e@(EmailAddress {..})) = do
+  Tracing.handlerSpan "/mailing-list" req (const ()) $ do
     unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original emailAddress) $ throw401 "Invalid Email Address"
 
     _pid <- MailingList.insertEmailAddress e

@@ -1,4 +1,4 @@
-module API.User.Login where
+module API.User.Login.Post where
 
 --------------------------------------------------------------------------------
 
@@ -26,41 +26,13 @@ import Effects.Database.Tables.User qualified as User
 import Errors (throw401, throw401', throw500)
 import GHC.Generics (Generic)
 import Log qualified
-import Lucid qualified
 import Network.Socket
 import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances ()
 import Servant qualified
-import Tracing (handlerSpan)
+import Tracing qualified
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
-
---------------------------------------------------------------------------------
-
-data Page = Page
-
-instance Lucid.ToHtml Page where
-  toHtml :: (Monad m) => Page -> Lucid.HtmlT m ()
-  toHtml Page =
-    Lucid.doctypehtml_ $ do
-      Lucid.head_ $ do
-        Lucid.title_ "Login"
-        Lucid.link_ [Lucid.rel_ "stylesheet", Lucid.type_ "text/css", Lucid.href_ "static/styles.css"]
-        Lucid.link_ [Lucid.rel_ "stylesheet", Lucid.type_ "text/css", Lucid.href_ "https://matcha.mizu.sh/matcha.css"]
-      Lucid.body_ $ do
-        Lucid.div_ $ do
-          Lucid.form_ [Lucid.method_ "POST", Lucid.action_ "login"] $ do
-            Lucid.input_ [Lucid.type_ "text", Lucid.name_ "email", Lucid.placeholder_ "email"]
-            Lucid.input_ [Lucid.type_ "text", Lucid.name_ "password", Lucid.placeholder_ "password"]
-            Lucid.button_ "submit"
-
-  toHtmlRaw :: (Monad m) => Page -> Lucid.HtmlT m ()
-  toHtmlRaw = Lucid.toHtml
-
---------------------------------------------------------------------------------
-
-getHandler :: (Lucid.Html ())
-getHandler = Lucid.toHtml Page
 
 --------------------------------------------------------------------------------
 
@@ -101,7 +73,7 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent req@Login {..} = do
-  handlerSpan "/user/login" req display $ do
+  Tracing.handlerSpan "/user/login" req display $ do
     selectUserByEmail ulEmail >>= \case
       Just user -> do
         Log.logInfo "Login Attempt" ulEmail

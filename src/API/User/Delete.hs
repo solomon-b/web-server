@@ -16,7 +16,7 @@ import Effects.Database.Tables.User qualified as User
 import Errors (throw401')
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
-import Tracing (handlerSpan)
+import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -33,6 +33,6 @@ handler ::
   User.Id ->
   m ()
 handler (Auth.Authz User {userId, userIsAdmin} _) uid =
-  handlerSpan "/user/:id/delete" () display $ do
+  Tracing.handlerSpan "/user/:id/delete" () display $ do
     unless (userId == uid || userIsAdmin) throw401'
     deleteUser uid

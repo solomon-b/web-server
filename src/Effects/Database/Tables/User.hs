@@ -20,7 +20,6 @@ import Lucid qualified
 import OrphanInstances ()
 import Rel8 qualified
 import Servant qualified
-import Servant.Auth.JWT (FromJWT, ToJWT)
 
 --------------------------------------------------------------------------------
 -- Model
@@ -28,7 +27,6 @@ import Servant.Auth.JWT (FromJWT, ToJWT)
 newtype Id = Id Int64
   deriving stock (Generic)
   deriving newtype (Show, Eq, Ord, Num, Servant.FromHttpApiData, Rel8.DBEq, Rel8.DBType, ToJSON, FromJSON, Display)
-  deriving anyclass (ToJWT, FromJWT)
 
 -- | Database Model for the `user` table.
 data Model f = Model
@@ -43,8 +41,6 @@ data Model f = Model
   deriving anyclass (Rel8.Rel8able, FunctorB, TraversableB, ApplicativeB, ConstraintsB)
 
 instance ToJSON (Model Identity)
-
-instance ToJWT (Model Identity)
 
 schema :: Rel8.TableSchema (Model Rel8.Name)
 schema =

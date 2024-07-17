@@ -1,4 +1,4 @@
-module API.User.Register where
+module API.User.Register.Post where
 
 --------------------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ import Network.Socket (SockAddr)
 import OpenTelemetry.Trace qualified as OTEL
 import Servant qualified
 import Text.Email.Validate qualified as Email
-import Tracing (handlerSpan)
+import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent req@Register {..} = do
-  handlerSpan "/user/register" req display $ do
+  Tracing.handlerSpan "/user/register" req display $ do
     unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original $ coerce urEmail) $ throw401 "Invalid Email Address"
     selectUserByEmail urEmail >>= \case
       Just _ -> do

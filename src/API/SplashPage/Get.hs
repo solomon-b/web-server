@@ -1,4 +1,4 @@
-module API.SplashPage where
+module API.SplashPage.Get where
 
 --------------------------------------------------------------------------------
 
@@ -34,8 +34,6 @@ instance Lucid.ToHtml SplashPage where
               Lucid.input_ [Lucid.type_ "text", Lucid.name_ "emailAddress", Lucid.placeholder_ "email address"]
               Lucid.button_ "submit"
 
-            Lucid.button_ [Lucid.Htmx.hxGet_ "admin", Lucid.Htmx.hxSwap_ "outerHTML"] "click me"
-
   toHtmlRaw :: (Monad m) => SplashPage -> Lucid.HtmlT m ()
   toHtmlRaw = Lucid.toHtml
 
@@ -45,7 +43,7 @@ type SplashPageAPI =
 --------------------------------------------------------------------------------
 -- Handler
 
-splashPageHandler :: (Monad m) => Environment -> Servant.ServerT SplashPageAPI m
-splashPageHandler = \case
+handler :: (Monad m) => Environment -> Servant.ServerT SplashPageAPI m
+handler = \case
   Production -> pure SplashPage :<|> Servant.serveDirectoryWebApp "/static"
   Development -> pure SplashPage :<|> Servant.serveDirectoryWebApp "./static"

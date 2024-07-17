@@ -2,10 +2,12 @@ module API where
 
 --------------------------------------------------------------------------------
 
-import API.Admin
-import API.MailingList
-import API.SplashPage
-import API.User
+import API.Admin qualified as Admin
+import API.MailingList.Post (MailingListAPI)
+import API.MailingList.Post qualified as MailingList.Post
+import API.SplashPage.Get (SplashPageAPI)
+import API.SplashPage.Get qualified as SplashPage.Get
+import API.User qualified as User
 import Config (Environment, Hostname, SmtpConfig)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
@@ -25,9 +27,9 @@ import Servant qualified
 type API =
   SplashPageAPI
     :<|> "mailing-list" :> MailingListAPI
-    :<|> "user" :> UserAPI
-    :<|> Servant.AuthProtect "cookie-auth" :> "user" :> UserProtectedAPI
-    :<|> "admin" :> AdminAPI
+    :<|> "user" :> User.API
+    :<|> Servant.AuthProtect "cookie-auth" :> "user" :> User.ProtectedAPI
+    :<|> Servant.AuthProtect "cookie-auth" :> "admin" :> Admin.ProtectedAPI
 
 server ::
   ( MonadReader env m,
@@ -46,8 +48,8 @@ server ::
   Environment ->
   Servant.ServerT API m
 server env =
-  splashPageHandler env
-    :<|> mailingListHandler
-    :<|> userHandler
-    :<|> userProtectedHandler
-    :<|> adminPageHandler
+  SplashPage.Get.handler env
+    :<|> MailingList.Post.handler
+    :<|> User.handler
+    :<|> User.protectedHandler
+    :<|> Admin.handler

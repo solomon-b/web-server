@@ -100,8 +100,6 @@ library
                   , password
                   , pretty-simple
                   , rel8
-                  , servant-auth
-                  , servant-auth-server
                   , servant-lucid
                   , servant-server
 		  , smtp-mail
@@ -121,15 +119,16 @@ library
     Auth.Network
     API
     API.Admin
-    API.MailingList
-    API.SplashPage
+    API.MailingList.Post
+    API.SplashPage.Get
     API.User
-    API.User.Current
+    API.User.Current.Get
     API.User.Delete
-    API.User.Login
-    API.User.Logout
-    API.User.PasswordReset
-    API.User.Register
+    API.User.Login.Get
+    API.User.Login.Post
+    API.User.Logout.Get
+    API.User.PasswordReset.Post
+    API.User.Register.Post
     Config
     Config.Fetchers
     Domain.Types.AdminStatus
