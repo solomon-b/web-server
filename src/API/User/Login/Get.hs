@@ -5,6 +5,13 @@ module API.User.Login.Get where
 import Lucid qualified
 import Lucid.Htmx qualified
 import OrphanInstances ()
+import Servant ((:>))
+import Servant qualified
+import Servant.HTML.Lucid qualified as Lucid
+
+--------------------------------------------------------------------------------
+
+type Route = "user" :> "login" :> Servant.Get '[Lucid.HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 

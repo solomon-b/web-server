@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Auth where
@@ -20,7 +19,7 @@ import Effects.Database.Queries.ServerSessions (expireServerSession, insertServe
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
 import Effects.Database.Utils
-import Errors (throw307, throw500)
+import Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)
 import Hasql.Pool qualified as HSQL
 import Hasql.Session qualified as HSQL
 import Log qualified
@@ -46,6 +45,12 @@ data AuthErr
   | MalformedSessionId
   deriving (Show)
 
+instance ToServerError AuthErr where
+  toServerError = \case
+    MissingCookieHeader -> Servant.err307 {Servant.errBody = toErrorBody "No cookie sent in request" 307, Servant.errHeaders = [("Location", "/login")]}
+    MissingCookieValue -> Servant.err307 {Servant.errBody = toErrorBody "Invalid cookie" 307, Servant.errHeaders = [("Location", "/login")]}
+    MalformedSessionId -> Servant.err307 {Servant.errBody = toErrorBody "Bad session data" 307, Servant.errHeaders = [("Location", "/login")]}
+
 authHandler :: HSQL.Pool -> Servant.AuthHandler Request Authz
 authHandler pool = mkAuthHandler $ \req ->
   let eSession = do
@@ -55,16 +60,14 @@ authHandler pool = mkAuthHandler $ \req ->
    in case eSession of
         Right sessionId ->
           liftIO (HSQL.use pool (HSQL.statement () $ selectServerSessionQuery $ coerce sessionId)) >>= \case
-            Left err -> do
-              liftIO $ print err
-              throw500 "Something went wrong"
+            Left _err -> do
+              -- TODO: Log censored error here?
+              throwErr InternalServerError
             Right Nothing ->
-              throw307 "forbidden" [("Location", "/login")]
+              throwErr $ Servant.err307 {Servant.errBody = "forbidden", Servant.errHeaders = [("Location", "/login")]}
             Right (Just (userModel, sessionModel)) ->
               pure $ Authz (parseModel userModel) (parseModel sessionModel)
-        Left MissingCookieHeader -> throw307 "No cookie sent in request" [("Location", "/login")]
-        Left MissingCookieValue -> throw307 "Invalid cookie" [("Location", "/login")]
-        Left MalformedSessionId -> throw307 "Bad session data" [("Location", "/login")]
+        Left err -> throwErr err
 
 login ::
   (MonadDB m, Log.MonadLog m) => User.Id -> SockAddr -> Maybe Text -> m (Either HSQL.UsageError SessionId)

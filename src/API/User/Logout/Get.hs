@@ -10,12 +10,18 @@ import Data.Has (Has)
 import Data.Text (Text)
 import Domain.Types.ServerSessions qualified as ServerSessions
 import Effects.Database.Class (MonadDB)
-import Errors (throw500)
+import Errors (InternalServerError (..), throwErr)
 import Log qualified
 import Lucid qualified
 import OpenTelemetry.Trace qualified as OTEL
+import Servant ((:>))
 import Servant qualified
+import Servant.HTML.Lucid qualified as Lucid
 import Tracing qualified
+
+--------------------------------------------------------------------------------
+
+type Route = Servant.AuthProtect "cookie-auth" :> "user" :> "logout" :> Servant.Get '[Lucid.HTML] (Servant.Headers '[Servant.Header "HX-Redirect" Text] Servant.NoContent)
 
 --------------------------------------------------------------------------------
 
@@ -65,6 +71,6 @@ handler Auth.Authz {authzSession} =
   Tracing.handlerSpan "/user/logout" () (\_ -> show ()) $ do
     Auth.expireSession (ServerSessions.serverSessionId authzSession) >>= \case
       Left _ ->
-        throw500 "Something went wrong"
+        throwErr InternalServerError
       Right _ ->
         pure $ Servant.addHeader "/user/current" Servant.NoContent

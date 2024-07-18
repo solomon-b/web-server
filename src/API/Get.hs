@@ -1,11 +1,9 @@
-module API.SplashPage.Get where
+module API.Get where
 
 --------------------------------------------------------------------------------
 
-import Config (Environment (..))
 import Lucid qualified
 import Lucid.Htmx qualified
-import Servant ((:<|>) (..), (:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
 
@@ -26,8 +24,8 @@ instance Lucid.ToHtml SplashPage where
         Lucid.section_ [Lucid.class_ "centered"] $ do
           Lucid.header_ $ do
             Lucid.a_
-              [Lucid.href_ "https://fccdata.org/?call=kpbj&facid=&city=&state=&ccode=1&country=US"]
-              (Lucid.img_ [Lucid.src_ "static/range.png"])
+              [Lucid.href_ "https://placehold.co"]
+              (Lucid.img_ [Lucid.src_ "static/hero.svg"])
             Lucid.p_ "Coming Soon"
           Lucid.div_ $ do
             Lucid.form_ [Lucid.Htmx.hxPost_ "mailing-list/signup", Lucid.Htmx.hxSwap_ "outerHTML"] $ do
@@ -37,13 +35,9 @@ instance Lucid.ToHtml SplashPage where
   toHtmlRaw :: (Monad m) => SplashPage -> Lucid.HtmlT m ()
   toHtmlRaw = Lucid.toHtml
 
-type SplashPageAPI =
-  Servant.Get '[Lucid.HTML] SplashPage :<|> "static" :> Servant.Raw
-
 --------------------------------------------------------------------------------
--- Handler
 
-handler :: (Monad m) => Environment -> Servant.ServerT SplashPageAPI m
-handler = \case
-  Production -> pure SplashPage :<|> Servant.serveDirectoryWebApp "/static"
-  Development -> pure SplashPage :<|> Servant.serveDirectoryWebApp "./static"
+type Route = Servant.Get '[Lucid.HTML] SplashPage
+
+handler :: (Monad m) => m SplashPage
+handler = pure SplashPage

@@ -13,10 +13,16 @@ import Domain.Types.User (User (..))
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Queries.User (deleteUser)
 import Effects.Database.Tables.User qualified as User
-import Errors (throw401')
+import Errors (Unauthorized (..), throwErr)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
+import Servant ((:>))
+import Servant qualified
 import Tracing qualified
+
+--------------------------------------------------------------------------------
+
+type Route = Servant.AuthProtect "cookie-auth" :> "user" :> Servant.Capture "id" User.Id :> "delete" :> Servant.Delete '[Servant.JSON] ()
 
 --------------------------------------------------------------------------------
 
@@ -34,5 +40,5 @@ handler ::
   m ()
 handler (Auth.Authz User {userId, userIsAdmin} _) uid =
   Tracing.handlerSpan "/user/:id/delete" () display $ do
-    unless (userId == uid || userIsAdmin) throw401'
+    unless (userId == uid || userIsAdmin) (throwErr Unauthorized)
     deleteUser uid

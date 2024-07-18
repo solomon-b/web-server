@@ -23,16 +23,21 @@ import Effects.Database.Queries.ServerSessions (selectServerSessionByUser)
 import Effects.Database.Queries.User
 import Effects.Database.Tables.User (umPassword)
 import Effects.Database.Tables.User qualified as User
-import Errors (throw401, throw401', throw500)
+import Errors (InternalServerError (..), Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Log qualified
 import Network.Socket
 import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances ()
+import Servant ((:>))
 import Servant qualified
 import Tracing qualified
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
+
+--------------------------------------------------------------------------------
+
+type Route = "user" :> "login" :> Servant.RemoteHost :> Servant.Header "User-Agent" Text :> Servant.ReqBody '[Servant.FormUrlEncoded, Servant.JSON] Login :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
 
 --------------------------------------------------------------------------------
 
@@ -51,6 +56,8 @@ instance FormUrlEncoded.FromForm Login where
     Login
       <$> FormUrlEncoded.parseUnique "email" f
       <*> fmap mkPassword (FormUrlEncoded.parseUnique "password" f)
+
+--------------------------------------------------------------------------------
 
 handler ::
   ( MonadReader env m,
@@ -77,12 +84,12 @@ handler sockAddr mUserAgent req@Login {..} = do
     selectUserByEmail ulEmail >>= \case
       Just user -> do
         Log.logInfo "Login Attempt" ulEmail
-        unless (checkPassword ulPassword (runIdentity (umPassword user)) == PasswordCheckSuccess) throw401'
+        unless (checkPassword ulPassword (runIdentity (umPassword user)) == PasswordCheckSuccess) (throwErr Unauthorized)
         selectServerSessionByUser (coerce $ User.umId user) >>= \case
           Nothing -> do
             Auth.login (coerce $ User.umId user) sockAddr mUserAgent >>= \case
               Left _err ->
-                throw500 "Something went wrong"
+                throwErr InternalServerError
               Right sessionId ->
                 pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
           Just session ->
@@ -90,4 +97,4 @@ handler sockAddr mUserAgent req@Login {..} = do
              in pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail
-        throw401 "Invalid Credentials."
+        throwErr Unauthorized

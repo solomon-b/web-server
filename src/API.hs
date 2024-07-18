@@ -2,12 +2,23 @@ module API where
 
 --------------------------------------------------------------------------------
 
-import API.Admin qualified as Admin
-import API.MailingList.Post (MailingListAPI)
+import API.Admin.Get qualified as Admin.Get
+import API.Get qualified as Get
 import API.MailingList.Post qualified as MailingList.Post
-import API.SplashPage.Get (SplashPageAPI)
-import API.SplashPage.Get qualified as SplashPage.Get
-import API.User qualified as User
+import API.Static.Get qualified as Static.Get
+import API.User.Current.Get qualified as Current.Get
+import API.User.Current.Get qualified as User.Current.Get
+import API.User.Delete qualified as Delete
+import API.User.Delete qualified as User.Delete
+import API.User.Get qualified as User.Get
+import API.User.Id.Get qualified as User.Id.Get
+import API.User.Login.Get qualified as User.Login.Get
+import API.User.Login.Post qualified as User.Login.Post
+import API.User.Logout.Get qualified as Logout.Get
+import API.User.Logout.Get qualified as User.Logout.Get
+import API.User.PasswordReset.Post qualified as PasswordReset.Post
+import API.User.PasswordReset.Post qualified as User.PasswordReset.Post
+import API.User.Register.Post qualified as User.Register.Post
 import Config (Environment, Hostname, SmtpConfig)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
@@ -19,17 +30,29 @@ import Effects.Email.Class (MonadEmail)
 import Hasql.Pool qualified as HSQL
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
-import Servant ((:<|>) (..), (:>))
+import Servant ((:<|>) (..))
 import Servant qualified
 
 --------------------------------------------------------------------------------
 
 type API =
-  SplashPageAPI
-    :<|> "mailing-list" :> MailingListAPI
-    :<|> "user" :> User.API
-    :<|> Servant.AuthProtect "cookie-auth" :> "user" :> User.ProtectedAPI
-    :<|> Servant.AuthProtect "cookie-auth" :> "admin" :> Admin.ProtectedAPI
+  -- Unprotected homepage Routes
+  Get.Route
+    :<|> Static.Get.Route
+    :<|> MailingList.Post.Route
+    -- Unprotected User Routes
+    :<|> User.Get.Route
+    :<|> User.Id.Get.Route
+    :<|> User.Register.Post.Route
+    :<|> User.Login.Post.Route
+    :<|> User.Login.Get.Route
+    -- Protected User Routes
+    :<|> User.Current.Get.Route
+    :<|> User.Logout.Get.Route
+    :<|> User.Delete.Route
+    :<|> User.PasswordReset.Post.Route
+    -- Protected Admin Routes
+    :<|> Admin.Get.Route
 
 server ::
   ( MonadReader env m,
@@ -37,6 +60,7 @@ server ::
     Has OTEL.Tracer env,
     Has SmtpConfig env,
     Has Hostname env,
+    Has Environment env,
     Log.MonadLog m,
     MonadDB m,
     MonadEmail m,
@@ -47,9 +71,17 @@ server ::
   ) =>
   Environment ->
   Servant.ServerT API m
-server env =
-  SplashPage.Get.handler env
+server env = do
+  Get.handler
+    :<|> Static.Get.handler env
     :<|> MailingList.Post.handler
-    :<|> User.handler
-    :<|> User.protectedHandler
-    :<|> Admin.handler
+    :<|> User.Get.handler
+    :<|> User.Id.Get.handler
+    :<|> User.Register.Post.handler
+    :<|> User.Login.Post.handler
+    :<|> User.Login.Get.handler
+    :<|> Current.Get.handler
+    :<|> Logout.Get.handler
+    :<|> Delete.handler
+    :<|> PasswordReset.Post.handler
+    :<|> Admin.Get.handler

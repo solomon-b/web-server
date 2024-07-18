@@ -24,14 +24,19 @@ import Domain.Types.Email
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Queries.User
 import Effects.Database.Utils
-import Errors (throw401, throw500, throw500')
+import Errors (Forbidden (..), InternalServerError (..), ToServerError (..), Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Log qualified
 import Network.Socket (SockAddr)
 import OpenTelemetry.Trace qualified as OTEL
+import Servant ((:>))
 import Servant qualified
 import Text.Email.Validate qualified as Email
 import Tracing qualified
+
+--------------------------------------------------------------------------------
+
+type Route = "user" :> "register" :> Servant.RemoteHost :> Servant.Header "User-Agent" Text :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
 
 --------------------------------------------------------------------------------
 
@@ -45,6 +50,15 @@ data Register = Register
   deriving
     (FromJSON, ToJSON)
     via Deriving.CustomJSON '[Deriving.FieldLabelModifier '[Deriving.StripPrefix "ur", Deriving.CamelToSnake]] Register
+
+--------------------------------------------------------------------------------
+
+data RegisterError = AlreadyRegistered
+
+instance ToServerError RegisterError where
+  toServerError AlreadyRegistered = Servant.err401 {Servant.errBody = "Email address is already registered"}
+
+--------------------------------------------------------------------------------
 
 handler ::
   ( MonadReader env m,
@@ -67,21 +81,21 @@ handler ::
     )
 handler sockAddr mUserAgent req@Register {..} = do
   Tracing.handlerSpan "/user/register" req display $ do
-    unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original $ coerce urEmail) $ throw401 "Invalid Email Address"
+    unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original $ coerce urEmail) $ throwErr Unauthorized
     selectUserByEmail urEmail >>= \case
       Just _ -> do
         Log.logInfo "Email address is already registered" urEmail
-        throw401 "Email address is already registered"
+        throwErr AlreadyRegistered
       Nothing -> do
         Log.logInfo "Registering New User" urEmail
         hashedPassword <- hashPassword urPassword
         uid <- insertUser (urEmail, hashedPassword, urDisplayName, IsNotAdmin)
         execQuerySpanThrowMessage "Failed to query users table" (selectUserQuery uid) >>= \case
           Nothing ->
-            throw500'
+            throwErr Forbidden
           Just _user -> do
             Auth.login uid sockAddr mUserAgent >>= \case
               Left _err ->
-                throw500 "Something went wrong"
+                throwErr InternalServerError
               Right sessionId ->
                 pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/" Servant.NoContent

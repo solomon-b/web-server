@@ -1,4 +1,4 @@
-module API.Admin where
+module API.Admin.Get where
 
 --------------------------------------------------------------------------------
 
@@ -17,17 +17,17 @@ import Effects.Database.Queries.User
 import Effects.Database.Tables.User qualified as User
 import Effects.Database.Utils
 import Effects.FormBuilder qualified as FB
-import Errors (throw401')
+import Errors (Unauthorized (..), throwErr)
 import Log qualified
 import Lucid qualified
 import Lucid.Htmx qualified
+import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
 
 --------------------------------------------------------------------------------
--- Route
 
-type ProtectedAPI = Servant.Get '[Lucid.HTML] AdminPage
+type Route = Servant.AuthProtect "cookie-auth" :> "admin" :> Servant.Get '[Lucid.HTML] AdminPage
 
 --------------------------------------------------------------------------------
 
@@ -78,8 +78,7 @@ handler ::
     MonadDB m,
     MonadThrow m
   ) =>
-  Auth.Authz ->
-  Servant.ServerT ProtectedAPI m
+  Servant.ServerT Route m
 handler (Auth.Authz User {..} _) = do
-  unless userIsAdmin throw401'
+  unless userIsAdmin (throwErr Unauthorized)
   AdminPage <$> execQuerySpanThrowMessage "Failed to query users table" selectUsersQuery <*> selectMailingListEntries

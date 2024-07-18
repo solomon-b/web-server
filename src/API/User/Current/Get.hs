@@ -11,7 +11,13 @@ import Data.Text.Display (display)
 import Domain.Types.User (User)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
+import Servant ((:>))
+import Servant qualified
 import Tracing qualified
+
+--------------------------------------------------------------------------------
+
+type Route = Servant.AuthProtect "cookie-auth" :> "user" :> "current" :> Servant.Get '[Servant.JSON] User
 
 --------------------------------------------------------------------------------
 

@@ -63,7 +63,7 @@ import Tracing (withTracer)
 
 --------------------------------------------------------------------------------
 
-runApp :: ctx -> IO ()
+runApp :: customCtx -> IO ()
 runApp ctx =
   Log.withJsonStdOutLogger $ \stdOutLogger -> do
     getConfig >>= \case
@@ -75,16 +75,19 @@ runApp ctx =
         Log.runLogT "webserver-backend" stdOutLogger Log.defaultLogLevel $
           Log.logInfo "Launching Service" (KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment])
 
+        -- Setup DB Pool
         let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname "localhost:3000"
         let hsqlSettings = HSQL.settings (fold postgresConfigHost) (fromMaybe 0 postgresConfigPort) (fold postgresConfigUser) (fold postgresConfigPassword) (fold postgresConfigDB)
         let poolSettings = HSQL.Pool.Config.settings [HSQL.Pool.Config.staticConnectionSettings hsqlSettings]
         pgPool <- HSQL.Pool.acquire poolSettings
 
         let cfg = authHandler pgPool :. Servant.EmptyContext
+
+        -- Run App with tracing
         withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp appConfigEnvironment cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname ctx))
+          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname appConfigEnvironment ctx))
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -125,6 +128,7 @@ data AppContext context = AppContext
     appTracer :: OTEL.Tracer,
     appSmtpConfig :: SmtpConfig,
     appHostname :: Hostname,
+    appEnvironment :: Environment,
     appCustom :: context
   }
 
@@ -147,6 +151,10 @@ instance Has.Has SmtpConfig (AppContext ctx) where
 instance Has.Has Hostname (AppContext ctx) where
   getter = appHostname
   modifier f ctx@AppContext {appHostname} = ctx {appHostname = f appHostname}
+
+instance Has.Has Environment (AppContext ctx) where
+  getter = appEnvironment
+  modifier f ctx@AppContext {appEnvironment} = ctx {appEnvironment = f appEnvironment}
 
 type ServantContext = '[AuthHandler Wai.Request Authz]
 
@@ -176,11 +184,11 @@ interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
 interpret ctx@AppContext {appLogger} (AppM appM) =
   Servant.Handler $ ExceptT $ catch (Right <$> appM ctx (Log.LoggerEnv appLogger "webserver-backend" [] [] Log.defaultLogLevel)) $ \(e :: Servant.ServerError) -> pure $ Left e
 
-mkApp :: Environment -> Servant.Context ServantContext -> AppContext ctx -> Servant.Application
-mkApp env cfg ctx =
+mkApp :: Servant.Context ServantContext -> AppContext ctx -> Servant.Application
+mkApp cfg ctx =
   Servant.serveWithContext (Proxy @API) cfg $
     Servant.hoistServerWithContext
       (Proxy @API)
       (Proxy @ServantContext)
       (interpret ctx)
-      (server env)
+      (server $ appEnvironment ctx)

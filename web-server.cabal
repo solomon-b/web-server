@@ -118,12 +118,14 @@ library
     Auth
     Auth.Network
     API
-    API.Admin
+    API.Admin.Get
     API.MailingList.Post
-    API.SplashPage.Get
-    API.User
+    API.Get
+    API.Static.Get
+    API.User.Get
     API.User.Current.Get
     API.User.Delete
+    API.User.Id.Get
     API.User.Login.Get
     API.User.Login.Post
     API.User.Logout.Get
