@@ -136,7 +136,7 @@ library
     Config.Fetchers
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
-    Domain.Types.Email
+    Domain.Types.EmailAddress
     Effects.Clock
     Effects.Database.Class
     Effects.Database.Execute
@@ -148,7 +148,14 @@ library
     Effects.MailSender
     Effects.Observability
     Errors
-    OrphanInstances
+    OrphanInstances.CaseInsensitive
+    OrphanInstances.IPRange
+    OrphanInstances.Lucid
+    OrphanInstances.OneRow
+    OrphanInstances.Password
+    OrphanInstances.Servant
+    OrphanInstances.UTCTime
+    OrphanInstances.UUID
     Utils
 
   hs-source-dirs: src

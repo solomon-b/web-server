@@ -1,4 +1,4 @@
-module Domain.Types.Email where
+module Domain.Types.EmailAddress where
 
 --------------------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ import Data.Text.Display (Display (..))
 import Data.Text.Internal.Builder qualified as Text
 import GHC.Generics
 import Hasql.Interpolate (DecodeValue, EncodeValue)
-import OrphanInstances ()
+import OrphanInstances.CaseInsensitive ()
 import Servant qualified
 
 --------------------------------------------------------------------------------

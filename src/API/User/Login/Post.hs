@@ -14,7 +14,7 @@ import Data.Password.Argon2 (Password, PasswordCheck (..), checkPassword, mkPass
 import Data.Text (Text)
 import Data.Text.Display (Display (..), RecordInstance (..), display)
 import Deriving.Aeson qualified as Deriving
-import Domain.Types.Email
+import Domain.Types.EmailAddress
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -26,7 +26,7 @@ import GHC.Generics (Generic)
 import Log qualified
 import Network.Socket
 import OpenTelemetry.Trace qualified as OTEL
-import OrphanInstances ()
+import OrphanInstances.Servant ()
 import Servant ((:>))
 import Servant qualified
 import Web.FormUrlEncoded (FromForm (..))

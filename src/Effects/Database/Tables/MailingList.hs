@@ -7,7 +7,7 @@ module Effects.Database.Tables.MailingList where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
 import Data.Text.Display (Display, RecordInstance (..))
-import Domain.Types.Email (EmailAddress)
+import Domain.Types.EmailAddress (EmailAddress)
 import GHC.Generics (Generic)
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
 import Hasql.Statement qualified as Hasql

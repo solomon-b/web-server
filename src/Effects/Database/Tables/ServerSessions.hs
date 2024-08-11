@@ -12,12 +12,14 @@ import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
 import Data.Time (UTCTime)
 import Data.UUID (UUID, fromASCIIBytes)
-import Domain.Types.Email (EmailAddress)
+import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Tables.User qualified as User
 import GHC.Generics
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
 import Hasql.Statement qualified as Hasql
-import OrphanInstances ()
+import OrphanInstances.IPRange ()
+import OrphanInstances.UTCTime ()
+import OrphanInstances.UUID ()
 import Servant qualified
 
 --------------------------------------------------------------------------------

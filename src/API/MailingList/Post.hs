@@ -17,7 +17,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display)
 import Data.Text.Encoding qualified as Text.Encoding
-import Domain.Types.Email (EmailAddress (..))
+import Domain.Types.EmailAddress (EmailAddress (..))
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.MailingList qualified as MailingList
@@ -30,7 +30,7 @@ import Lucid qualified
 import Network.Mail.Mime qualified as Mime
 import Network.Mail.SMTP qualified as SMTP
 import OpenTelemetry.Trace qualified as OTEL
-import OrphanInstances ()
+import OrphanInstances.OneRow ()
 import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid

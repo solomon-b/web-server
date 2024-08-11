@@ -11,7 +11,7 @@ import Effects.Observability qualified as Observability
 import Lucid qualified
 import Lucid.Htmx qualified
 import OpenTelemetry.Trace qualified as Trace
-import OrphanInstances ()
+import OrphanInstances.Lucid ()
 import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid

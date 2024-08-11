@@ -19,7 +19,7 @@ import Data.Text.Display.Generic (RecordInstance (..))
 import Data.Text.Encoding qualified as Text.Encoding
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.DisplayName
-import Domain.Types.Email
+import Domain.Types.EmailAddress
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -31,6 +31,8 @@ import Hasql.Interpolate (OneRow (..))
 import Log qualified
 import Network.Socket (SockAddr)
 import OpenTelemetry.Trace qualified as OTEL
+import OrphanInstances.OneRow ()
+import OrphanInstances.Servant ()
 import Servant ((:>))
 import Servant qualified
 import Text.Email.Validate qualified as Email

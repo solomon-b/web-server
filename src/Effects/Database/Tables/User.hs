@@ -11,11 +11,11 @@ import Data.Password.Argon2 (Argon2, PasswordHash)
 import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
 import Domain.Types.DisplayName (DisplayName (..))
-import Domain.Types.Email (EmailAddress)
+import Domain.Types.EmailAddress (EmailAddress)
 import GHC.Generics
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
 import Hasql.Statement qualified as Hasql
-import OrphanInstances ()
+import OrphanInstances.Password ()
 import Servant qualified
 
 --------------------------------------------------------------------------------
