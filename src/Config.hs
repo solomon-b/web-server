@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deriving-defaults #-}
@@ -10,20 +9,13 @@ module Config where
 
 import Barbies
 import Config.Fetchers (FetchHKD (..), packText, readEnv, readEnvDefault, readEnvOptional, readText)
-import Crypto.JOSE qualified as JOSE
 import Data.Aeson (ToJSON)
-import Data.Aeson qualified as Aeson
-import Data.Aeson.Types (FromJSON)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
-import Data.Either (fromRight)
 import Data.Functor.Compose (Compose)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display)
-import Data.Text.Encoding.Base64 (decodeBase64Lenient)
-import Data.Text.Lazy qualified as Text.Lazy
-import Data.Text.Lazy.Encoding qualified as Text.Lazy.Encoding
 import Data.Word (Word16)
 import GHC.Generics
 
@@ -148,33 +140,6 @@ instance FetchHKD ObservabilityConfigF where
 
 --------------------------------------------------------------------------------
 
-newtype JwkConfig = JwkConfig {getJwk :: JOSE.JWK}
-  deriving stock (Generic, Show)
-  deriving newtype (FromJSON, ToJSON)
-
-newtype JwkConfigF f = JwkConfigF {getJwkF :: f JOSE.JWK}
-  deriving stock (Generic)
-  deriving anyclass (FunctorB, ApplicativeB, TraversableB, ConstraintsB)
-
-deriving instance (AllBF Aeson.FromJSON f JwkConfigF) => Aeson.FromJSON (JwkConfigF f)
-
-instance FetchHKD JwkConfigF where
-  type Concrete JwkConfigF = JwkConfig
-
-  fromEnv :: JwkConfigF (Compose IO Maybe)
-  fromEnv =
-    JwkConfigF
-      { getJwkF = readEnv (fromRight (error "Failed to parse JwkConfig") . parseJwk) "APP_JWK"
-      }
-
-  toConcrete :: (Applicative f) => JwkConfigF f -> f (Concrete JwkConfigF)
-  toConcrete JwkConfigF {..} = JwkConfig <$> getJwkF
-
-parseJwk :: Text -> Either String JOSE.JWK
-parseJwk = Aeson.eitherDecode . Text.Lazy.Encoding.encodeUtf8 . Text.Lazy.fromStrict . decodeBase64Lenient
-
---------------------------------------------------------------------------------
-
 data SmtpConfig = SmtpConfig {smtpConfigServer :: Text, smtpConfigUsername :: Text, smtpConfigPassword :: Text}
   deriving stock (Generic, Show)
 
@@ -207,7 +172,6 @@ data AppConfig = AppConfig
     appConfigPostgresSettings :: PostgresConfig,
     appConfigEnvironment :: Environment,
     appConfigObservability :: ObservabilityConfig,
-    appConfigJwk :: JwkConfig,
     appConfigSmtp :: SmtpConfig,
     appConfigHostname :: Hostname
   }
@@ -218,7 +182,6 @@ data AppConfigF f = AppConfigF
     appConfigFPostgresSettings :: PostgresConfigF f,
     appConfigFEnvironment :: f Environment,
     appConfigFObservability :: ObservabilityConfigF f,
-    appConfigFJwk :: JwkConfigF f,
     appConfigFSmtp :: SmtpConfigF f,
     appConfigFHostname :: f Hostname
   }
@@ -235,14 +198,13 @@ instance FetchHKD AppConfigF where
         appConfigFEnvironment = readEnvDefault Development (\case "Development" -> Just Development; "Production" -> Just Production; _ -> Nothing) "APP_ENVIRONMENT",
         appConfigFPostgresSettings = fromEnv,
         appConfigFObservability = fromEnv,
-        appConfigFJwk = fromEnv,
         appConfigFSmtp = fromEnv,
         appConfigFHostname = readEnv Hostname "APP_HOSTNAME"
       }
 
   toConcrete :: (Applicative f) => AppConfigF f -> f (Concrete AppConfigF)
   toConcrete AppConfigF {..} =
-    AppConfig <$> toConcrete appConfigFWarpSettings <*> toConcrete appConfigFPostgresSettings <*> appConfigFEnvironment <*> toConcrete appConfigFObservability <*> toConcrete appConfigFJwk <*> toConcrete appConfigFSmtp <*> appConfigFHostname
+    AppConfig <$> toConcrete appConfigFWarpSettings <*> toConcrete appConfigFPostgresSettings <*> appConfigFEnvironment <*> toConcrete appConfigFObservability <*> toConcrete appConfigFSmtp <*> appConfigFHostname
 
 getConfig :: IO (Maybe AppConfig)
 getConfig = toConcrete @AppConfigF <$> bsequence fromEnv
