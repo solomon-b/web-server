@@ -9,16 +9,15 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Text.Display (display)
-import Domain.Types.User (User (..))
 import Effects.Database.Class (MonadDB)
-import Effects.Database.Queries.User (deleteUser)
+import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.User qualified as User
+import Effects.Observability qualified as Observability
 import Errors (Unauthorized (..), throwErr)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))
 import Servant qualified
-import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -38,7 +37,7 @@ handler ::
   Auth.Authz ->
   User.Id ->
   m ()
-handler (Auth.Authz User {userId, userIsAdmin} _) uid =
-  Tracing.handlerSpan "/user/:id/delete" () display $ do
-    unless (userId == uid || userIsAdmin) (throwErr Unauthorized)
-    deleteUser uid
+handler (Auth.Authz User.Domain {dId, dIsAdmin} _) uid =
+  Observability.handlerSpan "DELETE /user/:id/delete" () display $ do
+    unless (dId == uid || dIsAdmin) (throwErr Unauthorized)
+    execQuerySpanThrow $ User.deleteUser uid

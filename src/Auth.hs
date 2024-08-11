@@ -5,21 +5,18 @@ module Auth where
 
 --------------------------------------------------------------------------------
 
-import Auth.Network (sockAddrToNetAddr)
 import Control.Error (note)
 import Control.Monad.IO.Class (MonadIO (..))
-import Data.Coerce
+import Data.Functor ((<&>))
+import Data.IP (IP (..), IPRange (..), fromSockAddr, makeAddrRange)
 import Data.Text (Text)
-import Data.Time (getCurrentTime)
-import Data.Time.Clock qualified as Clock
-import Domain.Types.ServerSessions (ServerSession, SessionId (..), parseSessionId)
-import Domain.Types.User (User)
-import Effects.Database.Class (MonadDB)
-import Effects.Database.Queries.ServerSessions (expireServerSession, insertServerSession, selectServerSessionQuery)
+import Effects.Clock (MonadClock)
+import Effects.Clock qualified as Clock
+import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
-import Effects.Database.Utils
 import Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)
+import Hasql.Interpolate (getOneRow)
 import Hasql.Pool qualified as HSQL
 import Hasql.Session qualified as HSQL
 import Log qualified
@@ -35,8 +32,8 @@ import Web.Cookie (parseCookies)
 type instance Servant.AuthServerData (Servant.AuthProtect "cookie-auth") = Authz
 
 data Authz = Authz
-  { authzUser :: User,
-    authzSession :: ServerSession
+  { authzUser :: User.Domain,
+    authzSession :: Session.Domain
   }
 
 data AuthErr
@@ -56,30 +53,35 @@ authHandler pool = mkAuthHandler $ \req ->
   let eSession = do
         cookie <- note MissingCookieHeader $ lookup "cookie" $ requestHeaders req
         sessionId <- note MissingCookieValue $ lookup "session-id" $ parseCookies cookie
-        note MalformedSessionId $ parseSessionId sessionId
+        note MalformedSessionId $ Session.parseSessionId sessionId
    in case eSession of
         Right sessionId ->
-          liftIO (HSQL.use pool (HSQL.statement () $ selectServerSessionQuery $ coerce sessionId)) >>= \case
+          liftIO (HSQL.use pool (HSQL.statement () $ Session.getSessionUser sessionId)) >>= \case
             Left _err -> do
               -- TODO: Log censored error here?
               throwErr InternalServerError
             Right Nothing ->
               throwErr $ Servant.err307 {Servant.errBody = "forbidden", Servant.errHeaders = [("Location", "/login")]}
             Right (Just (userModel, sessionModel)) ->
-              pure $ Authz (parseModel userModel) (parseModel sessionModel)
+              pure $ Authz (User.toDomain userModel) (Session.toDomain sessionModel)
         Left err -> throwErr err
 
 login ::
-  (MonadDB m, Log.MonadLog m) => User.Id -> SockAddr -> Maybe Text -> m (Either HSQL.UsageError SessionId)
+  (MonadDB m, MonadClock m, Log.MonadLog m) => User.Id -> SockAddr -> Maybe Text -> m (Either HSQL.UsageError Session.Id)
 login uid sockAddr mUserAgent = do
-  -- TODO: Add clock effect:
-  now <- liftIO getCurrentTime
+  now <- Clock.currentSystemTime
   let sessionExpiration = Clock.addUTCTime Clock.nominalDay now
-      sessionToInsert = (uid, sockAddrToNetAddr sockAddr, mUserAgent, sessionExpiration)
-  insertServerSession sessionToInsert
+      sessionToInsert = Session.ServerSessionInsert uid (mkIpRange sockAddr) mUserAgent sessionExpiration
+  fmap (fmap (Session.mSessionId . getOneRow)) $ execStatement $ Session.insertServerSession sessionToInsert
+
+mkIpRange :: SockAddr -> Maybe IPRange
+mkIpRange sockAddr =
+  fromSockAddr sockAddr <&> \case
+    (IPv4 ip, _) -> IPv4Range $ makeAddrRange ip 0
+    (IPv6 ip, _) -> IPv6Range $ makeAddrRange ip 0
 
 expireSession ::
   (MonadDB m, Log.MonadLog m) =>
-  SessionId ->
+  Session.Id ->
   m (Either HSQL.UsageError ())
-expireSession = expireServerSession . coerce
+expireSession = execStatement . Session.expireSession

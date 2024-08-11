@@ -13,17 +13,16 @@ import Data.Has (Has)
 import Data.Password.Argon2 (Password, hashPassword)
 import Data.Text.Display (Display, RecordInstance (..), display)
 import Deriving.Aeson qualified as Deriving
-import Domain.Types.User (User (..))
 import Effects.Database.Class (MonadDB)
-import Effects.Database.Queries.User (changeUserPassword)
+import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.User qualified as User
+import Effects.Observability qualified as Observability
 import Errors (ToServerError (..), throwErr, toErrorBody)
 import GHC.Generics (Generic)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))
 import Servant qualified
-import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -61,11 +60,11 @@ handler ::
   User.Id ->
   PasswordReset ->
   m ()
-handler (Auth.Authz User {userId, userIsAdmin} _) uid PasswordReset {..} =
-  Tracing.handlerSpan "/user/:id/password-reset" () display $ do
-    unless (userId == uid || userIsAdmin) (throwErr Servant.err401)
+handler (Auth.Authz User.Domain {dId, dIsAdmin} _) uid PasswordReset {..} =
+  Observability.handlerSpan "POST /user/:id/password-reset" () display $ do
+    unless (dId == uid || dIsAdmin) (throwErr Servant.err401)
     hashedPrPassword <- liftIO $ hashPassword prPassword
     hashedPrNewPassword <- liftIO $ hashPassword prNewPassword
-    changeUserPassword uid hashedPrPassword hashedPrNewPassword >>= \case
+    execQuerySpanThrow (User.changeUserPassword uid hashedPrPassword hashedPrNewPassword) >>= \case
       Nothing -> throwErr PasswordResetFailed
       Just _ -> pure ()

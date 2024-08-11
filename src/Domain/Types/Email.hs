@@ -10,12 +10,15 @@ import Data.Text (Text)
 import Data.Text.Display (Display (..))
 import Data.Text.Internal.Builder qualified as Text
 import GHC.Generics
+import Hasql.Interpolate (DecodeValue, EncodeValue)
+import OrphanInstances ()
 import Servant qualified
 
 --------------------------------------------------------------------------------
 
 newtype EmailAddress = EmailAddress {emailAddress :: CI Text}
   deriving stock (Show, Generic, Eq)
+  deriving newtype (DecodeValue, EncodeValue)
 
 instance FromJSON EmailAddress where
   parseJSON = fmap (EmailAddress . CI.mk) . Aeson.parseJSON @Text

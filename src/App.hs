@@ -37,8 +37,11 @@ import Data.Has qualified as Has
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
+import Data.Time (getCurrentTime)
+import Effects.Clock (MonadClock (..))
 import Effects.Database.Class
-import Effects.Email.Class (MonadEmail (..))
+import Effects.MailSender (MonadEmail (..))
+import Effects.Observability qualified as Observability
 import Hasql.Connection qualified as HSQL
 import Hasql.Pool qualified as HSQL (Pool)
 import Hasql.Pool qualified as HSQL.Pool
@@ -55,11 +58,11 @@ import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
 import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
 import OpenTelemetry.Trace qualified as OTEL
+import OpenTelemetry.Trace.Monad (MonadTracer (..))
 import Servant (Context ((:.)))
 import Servant qualified
 import Servant.Server.Experimental.Auth (AuthHandler)
 import System.Posix.Signals qualified as Posix
-import Tracing (withTracer)
 
 --------------------------------------------------------------------------------
 
@@ -84,7 +87,7 @@ runApp ctx =
         let cfg = authHandler pgPool :. Servant.EmptyContext
 
         -- Run App with tracing
-        withTracer appConfigEnvironment $ \tracerProvider mkTracer -> do
+        Observability.withTracer (observabilityConfigVerbosity appConfigObservability) appConfigEnvironment $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
           Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname appConfigEnvironment ctx))
@@ -163,6 +166,9 @@ newtype AppM ctx a = AppM {runAppM' :: AppContext ctx -> Log.LoggerEnv -> IO a}
     (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO, Log.MonadLog)
     via ReaderT (AppContext ctx) (Log.LogT IO)
 
+instance MonadClock (AppM ctx) where
+  currentSystemTime = liftIO getCurrentTime
+
 instance MonadDB (AppM ctx) where
   runDB :: HSQL.Session a -> AppM ctx (Either HSQL.Pool.UsageError a)
   runDB s = do
@@ -177,6 +183,10 @@ instance MonadEmail (AppM ctx) where
   sendEmail mail = do
     SmtpConfig {..} <- Reader.asks Has.getter
     liftIO $ SMTP.sendMailWithLoginTLS (Text.unpack smtpConfigServer) (Text.unpack smtpConfigUsername) (Text.unpack smtpConfigPassword) mail
+
+instance MonadTracer (AppM ctx) where
+  getTracer :: AppM ctx OTEL.Tracer
+  getTracer = Reader.asks Has.getter
 
 --------------------------------------------------------------------------------
 

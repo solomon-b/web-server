@@ -1,38 +1,63 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Effects.Database.Tables.MailingList where
 
 --------------------------------------------------------------------------------
 
-import Barbies
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
-import Data.Text (Text)
-import Data.Text.Display (Display)
+import Data.Text.Display (Display, RecordInstance (..))
+import Domain.Types.Email (EmailAddress)
 import GHC.Generics (Generic)
-import Rel8 qualified
+import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
+import Hasql.Statement qualified as Hasql
 import Servant qualified
 
 --------------------------------------------------------------------------------
 
 newtype Id = Id Int64
   deriving stock (Generic)
-  deriving newtype (Show, Eq, Ord, Num, Servant.FromHttpApiData, Rel8.DBEq, Rel8.DBType, Display)
   deriving anyclass (ToJSON, FromJSON)
+  deriving newtype
+    ( Show,
+      Eq,
+      Ord,
+      Num,
+      Servant.FromHttpApiData,
+      Display,
+      DecodeValue,
+      EncodeValue
+    )
 
 -- | Database Model for the `mailing_list` table.
-data Model f = Model
-  { mlId :: f Id,
-    mlEmail :: f Text
+data Model = Model
+  { mId :: Id,
+    mEmail :: EmailAddress
   }
-  deriving stock (Generic)
-  deriving anyclass (Rel8.Rel8able, FunctorB, TraversableB, ApplicativeB, ConstraintsB)
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (DecodeRow)
+  deriving (Display) via (RecordInstance Model)
 
-schema :: Rel8.TableSchema (Model Rel8.Name)
-schema =
-  Rel8.TableSchema
-    { Rel8.name = "mailing_list",
-      Rel8.columns =
-        Model
-          { mlId = "id",
-            mlEmail = "email"
-          }
-    }
+getEmailListEntries :: Hasql.Statement () [Model]
+getEmailListEntries =
+  interp
+    False
+    [sql|
+    SELECT id, email
+    FROM mailing_list
+  |]
+
+newtype ModelInsert = ModelInsert {miEmail :: EmailAddress}
+  deriving stock (Generic, Show, Eq)
+  deriving (EncodeRow) via ModelInsert
+  deriving (Display) via (RecordInstance ModelInsert)
+
+insertEmailAddress :: ModelInsert -> Hasql.Statement () (OneRow Model)
+insertEmailAddress ModelInsert {..} =
+  interp
+    False
+    [sql|
+    INSERT INTO mailing_list(email)
+    VALUES (#{miEmail})
+    RETURNING id, email
+  |]

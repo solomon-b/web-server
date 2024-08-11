@@ -18,9 +18,11 @@ import Data.Text qualified as Text
 import Data.Text.Display (Display)
 import Data.Text.Encoding qualified as Text.Encoding
 import Domain.Types.Email (EmailAddress (..))
-import Effects.Database.Class (MonadDB)
-import Effects.Database.Queries.MailingList qualified as MailingList
-import Effects.Email.Class
+import Effects.Database.Class (MonadDB (..))
+import Effects.Database.Execute (execQuerySpanThrow)
+import Effects.Database.Tables.MailingList qualified as MailingList
+import Effects.MailSender
+import Effects.Observability qualified as Observability
 import Errors (Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Log qualified
@@ -33,7 +35,6 @@ import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
 import Text.Email.Validate qualified as Email
-import Tracing qualified
 import Web.FormUrlEncoded (FromForm)
 
 --------------------------------------------------------------------------------
@@ -51,24 +52,24 @@ type Route = "mailing-list" :> "signup" :> Servant.ReqBody '[Servant.JSON, Serva
 -- Handler
 
 handler ::
-  ( Log.MonadLog m,
-    MonadReader env m,
-    Has OTEL.Tracer env,
+  ( Has OTEL.Tracer env,
     Has SmtpConfig env,
     Has Hostname env,
+    Log.MonadLog m,
+    MonadCatch m,
     MonadDB m,
     MonadEmail m,
+    MonadReader env m,
     MonadThrow m,
-    MonadCatch m,
     MonadUnliftIO m
   ) =>
   MailingListForm ->
   m (Lucid.Html ())
 handler req@(MailingListForm e@(EmailAddress {..})) = do
-  Tracing.handlerSpan "/mailing-list" req (const ()) $ do
+  Observability.handlerSpan "POST /mailing-list" req (const ()) $ do
     unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original emailAddress) $ throwErr Unauthorized
 
-    _pid <- MailingList.insertEmailAddress e
+    _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert e
     Log.logInfo "Submited Email Address:" (KeyMap.singleton "email" (Text.unpack $ CI.original emailAddress))
 
     -- TODO: Disable email confirmation in Dev mode

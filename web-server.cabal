@@ -81,6 +81,8 @@ library
                   , errors
                   , hasql
                   , hasql-pool
+                  , hasql-interpolate
+                  , hasql-transaction
                   , hs-opentelemetry-api
                   , hs-opentelemetry-exporter-handle
                   , hs-opentelemetry-instrumentation-wai
@@ -88,6 +90,7 @@ library
                   , hs-opentelemetry-utils-exceptions
                   , http-api-data
                   , http-types
+                  , iproute
                   , jose
                   , log-base
                   , lucid
@@ -96,10 +99,8 @@ library
 		  , mime-mail
                   , network
                   , network-ip
-                  , opaleye
                   , password
                   , pretty-simple
-                  , rel8
                   , servant-lucid
                   , servant-server
 		  , smtp-mail
@@ -136,22 +137,18 @@ library
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
     Domain.Types.Email
-    Domain.Types.MailingListEntry
-    Domain.Types.User
-    Domain.Types.ServerSessions
+    Effects.Clock
     Effects.Database.Class
-    Effects.Database.Queries.User
-    Effects.Database.Queries.MailingList
-    Effects.Database.Queries.ServerSessions
+    Effects.Database.Execute
+    Effects.Database.SerializedStatement
     Effects.Database.Tables.User
     Effects.Database.Tables.MailingList
     Effects.Database.Tables.ServerSessions
-    Effects.Database.Utils
-    Effects.Email.Class
     Effects.FormBuilder
+    Effects.MailSender
+    Effects.Observability
     Errors
     OrphanInstances
-    Tracing
     Utils
 
   hs-source-dirs: src

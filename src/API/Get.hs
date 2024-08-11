@@ -1,9 +1,18 @@
+{-# LANGUAGE StandaloneDeriving #-}
+
 module API.Get where
 
 --------------------------------------------------------------------------------
 
+import Control.Monad.Catch (MonadCatch)
+import Control.Monad.IO.Unlift (MonadUnliftIO)
+import Control.Monad.Reader (MonadReader)
+import Data.Has (Has)
+import Data.Text.Display (Display (..), ShowInstance (..), display)
+import Effects.Observability qualified as Observability
 import Lucid qualified
 import Lucid.Htmx qualified
+import OpenTelemetry.Trace (Tracer)
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
 
@@ -11,6 +20,9 @@ import Servant.HTML.Lucid qualified as Lucid
 -- HTML
 
 data SplashPage = SplashPage
+  deriving stock (Show)
+
+deriving via (ShowInstance SplashPage) instance (Display SplashPage)
 
 instance Lucid.ToHtml SplashPage where
   toHtml :: (Monad m) => SplashPage -> Lucid.HtmlT m ()
@@ -39,5 +51,13 @@ instance Lucid.ToHtml SplashPage where
 
 type Route = Servant.Get '[Lucid.HTML] SplashPage
 
-handler :: (Monad m) => m SplashPage
-handler = pure SplashPage
+handler ::
+  ( Has Tracer env,
+    MonadCatch m,
+    MonadReader env m,
+    MonadUnliftIO m
+  ) =>
+  m SplashPage
+handler =
+  Observability.handlerSpan "GET /" () display $ do
+    pure SplashPage

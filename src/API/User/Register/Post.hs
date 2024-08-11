@@ -18,21 +18,22 @@ import Data.Text.Display (Display, display)
 import Data.Text.Display.Generic (RecordInstance (..))
 import Data.Text.Encoding qualified as Text.Encoding
 import Deriving.Aeson qualified as Deriving
-import Domain.Types.AdminStatus
 import Domain.Types.DisplayName
 import Domain.Types.Email
+import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
-import Effects.Database.Queries.User
-import Effects.Database.Utils
+import Effects.Database.Execute (execQuerySpanThrow)
+import Effects.Database.Tables.User qualified as User
+import Effects.Observability qualified as Observability
 import Errors (Forbidden (..), InternalServerError (..), ToServerError (..), Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
+import Hasql.Interpolate (OneRow (..))
 import Log qualified
 import Network.Socket (SockAddr)
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))
 import Servant qualified
 import Text.Email.Validate qualified as Email
-import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -61,7 +62,8 @@ instance ToServerError RegisterError where
 --------------------------------------------------------------------------------
 
 handler ::
-  ( MonadReader env m,
+  ( MonadClock m,
+    MonadReader env m,
     Has OTEL.Tracer env,
     Log.MonadLog m,
     MonadDB m,
@@ -80,17 +82,17 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent req@Register {..} = do
-  Tracing.handlerSpan "/user/register" req display $ do
+  Observability.handlerSpan "POST /user/register" req display $ do
     unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original $ coerce urEmail) $ throwErr Unauthorized
-    selectUserByEmail urEmail >>= \case
+    execQuerySpanThrow (User.getUserByEmail urEmail) >>= \case
       Just _ -> do
         Log.logInfo "Email address is already registered" urEmail
         throwErr AlreadyRegistered
       Nothing -> do
         Log.logInfo "Registering New User" urEmail
         hashedPassword <- hashPassword urPassword
-        uid <- insertUser (urEmail, hashedPassword, urDisplayName, IsNotAdmin)
-        execQuerySpanThrowMessage "Failed to query users table" (selectUserQuery uid) >>= \case
+        OneRow uid <- execQuerySpanThrow $ User.insertUser $ User.ModelInsert urEmail hashedPassword urDisplayName Nothing False
+        execQuerySpanThrow (User.getUser uid) >>= \case
           Nothing ->
             throwErr Forbidden
           Just _user -> do

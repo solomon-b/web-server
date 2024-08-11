@@ -34,6 +34,39 @@
         "type": "github"
       }
     },
+    "hasql-interpolate-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1721149332,
+        "narHash": "sha256-yENg0EadZS4Y52Gt71IXsX82foZi9HH7fOoJqElBv8A=",
+        "owner": "awkward-squad",
+        "repo": "hasql-interpolate",
+        "rev": "7d3a20824213f18188273e579788a7baa570daf6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "awkward-squad",
+        "repo": "hasql-interpolate",
+        "type": "github"
+      }
+    },
+    "hasql-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1721240642,
+        "narHash": "sha256-n8iuOINk8NPNAnTVJ6Od3nsIkj1pEZ/9lj2TTm4TZjE=",
+        "owner": "JonathanLorimer",
+        "repo": "hasql",
+        "rev": "a9a80bb90f81ccbe9a157276beb321b8536ad25d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "JonathanLorimer",
+        "ref": "expose-hasql-encoders-params",
+        "repo": "hasql",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1716097317,
@@ -54,6 +87,8 @@
       "inputs": {
         "cfg-src": "cfg-src",
         "flake-utils": "flake-utils",
+        "hasql-interpolate-src": "hasql-interpolate-src",
+        "hasql-src": "hasql-src",
         "nixpkgs": "nixpkgs"
       }
     },

@@ -8,8 +8,9 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Text (Text)
-import Domain.Types.ServerSessions qualified as ServerSessions
 import Effects.Database.Class (MonadDB)
+import Effects.Database.Tables.ServerSessions qualified as Session
+import Effects.Observability qualified as Observability
 import Errors (InternalServerError (..), throwErr)
 import Log qualified
 import Lucid qualified
@@ -17,7 +18,6 @@ import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
-import Tracing qualified
 
 --------------------------------------------------------------------------------
 
@@ -68,8 +68,8 @@ handler ::
         Servant.NoContent
     )
 handler Auth.Authz {authzSession} =
-  Tracing.handlerSpan "/user/logout" () (\_ -> show ()) $ do
-    Auth.expireSession (ServerSessions.serverSessionId authzSession) >>= \case
+  Observability.handlerSpan "GET /user/logout" () (\_ -> show ()) $ do
+    Auth.expireSession (Session.dSessionId authzSession) >>= \case
       Left _ ->
         throwErr InternalServerError
       Right _ ->

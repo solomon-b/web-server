@@ -6,7 +6,6 @@ import API.Admin.Get qualified as Admin.Get
 import API.Get qualified as Get
 import API.MailingList.Post qualified as MailingList.Post
 import API.Static.Get qualified as Static.Get
-import API.User.Current.Get qualified as Current.Get
 import API.User.Current.Get qualified as User.Current.Get
 import API.User.Delete qualified as Delete
 import API.User.Delete qualified as User.Delete
@@ -25,11 +24,13 @@ import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
+import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
-import Effects.Email.Class (MonadEmail)
+import Effects.MailSender (MonadEmail)
 import Hasql.Pool qualified as HSQL
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
+import OpenTelemetry.Trace.Monad (MonadTracer)
 import Servant ((:<|>) (..))
 import Servant qualified
 
@@ -62,9 +63,11 @@ server ::
     Has Hostname env,
     Has Environment env,
     Log.MonadLog m,
+    MonadClock m,
     MonadDB m,
     MonadEmail m,
     MonadIO m,
+    MonadTracer m,
     MonadThrow m,
     MonadUnliftIO m,
     MonadCatch m
@@ -80,7 +83,7 @@ server env = do
     :<|> User.Register.Post.handler
     :<|> User.Login.Post.handler
     :<|> User.Login.Get.handler
-    :<|> Current.Get.handler
+    :<|> User.Current.Get.handler
     :<|> Logout.Get.handler
     :<|> Delete.handler
     :<|> PasswordReset.Post.handler

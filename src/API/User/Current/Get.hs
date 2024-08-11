@@ -8,16 +8,16 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Text.Display (display)
-import Domain.Types.User (User)
+import Effects.Database.Tables.User qualified as User
+import Effects.Observability qualified as Observability
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))
 import Servant qualified
-import Tracing qualified
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.AuthProtect "cookie-auth" :> "user" :> "current" :> Servant.Get '[Servant.JSON] User
+type Route = Servant.AuthProtect "cookie-auth" :> "user" :> "current" :> Servant.Get '[Servant.JSON] User.Domain
 
 --------------------------------------------------------------------------------
 
@@ -30,6 +30,6 @@ handler ::
     MonadUnliftIO m
   ) =>
   Authz ->
-  m User
+  m User.Domain
 handler (Authz user _) =
-  Tracing.handlerSpan "/user/current" () display $ pure user
+  Observability.handlerSpan "GET /user/current" () display $ pure user

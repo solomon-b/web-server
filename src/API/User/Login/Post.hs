@@ -7,22 +7,20 @@ import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Control.Monad.Identity (Identity (..))
 import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Coerce (coerce)
 import Data.Has (Has)
 import Data.Password.Argon2 (Password, PasswordCheck (..), checkPassword, mkPassword)
 import Data.Text (Text)
 import Data.Text.Display (Display (..), RecordInstance (..), display)
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.Email
-import Domain.Types.ServerSessions (ServerSession (..), serverSessionId)
+import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
-import Effects.Database.Queries.ServerSessions (selectServerSessionByUser)
-import Effects.Database.Queries.User
-import Effects.Database.Tables.User (umPassword)
+import Effects.Database.Execute (execQuerySpanThrow)
+import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
+import Effects.Observability qualified as Observability
 import Errors (InternalServerError (..), Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Log qualified
@@ -31,7 +29,6 @@ import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances ()
 import Servant ((:>))
 import Servant qualified
-import Tracing qualified
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
 
@@ -60,7 +57,8 @@ instance FormUrlEncoded.FromForm Login where
 --------------------------------------------------------------------------------
 
 handler ::
-  ( MonadReader env m,
+  ( MonadClock m,
+    MonadReader env m,
     MonadIO m,
     Log.MonadLog m,
     MonadDB m,
@@ -80,20 +78,20 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent req@Login {..} = do
-  Tracing.handlerSpan "/user/login" req display $ do
-    selectUserByEmail ulEmail >>= \case
+  Observability.handlerSpan "POST /user/login" req display $ do
+    execQuerySpanThrow (User.getUserByEmail ulEmail) >>= \case
       Just user -> do
         Log.logInfo "Login Attempt" ulEmail
-        unless (checkPassword ulPassword (runIdentity (umPassword user)) == PasswordCheckSuccess) (throwErr Unauthorized)
-        selectServerSessionByUser (coerce $ User.umId user) >>= \case
+        unless (checkPassword ulPassword (User.mPassword user) == PasswordCheckSuccess) (throwErr Unauthorized)
+        execQuerySpanThrow (Session.getServerSessionByUser (User.mId user)) >>= \case
           Nothing -> do
-            Auth.login (coerce $ User.umId user) sockAddr mUserAgent >>= \case
+            Auth.login (User.mId user) sockAddr mUserAgent >>= \case
               Left _err ->
                 throwErr InternalServerError
               Right sessionId ->
                 pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
           Just session ->
-            let sessionId = serverSessionId session
+            let sessionId = Session.mSessionId session
              in pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail

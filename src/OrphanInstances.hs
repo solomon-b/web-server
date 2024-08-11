@@ -6,6 +6,10 @@ module OrphanInstances where
 --------------------------------------------------------------------------------
 
 import Data.Aeson qualified as Aeson
+import Data.CaseInsensitive (CI)
+import Data.CaseInsensitive qualified as CI
+import Data.Functor.Contravariant (contramap)
+import Data.IP (IPRange)
 import Data.Password.Argon2 (Password, PasswordHash (..), mkPassword)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -13,8 +17,9 @@ import Data.Text.Display (Display (..), ShowInstance (..))
 import Data.Text.Internal.Builder qualified as Text
 import Data.Time (UTCTime)
 import Data.UUID (UUID)
+import Hasql.Interpolate (DecodeValue (..), EncodeValue (..), OneRow (..))
+import Lucid.Base qualified
 import Network.IP.Addr (IP, NetAddr)
-import Rel8 qualified
 import Servant qualified
 
 --------------------------------------------------------------------------------
@@ -26,16 +31,6 @@ instance (Display a) => Display (Servant.Headers x a) where
 instance Display Servant.NoContent where
   displayBuilder :: Servant.NoContent -> Text.Builder
   displayBuilder Servant.NoContent = displayBuilder ()
-
-instance Rel8.DBType (PasswordHash x) where
-  typeInformation =
-    Rel8.TypeInformation
-      { encode = Rel8.encode (Rel8.typeInformation @Text) . unPasswordHash,
-        decode = PasswordHash <$> Rel8.decode Rel8.typeInformation,
-        typeName = Rel8.typeName (Rel8.typeInformation @Text)
-      }
-
-instance Rel8.DBEq (PasswordHash x)
 
 instance Aeson.ToJSON Password where
   toJSON pass = Aeson.String (Text.pack $ show pass)
@@ -52,8 +47,25 @@ instance Display (PasswordHash x) where
 instance Aeson.ToJSON (PasswordHash x) where
   toJSON pass = Aeson.String (unPasswordHash pass)
 
+deriving newtype instance DecodeValue (PasswordHash x)
+
+deriving newtype instance EncodeValue (PasswordHash x)
+
 deriving via (ShowInstance UUID) instance (Display UUID)
 
 deriving via (ShowInstance (NetAddr IP)) instance (Display (NetAddr IP))
 
+deriving via (ShowInstance IPRange) instance (Display IPRange)
+
 deriving via (ShowInstance UTCTime) instance (Display UTCTime)
+
+deriving via (ShowInstance (Lucid.Base.Html ())) instance (Display (Lucid.Base.Html ()))
+
+instance EncodeValue (CI Text) where
+  encodeValue = contramap CI.original (encodeValue @Text)
+
+instance DecodeValue (CI Text) where
+  decodeValue = fmap CI.mk (decodeValue @Text)
+
+instance (Display a) => Display (OneRow a) where
+  displayBuilder = displayBuilder . getOneRow

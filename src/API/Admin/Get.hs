@@ -1,26 +1,29 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module API.Admin.Get where
 
 --------------------------------------------------------------------------------
 
 import Auth qualified
 import Control.Monad (unless)
-import Control.Monad.Catch (MonadThrow)
-import Control.Monad.Identity (Identity (..))
+import Control.Monad.Catch (MonadCatch, MonadThrow)
+import Control.Monad.IO.Unlift (MonadUnliftIO)
+import Control.Monad.Reader (MonadReader)
+import Data.Has (Has)
 import Data.String (IsString (..))
 import Data.Text qualified as Text
-import Data.Text.Display (display)
-import Domain.Types.MailingListEntry (MailingListEntry (..))
-import Domain.Types.User
+import Data.Text.Display (Display, ShowInstance (..), display)
 import Effects.Database.Class (MonadDB)
-import Effects.Database.Queries.MailingList (selectMailingListEntries)
-import Effects.Database.Queries.User
+import Effects.Database.Execute (execQuerySpanThrow)
+import Effects.Database.Tables.MailingList qualified as MailingList
 import Effects.Database.Tables.User qualified as User
-import Effects.Database.Utils
-import Effects.FormBuilder qualified as FB
+import Effects.Observability qualified as Observability
 import Errors (Unauthorized (..), throwErr)
 import Log qualified
 import Lucid qualified
 import Lucid.Htmx qualified
+import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
@@ -31,11 +34,14 @@ type Route = Servant.AuthProtect "cookie-auth" :> "admin" :> Servant.Get '[Lucid
 
 --------------------------------------------------------------------------------
 
-data AdminPage = AdminPage [User.Model Identity] [MailingListEntry]
+data AdminPage = AdminPage [User.Model] [MailingList.Model]
+  deriving stock (Show)
+
+deriving via (ShowInstance AdminPage) instance (Display AdminPage)
 
 instance Lucid.ToHtml AdminPage where
   toHtml :: (Monad m) => AdminPage -> Lucid.HtmlT m ()
-  toHtml (AdminPage users mailingListEntries) =
+  toHtml (AdminPage _users mailingListEntries) =
     Lucid.doctypehtml_ $ do
       Lucid.head_ $ do
         Lucid.title_ "Admin"
@@ -46,19 +52,19 @@ instance Lucid.ToHtml AdminPage where
           Lucid.h1_ "Admin Page"
           Lucid.section_ $ do
             Lucid.header_ $ Lucid.h3_ "Tables"
-            FB.buildForm users
+            -- FB.buildForm users
             mailingListTable mailingListEntries
 
   toHtmlRaw :: (Monad m) => AdminPage -> Lucid.HtmlT m ()
   toHtmlRaw = Lucid.toHtml
 
-mailingListRow :: (Monad m) => MailingListEntry -> Lucid.HtmlT m ()
-mailingListRow MailingListEntry {..} =
+mailingListRow :: (Monad m) => MailingList.Model -> Lucid.HtmlT m ()
+mailingListRow MailingList.Model {..} =
   Lucid.tr_ $ do
-    Lucid.td_ (fromString $ Text.unpack $ display mlId)
-    Lucid.td_ (fromString $ Text.unpack $ display mlEmail)
+    Lucid.td_ (fromString $ Text.unpack $ display mId)
+    Lucid.td_ (fromString $ Text.unpack $ display mEmail)
 
-mailingListTable :: (Monad m) => [MailingListEntry] -> Lucid.HtmlT m ()
+mailingListTable :: (Monad m) => [MailingList.Model] -> Lucid.HtmlT m ()
 mailingListTable entries = do
   Lucid.div_ [Lucid.class_ "table-responsive"] $ do
     Lucid.table_ [Lucid.class_ "center"] $ do
@@ -74,11 +80,17 @@ mailingListTable entries = do
 -- Handler
 
 handler ::
-  ( Log.MonadLog m,
+  forall m env.
+  ( Has Trace.Tracer env,
+    Log.MonadLog m,
+    MonadCatch m,
     MonadDB m,
-    MonadThrow m
+    MonadReader env m,
+    MonadThrow m,
+    MonadUnliftIO m
   ) =>
   Servant.ServerT Route m
-handler (Auth.Authz User {..} _) = do
-  unless userIsAdmin (throwErr Unauthorized)
-  AdminPage <$> execQuerySpanThrowMessage "Failed to query users table" selectUsersQuery <*> selectMailingListEntries
+handler (Auth.Authz User.Domain {..} _) = do
+  Observability.handlerSpan "GET /admin" () display $ do
+    unless dIsAdmin (throwErr Unauthorized)
+    AdminPage <$> (execQuerySpanThrow @_ @_ @env) User.getUsers <*> execQuerySpanThrow MailingList.getEmailListEntries

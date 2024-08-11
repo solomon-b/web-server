@@ -2,8 +2,15 @@ module API.User.Login.Get where
 
 --------------------------------------------------------------------------------
 
+import Control.Monad.Catch (MonadCatch)
+import Control.Monad.IO.Unlift (MonadUnliftIO)
+import Control.Monad.Reader (MonadReader)
+import Data.Has (Has)
+import Data.Text.Display (display)
+import Effects.Observability qualified as Observability
 import Lucid qualified
 import Lucid.Htmx qualified
+import OpenTelemetry.Trace qualified as Trace
 import OrphanInstances ()
 import Servant ((:>))
 import Servant qualified
@@ -38,5 +45,14 @@ instance Lucid.ToHtml Page where
 
 --------------------------------------------------------------------------------
 
-handler :: (Applicative m) => m (Lucid.Html ())
-handler = pure $ Lucid.toHtml Page
+handler ::
+  ( Applicative m,
+    Has Trace.Tracer env,
+    MonadCatch m,
+    MonadUnliftIO m,
+    MonadReader env m
+  ) =>
+  m (Lucid.Html ())
+handler =
+  Observability.handlerSpan "GET /user/login" () display $ do
+    pure $ Lucid.toHtml Page
