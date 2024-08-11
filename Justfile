@@ -162,13 +162,29 @@ postgres-dev-psql:
   echo "🌐 Connecting to the Development Postgres service.."
   psql -h localhost -U postgres -d dev_db
 
+# Build and run a test docker container
+postgres-test-start:
+  echo "🟢 Starting the Test Postgres service.."
+  docker run --rm --name test-postgres -d -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=test_db -d postgres
+  echo "✨ Success!"
+
+# Halt the test docker container
+postgres-test-stop:
+  echo "🔴 Stopping the Test Postgres service.."
+  docker container stop test-postgres
+  echo ✨ "Success!"
+
+# Connect to the test postgres db with psql.
+postgres-test-psql:
+  echo "🌐 Connecting to the Test Postgres service.."
+  psql -h localhost -U postgres -d test_db
+
 #-------------------------------------------------------------------------------
 ## Deployment
 
 # Deploy 
 deploy:
   nix run .#deploy
-
 
 #-------------------------------------------------------------------------------
 ## Common Requests
