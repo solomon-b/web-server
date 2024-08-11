@@ -2,7 +2,7 @@ module Effects.Observability where
 
 --------------------------------------------------------------------------------
 
-import Config (Environment (..), Verbosity (..))
+import Config (Verbosity (..), AppExporter (..), ObservabilityConfig (..))
 import Control.Exception (bracket)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
 import Control.Monad.IO.Unlift
@@ -80,16 +80,15 @@ stdoutFormatter verbosity ImmutableSpan {..} =
         Loud -> events
    in "[" <> spanIdText <> "]" <> " " <> name <> " - " <> start <> " " <> duration <> "\n" <> additionalInformation
 
-withTracer :: Verbosity -> Environment -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
-withTracer v env f =
-  let acquire = case env of
-        -- TODO: Use jaeger or some other tracing service in production:
-        -- Production -> OTEL.initializeGlobalTracerProvider
-        _ -> do
+withTracer :: ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
+withTracer (ObservabilityConfig verbosity exporter) f =
+  let acquire = case exporter of
+        Otel -> OTEL.initializeGlobalTracerProvider
+        StdOut -> do
           providerOpts <- snd <$> OTEL.getTracerProviderInitializationOptions
           processor <-
             simpleProcessor . SimpleProcessorConfig $
-              stdoutExporter' (pure . stdoutFormatter v)
+              stdoutExporter' (pure . stdoutFormatter verbosity)
           OTEL.createTracerProvider [processor] providerOpts
       release = OTEL.shutdownTracerProvider
       work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "kpbj-fm"

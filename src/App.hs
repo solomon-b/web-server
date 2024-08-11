@@ -89,7 +89,7 @@ runApp ctx =
         let cfg = authHandler pgPool :. Servant.EmptyContext
 
         -- Run App with tracing
-        Observability.withTracer (observabilityConfigVerbosity appConfigObservability) appConfigEnvironment $ \tracerProvider mkTracer -> do
+        Observability.withTracer appConfigObservability $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
           Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname appConfigEnvironment ctx))

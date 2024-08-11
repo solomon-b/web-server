@@ -115,7 +115,7 @@ data ObservabilityConfig = ObservabilityConfig
 data Verbosity = Quiet | Loud
   deriving stock (Generic, Show)
 
-data AppExporter = StdOut
+data AppExporter = StdOut | Otel
   deriving (Generic, Show)
 
 data ObservabilityConfigF f = ObservabilityConfigF

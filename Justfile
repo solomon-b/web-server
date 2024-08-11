@@ -180,6 +180,26 @@ postgres-test-psql:
   psql -h localhost -U postgres -d test_db
 
 #-------------------------------------------------------------------------------
+## OpenTelemetry
+
+# Start Jaeger All-In-One service
+jaeger-start:
+  echo "🟢 Starting the Jaeger service.."
+  docker run --rm -d --name jaeger \
+    -e COLLECTOR_OTLP_ENABLED=true \
+    -p 16686:16686 \
+    -p 4317:4317 \
+    -p 4318:4318 \
+    jaegertracing/all-in-one:latest
+  echo ✨ "Success!"
+
+# Halt the jaeger docker container
+jaeger-stop:
+  echo "🔴 Stopping the Jaeger service.."
+  docker container stop jaeger
+  echo ✨ "Success!"
+
+#-------------------------------------------------------------------------------
 ## Deployment
 
 # Deploy 
