@@ -6,11 +6,13 @@ module App where
 
 {-
 TODO:
-- Rate Limiting
-- Caching
 - Test suite
-- OpenAPI Spec
-- HTMX
+- Basic HTMX Widgets
+  - Login
+  - Register
+  - Navbar
+  - Mailing List Signup
+- HTML/HTMX Starter Template
 -}
 
 --------------------------------------------------------------------------------
