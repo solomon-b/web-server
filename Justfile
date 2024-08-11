@@ -145,6 +145,23 @@ migrations-reset:
 migrations-list:
   sqlx migrate info --source migrations
 
+# Build and run a development docker container
+postgres-dev-start:
+  echo "🟢 Starting the Development Postgres service.."
+  docker run --rm --name dev-postgres -d -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=dev_db -d postgres
+  echo "✨ Success!"
+
+# Halt the development docker container
+postgres-dev-stop:
+  echo "🔴 Stopping the Development Postgres service.."
+  docker container stop dev-postgres
+  echo ✨ "Success!"
+
+# Connect to the development postgres db with psql.
+postgres-dev-psql:
+  echo "🌐 Connecting to the Development Postgres service.."
+  psql -h localhost -U postgres -d dev_db
+
 #-------------------------------------------------------------------------------
 ## Deployment
 
@@ -156,14 +173,8 @@ deploy:
 #-------------------------------------------------------------------------------
 ## Common Requests
 
-login user password:
-  curl -H "Content-Type: application/json" --data '{ "password": "{{password}}", "email": "{{user}}" }' "localhost:3000/user/login"
-
 get-users:
-  curl localhost:3000/user
-
-get-current-user:
-  curl -v -H "Authorization: Bearer ${BEARER_TOKEN}" localhost:3000/user/current
+  curl localhost:2000/user
 
 get-user id:
-  curl localhost:3000/user/{{id}}
+  curl localhost:2000/user/{{id}}
