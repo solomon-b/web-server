@@ -152,6 +152,9 @@ test-suite tests
   main-is:
     Spec.hs
   other-modules:
+     API.User.DeleteSpec
+     API.User.GetSpec
+     API.User.Id.GetSpec
      Effects.Database.Tables.UserSpec
      Effects.Database.Tables.MailingListSpec
      Effects.Database.Tables.ServerSessionsSpec
@@ -168,17 +171,20 @@ test-suite tests
   hs-source-dirs:
     test
   ghc-options:
-    -Wall
+    -Wall -threaded -rtsopts -with-rtsopts=-N -O0
   build-depends:
       base
     , bytestring
     , containers
     , exceptions
+    , data-has
     , hasql
     , hasql-interpolate
     , hasql-pool
     , hasql-transaction
     , hedgehog
+    , hs-opentelemetry-api
+    , hs-opentelemetry-sdk
     , hspec
     , hspec-api
     , hspec-core
@@ -187,6 +193,7 @@ test-suite tests
     , hspec-hedgehog
     , HUnit
     , iproute
+    , log-base
     , mtl
     , password
     , postgres-options
@@ -194,5 +201,6 @@ test-suite tests
     , time
     , tmp-postgres
     , typed-process
+    , unliftio-core
     , uuid
     , web-server

@@ -27,7 +27,7 @@ import Test.Hspec.Hedgehog (hedgehog)
 -- TODO: Consider graphula or something for data scaffolding
 spec :: Spec
 spec = withTestDB $
-  describe "ServerSessions" $ do
+  describe "Effects.Database.Tables.ServerSessions" $ do
     runs 30 . it "schema validation" $ hedgehog . prop_insertSelect
 
 prop_insertSelect :: TestDBConfig -> PropertyT IO ()

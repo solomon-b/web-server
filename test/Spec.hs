@@ -2,6 +2,9 @@ module Main where
 
 --------------------------------------------------------------------------------
 
+import API.User.DeleteSpec qualified as User.Delete
+import API.User.GetSpec qualified as User.Get
+import API.User.Id.GetSpec qualified as User.Id.Get
 import Data.Maybe (fromMaybe)
 import Effects.Database.Tables.MailingListSpec qualified as User
 import Effects.Database.Tables.ServerSessionsSpec qualified as ServerSessions
@@ -30,3 +33,6 @@ main = do
     MailingList.spec
     ServerSessions.spec
     User.spec
+    User.Delete.spec
+    User.Get.spec
+    User.Id.Get.spec
