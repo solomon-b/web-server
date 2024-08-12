@@ -12,7 +12,7 @@ import Data.IP (IP (..), IPRange (..), fromSockAddr, makeAddrRange)
 import Data.Text (Text)
 import Effects.Clock (MonadClock)
 import Effects.Clock qualified as Clock
-import Effects.Database.Class (MonadDB (..))
+import Effects.Database.Class (MonadDB (..), execStatement)
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
 import Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)

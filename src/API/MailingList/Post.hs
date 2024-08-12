@@ -10,14 +10,11 @@ import Control.Monad.Reader (MonadReader)
 import Control.Monad.Reader qualified as Reader
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.KeyMap qualified as KeyMap
-import Data.CaseInsensitive qualified as CI
 import Data.Has (Has)
 import Data.Has qualified as Has
 import Data.Text (Text)
-import Data.Text qualified as Text
-import Data.Text.Display (Display)
-import Data.Text.Encoding qualified as Text.Encoding
-import Domain.Types.EmailAddress (EmailAddress (..))
+import Data.Text.Display (Display, display)
+import Domain.Types.EmailAddress (EmailAddress, isValid)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.MailingList qualified as MailingList
@@ -34,7 +31,6 @@ import OrphanInstances.OneRow ()
 import Servant ((:>))
 import Servant qualified
 import Servant.HTML.Lucid qualified as Lucid
-import Text.Email.Validate qualified as Email
 import Web.FormUrlEncoded (FromForm)
 
 --------------------------------------------------------------------------------
@@ -65,12 +61,12 @@ handler ::
   ) =>
   MailingListForm ->
   m (Lucid.Html ())
-handler req@(MailingListForm e@(EmailAddress {..})) = do
+handler req@(MailingListForm emailAddress) = do
   Observability.handlerSpan "POST /mailing-list" req (const ()) $ do
-    unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original emailAddress) $ throwErr Unauthorized
+    unless (isValid emailAddress) $ throwErr Unauthorized
 
-    _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert e
-    Log.logInfo "Submited Email Address:" (KeyMap.singleton "email" (Text.unpack $ CI.original emailAddress))
+    _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert emailAddress
+    Log.logInfo "Submited Email Address:" (KeyMap.singleton "email" (display emailAddress))
 
     -- TODO: Disable email confirmation in Dev mode
     -- sendConfirmationEmail e
@@ -84,7 +80,7 @@ sendConfirmationEmail ::
   ) =>
   EmailAddress ->
   m ()
-sendConfirmationEmail EmailAddress {..} = do
+sendConfirmationEmail emailAddress = do
   Hostname hostname <- Reader.asks Has.getter
   let subject :: Text
       subject = "Welcome to " <> hostname
@@ -93,5 +89,5 @@ sendConfirmationEmail EmailAddress {..} = do
       body = Mime.plainPart "Thank you for your interest. We are still in early development but will reach out soon with more information."
 
       mail :: Mime.Mail
-      mail = SMTP.simpleMail (SMTP.Address Nothing $ "contact@" <> hostname) [SMTP.Address Nothing $ CI.original emailAddress] [] [] subject [body]
+      mail = SMTP.simpleMail (SMTP.Address Nothing $ "contact@" <> hostname) [SMTP.Address Nothing $ display emailAddress] [] [] subject [body]
    in sendEmail mail

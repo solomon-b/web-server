@@ -9,14 +9,11 @@ import Control.Monad.Catch.Pure (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.CaseInsensitive qualified as CI
-import Data.Coerce (coerce)
 import Data.Has (Has)
 import Data.Password.Argon2 (Password, hashPassword)
 import Data.Text (Text)
 import Data.Text.Display (Display, display)
 import Data.Text.Display.Generic (RecordInstance (..))
-import Data.Text.Encoding qualified as Text.Encoding
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.DisplayName
 import Domain.Types.EmailAddress
@@ -35,7 +32,6 @@ import OrphanInstances.OneRow ()
 import OrphanInstances.Servant ()
 import Servant ((:>))
 import Servant qualified
-import Text.Email.Validate qualified as Email
 
 --------------------------------------------------------------------------------
 
@@ -85,7 +81,7 @@ handler ::
     )
 handler sockAddr mUserAgent req@Register {..} = do
   Observability.handlerSpan "POST /user/register" req display $ do
-    unless (Email.isValid $ Text.Encoding.encodeUtf8 $ CI.original $ coerce urEmail) $ throwErr Unauthorized
+    unless (isValid urEmail) $ throwErr Unauthorized
     execQuerySpanThrow (User.getUserByEmail urEmail) >>= \case
       Just _ -> do
         Log.logInfo "Email address is already registered" urEmail

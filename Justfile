@@ -29,7 +29,7 @@ clean:
 
 # Run all test suites.
 test: 
-  cabal test all
+  cabal test --test-show-details=direct --test-option=--format=specdoc
 
 # Build docs
 haddock: 

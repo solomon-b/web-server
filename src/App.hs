@@ -6,7 +6,6 @@ module App where
 
 {-
 TODO:
-- Test suite
 - Basic HTMX Widgets
   - Login
   - Register
@@ -49,7 +48,6 @@ import Hasql.Pool qualified as HSQL (Pool)
 import Hasql.Pool qualified as HSQL.Pool
 import Hasql.Pool.Config as HSQL.Pool.Config
 import Hasql.Session qualified as HSQL
-import Hasql.Statement qualified as HSQL
 import Log (runLogT)
 import Log qualified
 import Log.Backend.StandardOutput qualified as Log
@@ -176,9 +174,6 @@ instance MonadDB (AppM ctx) where
   runDB s = do
     pool <- Reader.asks Has.getter
     liftIO $ HSQL.Pool.use pool s
-
-  execStatement :: HSQL.Statement () a -> AppM ctx (Either HSQL.Pool.UsageError a)
-  execStatement = runDB . HSQL.statement ()
 
 instance MonadEmail (AppM ctx) where
   sendEmail :: Mime.Mail -> AppM ctx ()

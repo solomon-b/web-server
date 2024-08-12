@@ -12,6 +12,7 @@ import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
 import Data.Time (UTCTime)
 import Data.UUID (UUID, fromASCIIBytes)
+import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Tables.User qualified as User
 import GHC.Generics
@@ -116,7 +117,7 @@ getSessionUser sId =
       ( User.Id,
         EmailAddress,
         PasswordHash Argon2,
-        Text,
+        DisplayName,
         Maybe Text,
         Bool,
         Id,

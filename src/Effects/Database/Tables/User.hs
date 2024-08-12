@@ -10,7 +10,7 @@ import Data.Int (Int64)
 import Data.Password.Argon2 (Argon2, PasswordHash)
 import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
-import Domain.Types.DisplayName (DisplayName (..))
+import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
 import GHC.Generics
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
@@ -42,7 +42,7 @@ data Model = Model
   { mId :: Id,
     mEmail :: EmailAddress,
     mPassword :: PasswordHash Argon2,
-    mDisplayName :: Text,
+    mDisplayName :: DisplayName,
     mAvatarUrl :: Maybe Text,
     mIsAdmin :: Bool
   }
@@ -67,7 +67,7 @@ toDomain Model {..} =
   Domain
     { dId = mId,
       dEmail = mEmail,
-      dDisplayName = DisplayName mDisplayName,
+      dDisplayName = mDisplayName,
       dAvatarUrl = mAvatarUrl,
       dIsAdmin = mIsAdmin
     }

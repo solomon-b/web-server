@@ -1,4 +1,9 @@
-module Domain.Types.EmailAddress where
+module Domain.Types.EmailAddress
+  ( EmailAddress,
+    mkEmailAddress,
+    isValid,
+  )
+where
 
 --------------------------------------------------------------------------------
 
@@ -8,11 +13,13 @@ import Data.CaseInsensitive (CI)
 import Data.CaseInsensitive qualified as CI
 import Data.Text (Text)
 import Data.Text.Display (Display (..))
+import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Internal.Builder qualified as Text
 import GHC.Generics
 import Hasql.Interpolate (DecodeValue, EncodeValue)
 import OrphanInstances.CaseInsensitive ()
 import Servant qualified
+import Text.Email.Validate qualified as Validate
 
 --------------------------------------------------------------------------------
 
@@ -32,3 +39,9 @@ instance Display EmailAddress where
 instance Servant.FromHttpApiData EmailAddress where
   parseUrlPiece = Right . EmailAddress . CI.mk
   parseQueryParam = Right . EmailAddress . CI.mk
+
+mkEmailAddress :: Text -> EmailAddress
+mkEmailAddress = EmailAddress . CI.mk
+
+isValid :: EmailAddress -> Bool
+isValid = Validate.isValid . Text.Encoding.encodeUtf8 . CI.original . emailAddress
