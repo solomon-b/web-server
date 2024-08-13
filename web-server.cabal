@@ -97,6 +97,8 @@ library
                   , warp
   exposed-modules:
     App
+    App.Context
+    App.Monad
     Auth
     Auth.Network
     API
