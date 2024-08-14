@@ -70,19 +70,20 @@ library
                   , hs-opentelemetry-instrumentation-wai
                   , hs-opentelemetry-sdk
                   , hs-opentelemetry-utils-exceptions
+                  , htmx
                   , http-api-data
+                  , http-media
                   , http-types
                   , iproute
                   , log-base
-                  , lucid
-                  , lucid-htmx
+                  , lucid2
+                  , htmx-lucid
                   , mtl
 		  , mime-mail
                   , network
                   , network-ip
                   , password
                   , pretty-simple
-                  , servant-lucid
                   , servant-server
 		  , smtp-mail
                   , text
@@ -114,6 +115,7 @@ library
     API.User.Login.Post
     API.User.Logout.Get
     API.User.PasswordReset.Post
+    API.User.Register.Get
     API.User.Register.Post
     Config
     Config.Fetchers
@@ -140,6 +142,7 @@ library
     OrphanInstances.UTCTime
     OrphanInstances.UUID
     Utils
+    Utils.HTML
 
   hs-source-dirs: src
   default-language: Haskell2010

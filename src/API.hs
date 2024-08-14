@@ -17,6 +17,7 @@ import API.User.Logout.Get qualified as Logout.Get
 import API.User.Logout.Get qualified as User.Logout.Get
 import API.User.PasswordReset.Post qualified as PasswordReset.Post
 import API.User.PasswordReset.Post qualified as User.PasswordReset.Post
+import API.User.Register.Get qualified as User.Register.Get
 import API.User.Register.Post qualified as User.Register.Post
 import Config (Environment, Hostname, SmtpConfig)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
@@ -44,6 +45,7 @@ type API =
     -- Unprotected User Routes
     :<|> User.Get.Route
     :<|> User.Id.Get.Route
+    :<|> User.Register.Get.Route
     :<|> User.Register.Post.Route
     :<|> User.Login.Post.Route
     :<|> User.Login.Get.Route
@@ -80,6 +82,7 @@ server env = do
     :<|> MailingList.Post.handler
     :<|> User.Get.handler
     :<|> User.Id.Get.handler
+    :<|> User.Register.Get.handler
     :<|> User.Register.Post.handler
     :<|> User.Login.Post.handler
     :<|> User.Login.Get.handler

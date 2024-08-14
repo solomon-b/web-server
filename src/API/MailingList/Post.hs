@@ -30,7 +30,7 @@ import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.OneRow ()
 import Servant ((:>))
 import Servant qualified
-import Servant.HTML.Lucid qualified as Lucid
+import Utils.HTML (HTML, RawHtml, toHTML)
 import Web.FormUrlEncoded (FromForm)
 
 --------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ newtype MailingListForm = MailingListForm
   deriving newtype (Display)
   deriving anyclass (FromJSON, ToJSON, FromForm)
 
-type Route = "mailing-list" :> "signup" :> Servant.ReqBody '[Servant.JSON, Servant.FormUrlEncoded] MailingListForm :> Servant.Post '[Lucid.HTML] (Lucid.Html ())
+type Route = "mailing-list" :> "signup" :> Servant.ReqBody '[Servant.JSON, Servant.FormUrlEncoded] MailingListForm :> Servant.Post '[HTML] RawHtml
 
 --------------------------------------------------------------------------------
 -- Handler
@@ -60,7 +60,7 @@ handler ::
     MonadUnliftIO m
   ) =>
   MailingListForm ->
-  m (Lucid.Html ())
+  m RawHtml
 handler req@(MailingListForm emailAddress) = do
   Observability.handlerSpan "POST /mailing-list" req (const ()) $ do
     unless (isValid emailAddress) $ throwErr Unauthorized
@@ -71,7 +71,7 @@ handler req@(MailingListForm emailAddress) = do
     -- TODO: Disable email confirmation in Dev mode
     -- sendConfirmationEmail e
 
-    pure $ Lucid.p_ "You have been added to the mailing list!"
+    pure $ toHTML $ Lucid.p_ "You have been added to the mailing list!"
 
 sendConfirmationEmail ::
   ( MonadEmail m,

@@ -29,12 +29,19 @@ import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.Servant ()
 import Servant ((:>))
 import Servant qualified
+import Utils.HTML (HTML)
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
 
 --------------------------------------------------------------------------------
 
-type Route = "user" :> "login" :> Servant.RemoteHost :> Servant.Header "User-Agent" Text :> Servant.ReqBody '[Servant.FormUrlEncoded, Servant.JSON] Login :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
+type Route =
+  "user"
+    :> "login"
+    :> Servant.RemoteHost
+    :> Servant.Header "User-Agent" Text
+    :> Servant.ReqBody '[Servant.FormUrlEncoded] Login
+    :> Servant.PostAccepted '[HTML] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
 
 --------------------------------------------------------------------------------
 
@@ -89,10 +96,10 @@ handler sockAddr mUserAgent req@Login {..} = do
               Left _err ->
                 throwErr InternalServerError
               Right sessionId ->
-                pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
+                pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/" Servant.NoContent
           Just session ->
             let sessionId = Session.mSessionId session
-             in pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/user/current" Servant.NoContent
+             in pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/" Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail
         throwErr Unauthorized

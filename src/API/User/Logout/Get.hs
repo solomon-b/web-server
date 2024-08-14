@@ -17,37 +17,33 @@ import Lucid qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))
 import Servant qualified
-import Servant.HTML.Lucid qualified as Lucid
+import Utils.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.AuthProtect "cookie-auth" :> "user" :> "logout" :> Servant.Get '[Lucid.HTML] (Servant.Headers '[Servant.Header "HX-Redirect" Text] Servant.NoContent)
+type Route = Servant.AuthProtect "cookie-auth" :> "user" :> "logout" :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "HX-Redirect" Text] Servant.NoContent)
 
 --------------------------------------------------------------------------------
 
 data Page = Authenticated | NotAuthenticated
 
-instance Lucid.ToHtml Page where
-  toHtml :: (Monad m) => Page -> Lucid.HtmlT m ()
-  toHtml Authenticated =
-    Lucid.doctypehtml_ $ do
-      Lucid.head_ $ do
-        Lucid.title_ "Logout"
-        Lucid.link_ [Lucid.rel_ "stylesheet", Lucid.type_ "text/css", Lucid.href_ "https://matcha.mizu.sh/matcha.css"]
-      Lucid.body_ $ do
-        Lucid.div_ $ do
-          Lucid.p_ "You have been logged out."
-  toHtml NotAuthenticated =
-    Lucid.doctypehtml_ $ do
-      Lucid.head_ $ do
-        Lucid.title_ "Logout"
-        Lucid.link_ [Lucid.rel_ "stylesheet", Lucid.type_ "text/css", Lucid.href_ "https://matcha.mizu.sh/matcha.css"]
-      Lucid.body_ $ do
-        Lucid.div_ $ do
-          Lucid.p_ "You are not logged in."
-
-  toHtmlRaw :: (Monad m) => Page -> Lucid.HtmlT m ()
-  toHtmlRaw = Lucid.toHtml
+logoutPage :: (Monad m) => Page -> Lucid.HtmlT m ()
+logoutPage Authenticated =
+  Lucid.doctypehtml_ $ do
+    Lucid.head_ $ do
+      Lucid.title_ "Logout"
+      Lucid.link_ [Lucid.rel_ "stylesheet", Lucid.type_ "text/css", Lucid.href_ "https://matcha.mizu.sh/matcha.css"]
+    Lucid.body_ $ do
+      Lucid.div_ $ do
+        Lucid.p_ "You have been logged out."
+logoutPage NotAuthenticated =
+  Lucid.doctypehtml_ $ do
+    Lucid.head_ $ do
+      Lucid.title_ "Logout"
+      Lucid.link_ [Lucid.rel_ "stylesheet", Lucid.type_ "text/css", Lucid.href_ "https://matcha.mizu.sh/matcha.css"]
+    Lucid.body_ $ do
+      Lucid.div_ $ do
+        Lucid.p_ "You are not logged in."
 
 --------------------------------------------------------------------------------
 
