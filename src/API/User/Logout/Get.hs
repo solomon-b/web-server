@@ -4,6 +4,7 @@ module API.User.Logout.Get where
 
 import Auth qualified
 import Control.Monad.Catch (MonadCatch, MonadThrow)
+import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
@@ -66,7 +67,8 @@ handler ::
 handler Auth.Authz {authzSession} =
   Observability.handlerSpan "GET /user/logout" () (\_ -> show ()) $ do
     Auth.expireSession (Session.dSessionId authzSession) >>= \case
-      Left _ ->
+      Left err -> do
+        liftIO $ print err
         throwErr InternalServerError
       Right _ ->
         pure $ Servant.addHeader "/user/current" Servant.NoContent

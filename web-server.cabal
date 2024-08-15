@@ -144,6 +144,11 @@ library
     OrphanInstances.UUID
     Utils
     Utils.HTML
+    Widgets.Body
+    Widgets.Header
+    Widgets.Navbar
+    Widgets.LoginForm
+    Widgets.RegisterForm
 
   hs-source-dirs: src
   default-language: Haskell2010

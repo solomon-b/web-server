@@ -10,7 +10,7 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Has (Has)
-import Data.Password.Argon2 (Password, hashPassword)
+import Data.Password.Argon2 (Password, hashPassword, mkPassword)
 import Data.Text (Text)
 import Data.Text.Display (Display, display)
 import Data.Text.Display.Generic (RecordInstance (..))
@@ -32,10 +32,18 @@ import OrphanInstances.OneRow ()
 import OrphanInstances.Servant ()
 import Servant ((:>))
 import Servant qualified
+import Utils.HTML (HTML)
+import Web.FormUrlEncoded qualified as FormUrlEncoded
 
 --------------------------------------------------------------------------------
 
-type Route = "user" :> "register" :> Servant.RemoteHost :> Servant.Header "User-Agent" Text :> Servant.ReqBody '[Servant.JSON] Register :> Servant.Post '[Servant.JSON] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
+type Route =
+  "user"
+    :> "register"
+    :> Servant.RemoteHost
+    :> Servant.Header "User-Agent" Text
+    :> Servant.ReqBody '[Servant.FormUrlEncoded] Register
+    :> Servant.Post '[HTML] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
 
 --------------------------------------------------------------------------------
 
@@ -49,6 +57,13 @@ data Register = Register
   deriving
     (FromJSON, ToJSON)
     via Deriving.CustomJSON '[Deriving.FieldLabelModifier '[Deriving.StripPrefix "ur", Deriving.CamelToSnake]] Register
+
+instance FormUrlEncoded.FromForm Register where
+  fromForm f =
+    Register
+      <$> FormUrlEncoded.parseUnique "email" f
+      <*> fmap mkPassword (FormUrlEncoded.parseUnique "password" f)
+      <*> FormUrlEncoded.parseUnique "displayName" f
 
 --------------------------------------------------------------------------------
 
