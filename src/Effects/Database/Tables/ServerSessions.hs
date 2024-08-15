@@ -168,5 +168,5 @@ expireSession sessionId =
     [sql|
     UPDATE server_sessions
     SET expires_at = NOW()
-    WHERE session_id = #{sessionId}
+    WHERE id = #{sessionId}
   |]
