@@ -13,8 +13,8 @@ import API.User.Get qualified as User.Get
 import API.User.Id.Get qualified as User.Id.Get
 import API.User.Login.Get qualified as User.Login.Get
 import API.User.Login.Post qualified as User.Login.Post
-import API.User.Logout.Get qualified as Logout.Get
 import API.User.Logout.Get qualified as User.Logout.Get
+import API.User.Logout.Post qualified as User.Logout.Post
 import API.User.PasswordReset.Post qualified as PasswordReset.Post
 import API.User.PasswordReset.Post qualified as User.PasswordReset.Post
 import API.User.Register.Get qualified as User.Register.Get
@@ -52,6 +52,7 @@ type API =
     -- Protected User Routes
     :<|> User.Current.Get.Route
     :<|> User.Logout.Get.Route
+    :<|> User.Logout.Post.Route
     :<|> User.Delete.Route
     :<|> User.PasswordReset.Post.Route
     -- Protected Admin Routes
@@ -87,7 +88,8 @@ server env = do
     :<|> User.Login.Post.handler
     :<|> User.Login.Get.handler
     :<|> User.Current.Get.handler
-    :<|> Logout.Get.handler
+    :<|> User.Logout.Get.handler
+    :<|> User.Logout.Post.handler
     :<|> Delete.handler
     :<|> PasswordReset.Post.handler
     :<|> Admin.Get.handler

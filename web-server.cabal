@@ -114,6 +114,7 @@ library
     API.User.Login.Get
     API.User.Login.Post
     API.User.Logout.Get
+    API.User.Logout.Post
     API.User.PasswordReset.Post
     API.User.Register.Get
     API.User.Register.Post
