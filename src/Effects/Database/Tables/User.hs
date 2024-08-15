@@ -152,34 +152,3 @@ changeUserPassword userId oldPassword newPassword =
       SET (password = #{newPassword})
       WHERE id = #{userId} && password = #{oldPassword}
   |]
-
--- instance FormBuilder Model where
---   type Index Model = Id
---   type Name Model = Text
-
---   routeName :: Text
---   routeName = "user"
-
---   idColumn = runIdentity . umId
-
---   rowForm :: (Monad m) => Model (ToForm m)
---   rowForm =
---     Model
---       { mId = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
---         mEmail = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
---         mPassword = ToForm $ \x -> Lucid.td_ (fromString $ show x),
---         mDisplayName = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
---         mAvatarUrl = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x),
---         mIsAdmin = ToForm $ \x -> Lucid.td_ (fromString $ Text.unpack $ display x)
---       }
-
---   columnNames :: (Monad m) => Model (Const (Lucid.HtmlT m ()))
---   columnNames =
---     Model
---       { mId = Const "id",
---         mEmail = Const "email",
---         mPassword = Const "password",
---         mDisplayName = Const "displayName",
---         mAvatarUrl = Const "avatarUrl",
---         mIsAdmin = Const "isAdmin"
---       }

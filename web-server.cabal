@@ -130,7 +130,6 @@ library
     Effects.Database.Tables.User
     Effects.Database.Tables.MailingList
     Effects.Database.Tables.ServerSessions
-    Effects.FormBuilder
     Effects.MailSender
     Effects.Observability
     Errors
