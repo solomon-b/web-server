@@ -2,14 +2,17 @@ module API.Get where
 
 --------------------------------------------------------------------------------
 
+import Auth (getAuth, lookupSessionId)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Text (Text)
+import Effects.Database.Class (MonadDB)
 import Effects.Observability qualified as Observability
 import Lucid
 import OpenTelemetry.Trace (Tracer)
+import Servant ((:>))
 import Servant qualified
 import Utils.HTML (HTML, RawHtml (..), classes_, toHTML)
 import Widgets.Body qualified as Body
@@ -28,16 +31,22 @@ page loggedIn =
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.Get '[HTML] RawHtml
+type Route = Servant.Header "Cookie" Text :> Servant.Get '[HTML] RawHtml
 
 handler ::
   ( Has Tracer env,
     MonadCatch m,
+    MonadDB m,
     MonadReader env m,
     MonadUnliftIO m
   ) =>
-  Navbar.LoggedIn ->
+  Maybe Text ->
   m RawHtml
-handler loggedIn =
+handler cookie =
   Observability.handlerSpan "GET /" () (const @Text "RawHtml") $ do
-    pure $ toHTML $ page loggedIn
+    let mSessionId = cookie >>= lookupSessionId
+    traverse getAuth mSessionId >>= \case
+      Just (Right (Just _)) ->
+        pure $ toHTML $ page Navbar.IsLoggedIn
+      _ ->
+        pure $ toHTML $ page Navbar.IsNotLoggedIn

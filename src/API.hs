@@ -32,16 +32,14 @@ import Hasql.Pool qualified as HSQL
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Monad (MonadTracer)
-import Servant ((:<|>) (..), (:>))
+import Servant ((:<|>) (..))
 import Servant qualified
-import Widgets.Navbar qualified as Navbar
 
 --------------------------------------------------------------------------------
 
 type API =
   -- Unprotected homepage Routes
   Get.Route
-    :<|> (Servant.AuthProtect "cookie-auth" :> Get.Route)
     :<|> Static.Get.Route
     :<|> MailingList.Post.Route
     -- Unprotected User Routes
@@ -80,8 +78,7 @@ server ::
   Environment ->
   Servant.ServerT API m
 server env = do
-  Get.handler Navbar.IsNotLoggedIn
-    :<|> (\_ -> Get.handler Navbar.IsLoggedIn)
+  Get.handler
     :<|> Static.Get.handler env
     :<|> MailingList.Post.handler
     :<|> User.Get.handler

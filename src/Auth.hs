@@ -6,10 +6,14 @@ module Auth where
 --------------------------------------------------------------------------------
 
 import Control.Error (note)
+import Control.Monad ((>=>))
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.Foldable (fold)
 import Data.Functor ((<&>))
 import Data.IP (IP (..), IPRange (..), fromSockAddr, makeAddrRange)
 import Data.Text (Text)
+import Data.Text.Display (display)
+import Data.Text.Encoding qualified as Text.Encoding
 import Effects.Clock (MonadClock)
 import Effects.Clock qualified as Clock
 import Effects.Database.Class (MonadDB (..), execStatement)
@@ -66,6 +70,19 @@ authHandler pool = mkAuthHandler $ \req ->
               pure $ Authz (User.toDomain userModel) (Session.toDomain sessionModel)
         Left err -> throwErr err
 
+getAuth :: (MonadDB m) => Session.Id -> m (Either HSQL.UsageError (Maybe Authz))
+getAuth sessionId = do
+  eSessionData <- runDB . HSQL.statement () $ Session.getSessionUser sessionId
+  pure $
+    eSessionData
+      <&> fmap
+        ( \(user, serverSession) ->
+            Authz
+              { authzUser = User.toDomain user,
+                authzSession = Session.toDomain serverSession
+              }
+        )
+
 login ::
   (MonadDB m, MonadClock m, Log.MonadLog m) => User.Id -> SockAddr -> Maybe Text -> m (Either HSQL.UsageError Session.Id)
 login uid sockAddr mUserAgent = do
@@ -85,3 +102,28 @@ expireSession ::
   Session.Id ->
   m (Either HSQL.UsageError ())
 expireSession = execStatement . Session.expireSession
+
+lookupSessionId :: Text -> Maybe Session.Id
+lookupSessionId =
+  lookup (Text.Encoding.encodeUtf8 "session-id") . parseCookies . Text.Encoding.encodeUtf8 >=> Session.parseSessionId
+
+mkCookieSession :: Session.Id -> Text
+mkCookieSession sId =
+  fold
+    [ "session-id",
+      "=",
+      display sId,
+      "; ",
+      -- NOTE: We have to do this because of OIDC authentication flows
+      -- We could remove this if there was web native referrer domain whitelisting.
+      -- Instead we implement that in our auth handler. For more info see:
+      -- - https://stackoverflow.com/questions/64985696/samesite-cookie-but-allow-specific-domain
+      -- - https://github.com/WICG/first-party-sets/
+      "SameSite=lax",
+      "; ",
+      "Path=/",
+      "; ",
+      "HttpOnly",
+      "; ",
+      "Secure"
+    ]

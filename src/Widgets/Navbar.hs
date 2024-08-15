@@ -58,5 +58,4 @@ navBar loggedIn =
           li_ [] $ a_ [href_ "#", classes_ ["block", "py-2", "px-3", "md:p-0", "text-gray-900", "rounded", "hover:bg-gray-100", "md:hover:bg-transparent", "md:hover:text-green-700"]] "Contact"
 
       div_ [id_ "login-sign-up-logout", classes_ ["flex md:order-2", "space-x-3", "md:space-x-0", "rtl:space-x-reverse"]] $ do
-        if loggedIn == IsLoggedIn then logoutButton else loginButton
-        signupButton
+        if loggedIn == IsLoggedIn then logoutButton else loginButton *> signupButton
