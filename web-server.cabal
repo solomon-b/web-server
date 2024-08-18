@@ -103,6 +103,7 @@ library
     Auth
     Auth.Network
     API
+    API.About.Get
     API.Admin.Get
     API.MailingList.Post
     API.Get
@@ -143,6 +144,7 @@ library
     OrphanInstances.UUID
     Utils
     Utils.HTML
+    Widgets.About
     Widgets.Body
     Widgets.Header
     Widgets.Navbar

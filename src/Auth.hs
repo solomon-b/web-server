@@ -107,6 +107,17 @@ lookupSessionId :: Text -> Maybe Session.Id
 lookupSessionId =
   lookup (Text.Encoding.encodeUtf8 "session-id") . parseCookies . Text.Encoding.encodeUtf8 >=> Session.parseSessionId
 
+data LoggedIn = IsLoggedIn | IsNotLoggedIn
+
+userLoginState :: (MonadDB m) => Maybe Text -> m LoggedIn
+userLoginState cookie = do
+  let mSessionId = cookie >>= lookupSessionId
+  traverse getAuth mSessionId >>= \case
+    Just (Right (Just _)) ->
+      pure IsLoggedIn
+    _ ->
+      pure IsNotLoggedIn
+
 mkCookieSession :: Session.Id -> Text
 mkCookieSession sId =
   fold

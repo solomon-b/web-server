@@ -2,6 +2,7 @@ module API where
 
 --------------------------------------------------------------------------------
 
+import API.About.Get qualified as About.Get
 import API.Admin.Get qualified as Admin.Get
 import API.Get qualified as Get
 import API.MailingList.Post qualified as MailingList.Post
@@ -43,6 +44,7 @@ type API =
     :<|> Static.Get.Route
     :<|> MailingList.Post.Route
     -- Unprotected User Routes
+    :<|> About.Get.Route
     :<|> User.Get.Route
     :<|> User.Id.Get.Route
     :<|> User.Register.Get.Route
@@ -81,6 +83,7 @@ server env = do
   Get.handler
     :<|> Static.Get.handler env
     :<|> MailingList.Post.handler
+    :<|> About.Get.handler
     :<|> User.Get.handler
     :<|> User.Id.Get.handler
     :<|> User.Register.Get.handler
