@@ -2,7 +2,7 @@ module API.Get where
 
 --------------------------------------------------------------------------------
 
-import Auth (getAuth, lookupSessionId)
+import Auth qualified
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
@@ -44,9 +44,5 @@ handler ::
   m RawHtml
 handler cookie =
   Observability.handlerSpan "GET /" () (const @Text "RawHtml") $ do
-    let mSessionId = cookie >>= lookupSessionId
-    traverse getAuth mSessionId >>= \case
-      Just (Right (Just _)) ->
-        pure $ toHTML $ page Navbar.IsLoggedIn
-      _ ->
-        pure $ toHTML $ page Navbar.IsNotLoggedIn
+    loginState <- Auth.userLoginState cookie
+    pure $ toHTML $ page loginState
