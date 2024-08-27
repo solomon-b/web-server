@@ -16,3 +16,6 @@ readJSON path' = do
   case raw of
     Left err -> error $ show err
     Right json -> pure json
+
+combine :: (Applicative f) => (f a, f b) -> f (a, b)
+combine (x, y) = liftA2 (,) x y

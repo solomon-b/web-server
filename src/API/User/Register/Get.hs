@@ -2,37 +2,25 @@ module API.User.Register.Get where
 
 --------------------------------------------------------------------------------
 
-import Control.Monad.Catch (MonadCatch)
+import Auth qualified
+import Control.Monad.Catch (MonadCatch, MonadThrow)
+import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
+import Data.Functor ((<&>))
 import Data.Has (Has)
 import Data.Text (Text)
 import Effects.Observability qualified as Observability
-import Lucid
 import OpenTelemetry.Trace qualified as Trace
-import OrphanInstances.Lucid ()
 import Servant ((:>))
 import Servant qualified
-import Utils.HTML (HTML, RawHtml, classes_, toHTML)
-import Widgets.Header qualified as Header
-import Widgets.RegisterForm qualified as RegisterForm
+import Text.XmlHtml qualified as Xml
+import Text.XmlHtml.Optics
+import Utils.HTML (HTML, RawHtml, readDocument, readFragment, renderFragment, renderHTML)
 
 --------------------------------------------------------------------------------
 
-type Route = "user" :> "register" :> Servant.Get '[HTML] RawHtml
-
---------------------------------------------------------------------------------
-
-data Page = Page
-
-page :: (Monad m) => Lucid.HtmlT m ()
-page =
-  Lucid.doctypehtml_ $ do
-    Header.widget
-
-    Lucid.body_ $
-      div_ [classes_ ["container", "mx-auto"]] $ do
-        RegisterForm.widget
+type Route = "user" :> "register" :> Servant.Header "HX-Request" Bool :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
 
@@ -43,7 +31,29 @@ handler ::
     MonadUnliftIO m,
     MonadReader env m
   ) =>
-  m RawHtml
-handler =
+  Maybe Bool ->
+  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+handler hxTrigger =
   Observability.handlerSpan "GET /user/login" () (const @Text "RawHtml") $ do
-    pure $ toHTML page
+    pageFragment <- readFragment "src/Templates/Root/Register/get.html"
+    template <- readDocument "src/Templates/index.html" <&> swapMain pageFragment
+
+    case hxTrigger of
+      Just True ->
+        pure $ Servant.addHeader "HX-Request" $ renderFragment pageFragment
+      _ -> do
+        let html = renderHTML $ swapMain pageFragment template
+        pure $ Servant.addHeader "HX-Request" html
+
+--------------------------------------------------------------------------------
+
+updateAuthLinks :: [Xml.Node] -> Xml.Document -> Xml.Document
+updateAuthLinks = swapInner (_id "user-auth-links")
+
+swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
+swapMain = swapInner _main
+
+readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
+readUserAuthFragment = \case
+  Auth.IsLoggedIn -> readFragment "src/Templates/Root/Logout/button.html"
+  Auth.IsNotLoggedIn -> liftA2 (<>) (readFragment "src/Templates/Root/Login/button.html") (readFragment "src/Templates/Root/Register/button.html")

@@ -2,7 +2,6 @@ module API.User.Login.Post where
 
 --------------------------------------------------------------------------------
 
-import Auth (mkCookieSession)
 import Auth qualified
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
@@ -96,11 +95,11 @@ handler sockAddr mUserAgent req@Login {..} = do
             Auth.login (User.mId user) sockAddr mUserAgent >>= \case
               Left _err ->
                 throwErr InternalServerError
-              Right sessionId ->
-                pure $ Servant.addHeader (mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
+              Right sessionId -> do
+                pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
           Just session ->
             let sessionId = Session.mSessionId session
-             in pure $ Servant.addHeader (mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
+             in pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail
         throwErr Unauthorized

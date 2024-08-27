@@ -23,14 +23,14 @@ import Effects.Observability qualified as Observability
 import Errors (Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Log qualified
-import Lucid qualified
 import Network.Mail.Mime qualified as Mime
 import Network.Mail.SMTP qualified as SMTP
 import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.OneRow ()
 import Servant ((:>))
 import Servant qualified
-import Utils.HTML (HTML, RawHtml, toHTML)
+import Text.XmlHtml qualified as Xml
+import Utils.HTML (HTML, RawHtml, renderFragment)
 import Web.FormUrlEncoded (FromForm)
 
 --------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ handler req@(MailingListForm emailAddress) = do
     -- TODO: Disable email confirmation in Dev mode
     -- sendConfirmationEmail e
 
-    pure $ toHTML $ Lucid.p_ "You have been added to the mailing list!"
+    pure $ renderFragment [Xml.TextNode "You have been added to the mailing list!"]
 
 sendConfirmationEmail ::
   ( MonadEmail m,

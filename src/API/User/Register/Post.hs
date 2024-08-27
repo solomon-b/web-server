@@ -15,8 +15,8 @@ import Data.Text (Text)
 import Data.Text.Display (Display, display)
 import Data.Text.Display.Generic (RecordInstance (..))
 import Deriving.Aeson qualified as Deriving
-import Domain.Types.DisplayName
-import Domain.Types.EmailAddress
+import Domain.Types.DisplayName (DisplayName)
+import Domain.Types.EmailAddress (EmailAddress, isValid)
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -70,6 +70,7 @@ instance FormUrlEncoded.FromForm Register where
 data RegisterError = AlreadyRegistered
 
 instance ToServerError RegisterError where
+  toServerError :: RegisterError -> Servant.ServerError
   toServerError AlreadyRegistered = Servant.err401 {Servant.errBody = "Email address is already registered"}
 
 --------------------------------------------------------------------------------
@@ -112,5 +113,5 @@ handler sockAddr mUserAgent req@Register {..} = do
             Auth.login uid sockAddr mUserAgent >>= \case
               Left _err ->
                 throwErr InternalServerError
-              Right sessionId ->
-                pure $ Servant.addHeader ("session-id=" <> display sessionId <> "; SameSite=strict") $ Servant.addHeader "/" Servant.NoContent
+              Right sessionId -> do
+                pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent

@@ -51,6 +51,7 @@ library
                   , barbies
                   , base ^>=4.18.1.0
                   , base64
+                  , binary
                   , bytestring
                   , case-insensitive
                   , cookie
@@ -75,17 +76,16 @@ library
                   , http-media
                   , http-types
                   , iproute
+                  , lens
                   , log-base
-                  , lucid2
-                  , htmx-lucid
                   , mtl
 		  , mime-mail
                   , network
                   , network-ip
                   , password
-                  , pretty-simple
                   , servant-server
 		  , smtp-mail
+                  , string-interpolate
                   , text
                   , text-display
                   , time
@@ -96,6 +96,7 @@ library
                   , unordered-containers
                   , wai
                   , warp
+                  , xmlhtml
   exposed-modules:
     App
     App.Context
@@ -136,20 +137,14 @@ library
     Errors
     OrphanInstances.CaseInsensitive
     OrphanInstances.IPRange
-    OrphanInstances.Lucid
     OrphanInstances.OneRow
     OrphanInstances.Password
     OrphanInstances.Servant
     OrphanInstances.UTCTime
     OrphanInstances.UUID
+    Text.XmlHtml.Optics
     Utils
     Utils.HTML
-    Widgets.About
-    Widgets.Body
-    Widgets.Header
-    Widgets.Navbar
-    Widgets.LoginForm
-    Widgets.RegisterForm
 
   hs-source-dirs: src
   default-language: Haskell2010

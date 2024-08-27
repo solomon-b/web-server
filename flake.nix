@@ -62,6 +62,22 @@
                   { }
               );
 
+              htmx = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
+                {
+                  pkg = "htmx";
+                  ver = "0.1.0.0";
+                  sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+                }
+                { });
+
+              htmx-lucid = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
+                {
+                  pkg = "htmx-lucid";
+                  ver = "0.2.0.0";
+                  sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+                }
+                { });
+
               postgresql-binary = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
                 {
                   pkg = "postgresql-binary";
@@ -69,6 +85,7 @@
                   sha256 = "sha256-ldXhe3JpdOXQvB7LE+5D4SUpNuwRjfw7zceV9BTVcUA=";
                 }
                 { });
+
               postgresql-libpq = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
                 {
                   pkg = "postgresql-libpq";
