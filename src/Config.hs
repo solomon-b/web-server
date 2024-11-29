@@ -135,7 +135,7 @@ instance FetchHKD ObservabilityConfigF where
         observabilityConfigFExporter = readEnvDefault StdOut (\case "StdOut" -> Just StdOut; _ -> Nothing) "APP_OBSERVABILITY_EXPORTER"
       }
 
-  toConcrete :: (Applicative f) => ObservabilityConfigF f -> f (Concrete ObservabilityConfigF)
+  toConcrete :: (Applicative f) => ObservabilityConfigF f -> f ObservabilityConfig
   toConcrete ObservabilityConfigF {..} = ObservabilityConfig <$> observabilityConfigFVerbosity <*> observabilityConfigFExporter
 
 --------------------------------------------------------------------------------
@@ -162,7 +162,7 @@ instance FetchHKD SmtpConfigF where
         smtpConfigFPassword = readEnv id "APP_SMTP_PASSWORD"
       }
 
-  toConcrete :: (Applicative f) => SmtpConfigF f -> f (Concrete SmtpConfigF)
+  toConcrete :: (Applicative f) => SmtpConfigF f -> f SmtpConfig
   toConcrete SmtpConfigF {..} = SmtpConfig <$> smtpConfigFServer <*> smtpConfigFUsername <*> smtpConfigFPassword
 
 --------------------------------------------------------------------------------
@@ -202,7 +202,7 @@ instance FetchHKD AppConfigF where
         appConfigFHostname = readEnv Hostname "APP_HOSTNAME"
       }
 
-  toConcrete :: (Applicative f) => AppConfigF f -> f (Concrete AppConfigF)
+  toConcrete :: (Applicative f) => AppConfigF f -> f AppConfig
   toConcrete AppConfigF {..} =
     AppConfig <$> toConcrete appConfigFWarpSettings <*> toConcrete appConfigFPostgresSettings <*> appConfigFEnvironment <*> toConcrete appConfigFObservability <*> toConcrete appConfigFSmtp <*> appConfigFHostname
 
