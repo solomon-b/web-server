@@ -3,6 +3,7 @@ module API.User.Delete where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import App.Errors (Unauthorized (..), throwErr)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -13,7 +14,6 @@ import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
-import Errors (Unauthorized (..), throwErr)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))

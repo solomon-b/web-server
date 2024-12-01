@@ -3,6 +3,7 @@ module API.User.Login.Post where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import App.Errors (InternalServerError (..), Unauthorized (..), throwErr)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
@@ -21,7 +22,6 @@ import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
-import Errors (InternalServerError (..), Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Log qualified
 import Network.Socket

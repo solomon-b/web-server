@@ -3,6 +3,7 @@ module API.User.Register.Post where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import App.Errors (Forbidden (..), InternalServerError (..), ToServerError (..), Unauthorized (..), throwErr)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Catch.Pure (MonadCatch)
@@ -22,7 +23,6 @@ import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
-import Errors (Forbidden (..), InternalServerError (..), ToServerError (..), Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Hasql.Interpolate (OneRow (..))
 import Log qualified

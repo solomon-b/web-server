@@ -5,6 +5,7 @@ module App.Auth where
 
 --------------------------------------------------------------------------------
 
+import App.Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)
 import Control.Error (note)
 import Control.Monad ((>=>))
 import Control.Monad.IO.Class (MonadIO (..))
@@ -19,7 +20,6 @@ import Effects.Clock qualified as Clock
 import Effects.Database.Class (MonadDB (..), execStatement)
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
-import Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)
 import Hasql.Interpolate (getOneRow)
 import Hasql.Pool qualified as HSQL
 import Hasql.Session qualified as HSQL

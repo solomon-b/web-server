@@ -2,7 +2,7 @@ module Text.HTML where
 
 --------------------------------------------------------------------------------
 
-import Errors (InternalServerError (..), throwErr)
+import App.Errors (InternalServerError (..), throwErr)
 import Control.Lens (view)
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))

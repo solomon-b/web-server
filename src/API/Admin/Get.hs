@@ -7,6 +7,7 @@ module API.Admin.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import App.Errors (Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
 import Control.Lens (set, (<&>))
 import Control.Monad (unless)
@@ -25,7 +26,6 @@ import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.MailingList qualified as MailingList
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
-import Errors (Unauthorized (..), throwErr)
 import Log qualified
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))

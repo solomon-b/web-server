@@ -3,6 +3,7 @@ module API.MailingList.Post where
 --------------------------------------------------------------------------------
 
 import App.Config (Hostname (..), SmtpConfig (..))
+import App.Errors (Unauthorized (..), throwErr)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -20,7 +21,6 @@ import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.MailingList qualified as MailingList
 import Effects.MailSender
 import Effects.Observability qualified as Observability
-import Errors (Unauthorized (..), throwErr)
 import GHC.Generics (Generic)
 import Log qualified
 import Network.Mail.Mime qualified as Mime

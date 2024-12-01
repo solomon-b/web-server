@@ -2,6 +2,7 @@ module Effects.Database.Execute where
 
 --------------------------------------------------------------------------------
 
+import App.Errors (InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader qualified as Reader
@@ -17,7 +18,6 @@ import Data.Text qualified as Text
 import Data.Text.Display (Display, display)
 import Effects.Database.Class
 import Effects.Database.SerializedStatement (SerializedStatement (..), serializeStatement)
-import Errors (InternalServerError (..), throwErr)
 import GHC.Num.Natural (Natural)
 import Hasql.Pool qualified as HSQL
 import Hasql.Session (SessionError (..))

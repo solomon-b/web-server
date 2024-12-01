@@ -3,6 +3,7 @@ module API.User.Logout.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import App.Errors (InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -12,7 +13,6 @@ import Data.Text (Text)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Observability qualified as Observability
-import Errors (InternalServerError (..), throwErr)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))

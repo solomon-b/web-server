@@ -104,6 +104,7 @@ library
     App.Config
     App.Config.Fetchers
     App.Context
+    App.Errors
     App.Monad
     API
     API.About.Get
@@ -136,7 +137,6 @@ library
     Effects.Database.Tables.ServerSessions
     Effects.MailSender
     Effects.Observability
-    Errors
     OrphanInstances.CaseInsensitive
     OrphanInstances.IPRange
     OrphanInstances.OneRow

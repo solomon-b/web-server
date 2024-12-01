@@ -2,6 +2,7 @@ module API.User.Id.Get where
 
 --------------------------------------------------------------------------------
 
+import App.Errors (Forbidden (..), throwErr)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
@@ -11,7 +12,6 @@ import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Execute qualified as Execute
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
-import Errors (Forbidden (..), throwErr)
 import Log qualified
 import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))

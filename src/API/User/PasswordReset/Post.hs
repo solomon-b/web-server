@@ -3,6 +3,7 @@ module API.User.PasswordReset.Post where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import App.Errors (ToServerError (..), throwErr, toErrorBody)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
@@ -17,7 +18,6 @@ import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
-import Errors (ToServerError (..), throwErr, toErrorBody)
 import GHC.Generics (Generic)
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
