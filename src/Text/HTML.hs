@@ -2,13 +2,13 @@ module Text.HTML where
 
 --------------------------------------------------------------------------------
 
+import Errors (InternalServerError (..), throwErr)
 import Control.Lens (view)
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Binary.Builder qualified as Builder
 import Data.ByteString as BS
 import Data.ByteString.Lazy as Lazy hiding (foldr)
-import Errors (InternalServerError (..), throwErr)
 import Network.HTTP.Media ((//), (/:))
 import Servant
 import Text.XmlHtml qualified as Xml
@@ -24,7 +24,8 @@ newtype RawHtml = RawHtml {unRaw :: Lazy.ByteString}
 printRawHtml :: RawHtml -> IO ()
 printRawHtml = Lazy.putStr . unRaw
 
-p = printRawHtml . renderHTML
+printDocument:: Xml.Document -> IO ()
+printDocument = printRawHtml . renderHTML
 
 instance Accept HTML where
   contentType _ = "text" // "html" /: ("charset", "utf-8")

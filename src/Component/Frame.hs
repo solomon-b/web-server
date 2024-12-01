@@ -14,7 +14,7 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
-import Utils.HTML (parseDocument)
+import Text.HTML (parseDocument)
 
 --------------------------------------------------------------------------------
 

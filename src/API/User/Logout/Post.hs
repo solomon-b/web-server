@@ -16,7 +16,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import Servant ((:>))
 import Servant qualified
-import Utils.HTML (HTML)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 

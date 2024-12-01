@@ -29,8 +29,8 @@ import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.OneRow ()
 import Servant ((:>))
 import Servant qualified
+import Text.HTML (HTML, RawHtml, renderFragment)
 import Text.XmlHtml qualified as Xml
-import Utils.HTML (HTML, RawHtml, renderFragment)
 import Web.FormUrlEncoded (FromForm)
 
 --------------------------------------------------------------------------------

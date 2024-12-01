@@ -32,7 +32,7 @@ import OrphanInstances.OneRow ()
 import OrphanInstances.Servant ()
 import Servant ((:>))
 import Servant qualified
-import Utils.HTML (HTML)
+import Text.HTML (HTML)
 import Web.FormUrlEncoded qualified as FormUrlEncoded
 
 --------------------------------------------------------------------------------

@@ -18,9 +18,9 @@ import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
+import Text.HTML (HTML, RawHtml, parseFragment, readFragment, renderFragment, renderHTML)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
-import Utils.HTML (HTML, RawHtml, parseFragment, readFragment, renderFragment, renderHTML)
 
 --------------------------------------------------------------------------------
 

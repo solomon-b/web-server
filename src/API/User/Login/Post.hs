@@ -29,7 +29,7 @@ import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.Servant ()
 import Servant ((:>))
 import Servant qualified
-import Utils.HTML (HTML)
+import Text.HTML (HTML)
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
 

@@ -13,7 +13,7 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics (swapInner, _a, _docContent', _elAttributes, _elChildren, _elChildren', _id)
-import Utils.HTML (parseFragment)
+import Text.HTML (parseFragment)
 
 --------------------------------------------------------------------------------
 
