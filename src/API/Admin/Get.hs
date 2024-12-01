@@ -7,7 +7,8 @@ module API.Admin.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import Control.Lens (filtered, set, traversed, (<&>))
+import Component.NavBar hiding (template)
+import Control.Lens (set, (<&>))
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
@@ -30,8 +31,8 @@ import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
 import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics (swapInner, _a, _docContent', _elAttributes, _elChildren, _elChildren', _id, _main)
-import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, readFragment, renderHTML)
+import Text.XmlHtml.Optics (swapInner, _elChildren, _id, _main)
+import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, renderHTML)
 
 --------------------------------------------------------------------------------
 
@@ -138,28 +139,9 @@ handler (Auth.Authz User.Domain {..} _) = do
     mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
 
     pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-    page <- readDocument "src/Templates/index.html" <&> updateTabHighlight . updateAuthLinks authFragment . swapMain pageFragment
+    page <- readDocument "src/Templates/index.html" <&> updateTabHighlight "home-tab" . updateAuthLinks authFragment . swapInner _main pageFragment
 
     pure $ renderHTML page
 
---------------------------------------------------------------------------------
-
-updateTabHighlight :: Xml.Document -> Xml.Document
-updateTabHighlight =
-  set (_docContent' . _id "home-tab" . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
-  where
-    focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
-
-updateAuthLinks :: [Xml.Node] -> Xml.Document -> Xml.Document
-updateAuthLinks = swapInner (_id "user-auth-links")
-
-swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
-swapMain = swapInner _main
-
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "db-tables" . _elChildren) x)
-
-readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
-readUserAuthFragment = \case
-  Auth.IsLoggedIn -> readFragment "src/Templates/Root/Logout/button.html"
-  Auth.IsNotLoggedIn -> liftA2 (<>) (readFragment "src/Templates/Root/Login/button.html") (readFragment "src/Templates/Root/Register/button.html")

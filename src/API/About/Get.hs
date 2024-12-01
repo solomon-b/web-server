@@ -5,10 +5,9 @@ module API.About.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import Control.Lens (filtered, set, traversed, (<&>))
+import Component.NavBar hiding (template)
+import Control.Lens ((<&>))
 import Control.Monad.Catch (MonadCatch)
-import Control.Monad.Catch.Pure (MonadThrow)
-import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.ByteString (ByteString)
@@ -20,9 +19,8 @@ import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
-import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics (swapInner, _a, _docContent', _elAttributes, _elChildren', _id, _main)
-import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, readFragment, renderFragment, renderHTML)
+import Text.XmlHtml.Optics (swapInner, _main)
+import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, renderFragment, renderHTML)
 
 --------------------------------------------------------------------------------
 
@@ -67,30 +65,11 @@ handler cookie hxTrigger =
     pageFragment <- parseFragment template
     authFragment <- readUserAuthFragment loginState
 
-    template <- readDocument "src/Templates/index.html" <&> updateTabHighlight . updateAuthLinks authFragment
+    page <- readDocument "src/Templates/index.html" <&> updateTabHighlight "about-tab" . updateAuthLinks authFragment
 
     case hxTrigger of
       Just True ->
         pure $ Servant.addHeader "HX-Request" $ renderFragment pageFragment
       _ -> do
-        let html = renderHTML $ swapMain pageFragment template
+        let html = renderHTML $ swapInner _main pageFragment page
         pure $ Servant.addHeader "HX-Request" html
-
---------------------------------------------------------------------------------
-
-updateTabHighlight :: Xml.Document -> Xml.Document
-updateTabHighlight =
-  set (_docContent' . _id "about-tab" . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
-  where
-    focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
-
-updateAuthLinks :: [Xml.Node] -> Xml.Document -> Xml.Document
-updateAuthLinks = swapInner (_id "user-auth-links")
-
-swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
-swapMain = swapInner _main
-
-readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
-readUserAuthFragment = \case
-  Auth.IsLoggedIn -> readFragment "src/Templates/Root/Logout/button.html"
-  Auth.IsNotLoggedIn -> liftA2 (<>) (readFragment "src/Templates/Root/Login/button.html") (readFragment "src/Templates/Root/Register/button.html")

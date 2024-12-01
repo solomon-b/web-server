@@ -95,9 +95,6 @@ handler hxTrigger =
 
 --------------------------------------------------------------------------------
 
-updateAuthLinks :: [Xml.Node] -> Xml.Document -> Xml.Document
-updateAuthLinks = swapInner (_id "user-auth-links")
-
 swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
 swapMain = swapInner _main
 
