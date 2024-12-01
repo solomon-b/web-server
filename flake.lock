@@ -1,31 +1,15 @@
 {
   "nodes": {
-    "cfg-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1713115729,
-        "narHash": "sha256-sbPhaC7uLjUG99Euad1LpP5bRVzQ7N8CR1YbnJ5Ihhs=",
-        "owner": "JonathanLorimer",
-        "repo": "cfg",
-        "rev": "f68e34faf78fabccc54de395ef093d525bb7d39e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "JonathanLorimer",
-        "repo": "cfg",
-        "type": "github"
-      }
-    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1710146030,
-        "narHash": "sha256-SZ5L6eA7HJ/nmkzGG7/ISclqe6oZdOZTNoesiInkXPQ=",
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "b1d9ab70662946ef0850d488da1c9019f3a9752a",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
         "type": "github"
       },
       "original": {
@@ -37,11 +21,11 @@
     "hasql-interpolate-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1721149332,
-        "narHash": "sha256-yENg0EadZS4Y52Gt71IXsX82foZi9HH7fOoJqElBv8A=",
+        "lastModified": 1732132753,
+        "narHash": "sha256-qErA4SsoPZjpCtJouPYpeDm+RrMji4Wsrfan9SdO5mE=",
         "owner": "awkward-squad",
         "repo": "hasql-interpolate",
-        "rev": "7d3a20824213f18188273e579788a7baa570daf6",
+        "rev": "b52fc63d0409fcc79b6758ff08dec59e96ddbd60",
         "type": "github"
       },
       "original": {
@@ -53,11 +37,11 @@
     "hasql-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1721240642,
-        "narHash": "sha256-n8iuOINk8NPNAnTVJ6Od3nsIkj1pEZ/9lj2TTm4TZjE=",
+        "lastModified": 1729181625,
+        "narHash": "sha256-1S3/Apisb1vGz49ljcYnfIye3J5ClzpEqPAtU00ocBc=",
         "owner": "JonathanLorimer",
         "repo": "hasql",
-        "rev": "a9a80bb90f81ccbe9a157276beb321b8536ad25d",
+        "rev": "3b993b2afbdf9619d3d74b0ea3caddb87b3e00d4",
         "type": "github"
       },
       "original": {
@@ -69,11 +53,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1716097317,
-        "narHash": "sha256-1UMrLtgzielG/Sop6gl6oTSM4pDt7rF9j9VuxhDWDlY=",
+        "lastModified": 1732617236,
+        "narHash": "sha256-PYkz6U0bSEaEB1al7O1XsqVNeSNS+s3NVclJw7YC43w=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8535fb92661f37ff9f0da3007fbc942f7d134b41",
+        "rev": "af51545ec9a44eadf3fe3547610a5cdd882bc34e",
         "type": "github"
       },
       "original": {
@@ -85,11 +69,11 @@
     },
     "root": {
       "inputs": {
-        "cfg-src": "cfg-src",
         "flake-utils": "flake-utils",
         "hasql-interpolate-src": "hasql-interpolate-src",
         "hasql-src": "hasql-src",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "tmp-postgres-src": "tmp-postgres-src"
       }
     },
     "systems": {
@@ -104,6 +88,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "tmp-postgres-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1691516008,
+        "narHash": "sha256-dE1OQN7I4Lxy6RBdLCvm75Z9D/Hu+9G4ejV2pEtvL1A=",
+        "owner": "jfischoff",
+        "repo": "tmp-postgres",
+        "rev": "7f2467a6d6d5f6db7eed59919a6773fe006cf22b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jfischoff",
+        "repo": "tmp-postgres",
         "type": "github"
       }
     }

@@ -5,22 +5,22 @@
     nixpkgs.url = github:NixOS/nixpkgs/nixpkgs-unstable;
     flake-utils.url = github:numtide/flake-utils;
 
-    cfg-src = {
-      url = github:JonathanLorimer/cfg;
-      flake = false;
-    };
-
     hasql-interpolate-src = {
-      url = "github:awkward-squad/hasql-interpolate";
+      url = github:awkward-squad/hasql-interpolate;
       flake = false;
     };
     hasql-src = {
-      url = "github:JonathanLorimer/hasql/expose-hasql-encoders-params";
+      url = github:JonathanLorimer/hasql/expose-hasql-encoders-params;
+      flake = false;
+    };
+
+    tmp-postgres-src = {
+      url = github:jfischoff/tmp-postgres;
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, cfg-src, hasql-interpolate-src, hasql-src }:
+  outputs = { self, nixpkgs, flake-utils, hasql-interpolate-src, hasql-src, tmp-postgres-src }:
     let
       ghcVersion = "963";
       compiler = "ghc${ghcVersion}";
@@ -66,15 +66,7 @@
                 {
                   pkg = "htmx";
                   ver = "0.1.0.0";
-                  sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-                }
-                { });
-
-              htmx-lucid = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
-                {
-                  pkg = "htmx-lucid";
-                  ver = "0.2.0.0";
-                  sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+                  sha256 = "sha256-RHpdjcqHBwA0u18h3TDNslhxsz0HXdy1pO5YYykc/jk=";
                 }
                 { });
 
@@ -94,10 +86,10 @@
                 }
                 { });
 
-              web-server = hfinal.callCabal2nix "web-server" ./. { };
-              cfg = hfinal.callCabal2nix "cfg" "${cfg-src}" { };
-              rel8 = pkgs.haskell.lib.dontCheck hprev.rel8;
-              servant-auth-server = pkgs.haskell.lib.markUnbroken (pkgs.haskell.lib.dontCheck hprev.servant-auth-server);
+              # TODO: Figure out how to run effectful integration tests in the nix build. Nix Shell
+              web-server = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./. { });
+
+              tmp-postgres = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "tmp-postgres" tmp-postgres-src { });
             };
           };
         in
