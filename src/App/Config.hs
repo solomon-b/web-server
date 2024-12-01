@@ -3,12 +3,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deriving-defaults #-}
 
-module Config where
+module App.Config where
 
 --------------------------------------------------------------------------------
 
+import App.Config.Fetchers (FetchHKD (..), packText, readEnv, readEnvDefault, readEnvOptional, readText)
 import Barbies
-import Config.Fetchers (FetchHKD (..), packText, readEnv, readEnvDefault, readEnvOptional, readText)
 import Data.Aeson (ToJSON)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)

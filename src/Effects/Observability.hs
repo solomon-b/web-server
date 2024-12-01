@@ -2,7 +2,7 @@ module Effects.Observability where
 
 --------------------------------------------------------------------------------
 
-import Config (AppExporter (..), ObservabilityConfig (..), Verbosity (..))
+import App.Config (AppExporter (..), ObservabilityConfig (..), Verbosity (..))
 import Control.Exception (bracket)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
 import Control.Monad.IO.Unlift

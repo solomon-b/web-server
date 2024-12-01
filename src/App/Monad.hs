@@ -2,8 +2,8 @@ module App.Monad where
 
 --------------------------------------------------------------------------------
 
+import App.Config
 import App.Context
-import Config
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))

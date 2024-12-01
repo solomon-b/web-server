@@ -20,7 +20,7 @@ import API.User.PasswordReset.Post qualified as PasswordReset.Post
 import API.User.PasswordReset.Post qualified as User.PasswordReset.Post
 import API.User.Register.Get qualified as User.Register.Get
 import API.User.Register.Post qualified as User.Register.Post
-import Config (Environment, Hostname, SmtpConfig)
+import App.Config (Environment, Hostname, SmtpConfig)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)

@@ -17,10 +17,10 @@ TODO:
 --------------------------------------------------------------------------------
 
 import API
+import App.Config
 import App.Context
 import App.Monad
 import Auth (authHandler)
-import Config
 import Control.Exception (catch)
 import Control.Monad (void)
 import Control.Monad.Trans.Except (ExceptT (..))

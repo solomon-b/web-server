@@ -2,8 +2,8 @@ module App.Context where
 
 --------------------------------------------------------------------------------
 
+import App.Config
 import Auth (Authz)
-import Config
 import Data.Has qualified as Has
 import Hasql.Pool qualified as HSQL (Pool)
 import Log qualified

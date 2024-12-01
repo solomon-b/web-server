@@ -99,6 +99,8 @@ library
                   , xmlhtml
   exposed-modules:
     App
+    App.Config
+    App.Config.Fetchers
     App.Context
     App.Monad
     Auth
@@ -120,8 +122,6 @@ library
     API.User.PasswordReset.Post
     API.User.Register.Get
     API.User.Register.Post
-    Config
-    Config.Fetchers
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
     Domain.Types.EmailAddress

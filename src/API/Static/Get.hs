@@ -2,7 +2,7 @@ module API.Static.Get where
 
 --------------------------------------------------------------------------------
 
-import Config (Environment (..))
+import App.Config (Environment (..))
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Servant ((:>))

@@ -2,7 +2,7 @@ module API.MailingList.Post where
 
 --------------------------------------------------------------------------------
 
-import Config (Hostname (..), SmtpConfig (..))
+import App.Config (Hostname (..), SmtpConfig (..))
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)

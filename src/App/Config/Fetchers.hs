@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -Wno-deriving-defaults #-}
 
 -- | Configuration fetching/parsing.
-module Config.Fetchers where
+module App.Config.Fetchers where
 
 --------------------------------------------------------------------------------
 
