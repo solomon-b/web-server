@@ -57,10 +57,9 @@ import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX
 import Log qualified
 import Log.Internal.Logger qualified as Log.Internal
-import OpenTelemetry.Exporter (ExportResult (..), Exporter (..))
+import OpenTelemetry.Exporter.Span (ExportResult (..), SpanExporter (..))
 import OpenTelemetry.Processor.Simple (SimpleProcessorConfig (..), simpleProcessor)
 import OpenTelemetry.Trace qualified as OTEL
-import OpenTelemetry.Trace.Core (ImmutableSpan)
 import System.Process.Typed (proc, readProcess)
 import Test.Hspec (Spec, SpecWith, it)
 import Test.Hspec.Core.Hooks (around, beforeWith)
@@ -170,8 +169,8 @@ instance Example (TestDB a) where
 --------------------------------------------------------------------------------
 
 -- No-Op Trace Exporter for test suite
-noOpExporter :: Exporter ImmutableSpan
-noOpExporter = Exporter (\_ -> pure Success) (pure ())
+noOpExporter :: SpanExporter
+noOpExporter = SpanExporter (\_ -> pure Success) (pure ())
 
 withTracer :: (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
 withTracer f =
