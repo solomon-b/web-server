@@ -5,8 +5,7 @@ module API.About.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import Component.NavBar hiding (template)
-import Control.Lens ((<&>))
+import Component.Frame (loadFrameWithNav)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
@@ -20,7 +19,7 @@ import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
 import Text.XmlHtml.Optics (swapInner, _main)
-import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, renderFragment, renderHTML)
+import Utils.HTML (HTML, RawHtml, parseFragment, renderFragment, renderHTML)
 
 --------------------------------------------------------------------------------
 
@@ -63,9 +62,7 @@ handler cookie hxTrigger =
     loginState <- Auth.userLoginState cookie
 
     pageFragment <- parseFragment template
-    authFragment <- readUserAuthFragment loginState
-
-    page <- readDocument "src/Templates/index.html" <&> updateTabHighlight "about-tab" . updateAuthLinks authFragment
+    page <- loadFrameWithNav loginState "about-tab" pageFragment
 
     case hxTrigger of
       Just True ->

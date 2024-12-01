@@ -5,12 +5,12 @@ module API.User.Register.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import Component.Frame (loadFrameWithNav)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.ByteString (ByteString)
-import Data.Functor ((<&>))
 import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
@@ -20,7 +20,7 @@ import Servant ((:>))
 import Servant qualified
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
-import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, readFragment, renderFragment, renderHTML)
+import Utils.HTML (HTML, RawHtml, parseFragment, readFragment, renderFragment, renderHTML)
 
 --------------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ handler ::
 handler hxTrigger =
   Observability.handlerSpan "GET /user/login" () (const @Text "RawHtml") $ do
     pageFragment <- parseFragment template
-    page <- readDocument "src/Templates/index.html" <&> swapMain pageFragment
+    page <- loadFrameWithNav Auth.IsNotLoggedIn "" pageFragment
 
     case hxTrigger of
       Just True ->

@@ -7,7 +7,7 @@ module API.Admin.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import Component.NavBar hiding (template)
+import Component.Frame (loadFrameWithNav)
 import Control.Lens (set, (<&>))
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
@@ -31,8 +31,8 @@ import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
 import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics (swapInner, _elChildren, _id, _main)
-import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, renderHTML)
+import Text.XmlHtml.Optics (_elChildren, _id)
+import Utils.HTML (HTML, RawHtml, parseFragment, renderHTML)
 
 --------------------------------------------------------------------------------
 
@@ -129,8 +129,6 @@ handler (Auth.Authz User.Domain {..} _) = do
   Observability.handlerSpan "GET /admin" () (const @Text "RawHTML") $ do
     unless dIsAdmin (throwErr Unauthorized)
 
-    authFragment <- readUserAuthFragment Auth.IsLoggedIn
-
     users <- execQuerySpanThrow User.getUsers
     let x = TE.encodeUtf8 $ userTable users
     userTableFragment <- parseFragment x
@@ -139,7 +137,7 @@ handler (Auth.Authz User.Domain {..} _) = do
     mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
 
     pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-    page <- readDocument "src/Templates/index.html" <&> updateTabHighlight "home-tab" . updateAuthLinks authFragment . swapInner _main pageFragment
+    page <- loadFrameWithNav Auth.IsLoggedIn "about-tab" pageFragment
 
     pure $ renderHTML page
 

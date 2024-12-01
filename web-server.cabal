@@ -122,6 +122,7 @@ library
     API.User.PasswordReset.Post
     API.User.Register.Get
     API.User.Register.Post
+    Component.Frame
     Component.NavBar
     Domain.Types.AdminStatus
     Domain.Types.DisplayName

@@ -353,7 +353,7 @@ modifyTextContent t = over (_docContent' . t . _elChildren' . _TextNode)
 -- insertBeforeBegin :: Traversal' Node FocusedElement -> Node -> Document -> Document
 -- insertBeforeBegin = _
 
--- | Insert the response before the first child of the target element
+-- | Insert the 'Node' before the first child of the target element
 insertAfterBegin :: Traversal' Node FocusedElement -> Node -> Document -> Document
 insertAfterBegin t n = over (_docContent' . t . _elChildren) (n :)
 

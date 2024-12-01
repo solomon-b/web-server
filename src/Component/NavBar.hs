@@ -5,14 +5,14 @@ module Component.NavBar where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import Control.Lens (filtered, set, traversed)
+import Control.Lens (filtered, set, traversed, (<&>))
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Data.ByteString (ByteString)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics (swapInner, _a, _docContent', _elAttributes, _elChildren', _id)
+import Text.XmlHtml.Optics (swapInner, _a, _docContent', _elAttributes, _elChildren, _elChildren', _id)
 import Utils.HTML (parseFragment)
 
 --------------------------------------------------------------------------------
@@ -93,11 +93,23 @@ signupButton =
 
 --------------------------------------------------------------------------------
 
+navBar :: (MonadThrow m) => m [Xml.Node]
+navBar = parseFragment template
+
+updateTabHighlight' :: Text -> [Xml.Node] -> [Xml.Node]
+updateTabHighlight' tabId =
+  set (traversed . _id tabId . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
+  where
+    focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
+
 updateTabHighlight :: Text -> Xml.Document -> Xml.Document
 updateTabHighlight tabId =
   set (_docContent' . _id tabId . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
   where
     focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
+
+updateAuthLinks' :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
+updateAuthLinks' = set (traversed . _id "user-auth-links" . _elChildren)
 
 updateAuthLinks :: [Xml.Node] -> Xml.Document -> Xml.Document
 updateAuthLinks = swapInner (_id "user-auth-links")
@@ -106,3 +118,9 @@ readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Nod
 readUserAuthFragment = \case
   Auth.IsLoggedIn -> parseFragment logoutButton
   Auth.IsNotLoggedIn -> liftA2 (<>) (parseFragment loginButton) (parseFragment signupButton)
+
+loadNavBar :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> m [Xml.Node]
+loadNavBar loginState tabId = do
+  authFragment <- readUserAuthFragment loginState
+
+  navBar <&> updateTabHighlight' tabId . updateAuthLinks' authFragment
