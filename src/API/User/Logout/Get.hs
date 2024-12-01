@@ -2,7 +2,7 @@ module API.User.Logout.Get where
 
 --------------------------------------------------------------------------------
 
-import Auth qualified
+import App.Auth qualified as Auth
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)

@@ -2,7 +2,7 @@ module API.User.Login.Post where
 
 --------------------------------------------------------------------------------
 
-import Auth qualified
+import App.Auth qualified as Auth
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))

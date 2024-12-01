@@ -6,7 +6,7 @@ module API.Admin.Get where
 
 --------------------------------------------------------------------------------
 
-import Auth qualified
+import App.Auth qualified as Auth
 import Control.Lens (filtered, set, traversed, (<&>))
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow)

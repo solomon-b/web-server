@@ -2,7 +2,7 @@ module API.User.Current.Get where
 
 --------------------------------------------------------------------------------
 
-import Auth (Authz (..))
+import App.Auth (Authz (..))
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)

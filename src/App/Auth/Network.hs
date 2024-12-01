@@ -1,4 +1,4 @@
-module Auth.Network where
+module App.Auth.Network where
 
 --------------------------------------------------------------------------------
 

@@ -6,7 +6,7 @@ module API.User.DeleteSpec where
 --------------------------------------------------------------------------------
 
 import API.User.Delete qualified as UUT
-import Auth (Authz)
+import App.Auth (Authz)
 import Data.Foldable (traverse_)
 import Data.List ((\\))
 import Data.Maybe (fromMaybe)

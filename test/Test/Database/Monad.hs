@@ -19,7 +19,7 @@ where
 
 --------------------------------------------------------------------------------
 
-import Auth (Authz (..))
+import App.Auth (Authz (..))
 import Control.Concurrent (MVar, newEmptyMVar)
 import Control.Concurrent.MVar (readMVar, tryPutMVar)
 import Control.Exception (Exception, throw, throwIO)

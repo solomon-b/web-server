@@ -99,12 +99,12 @@ library
                   , xmlhtml
   exposed-modules:
     App
+    App.Auth
+    App.Auth.Network
     App.Config
     App.Config.Fetchers
     App.Context
     App.Monad
-    Auth
-    Auth.Network
     API
     API.About.Get
     API.Admin.Get

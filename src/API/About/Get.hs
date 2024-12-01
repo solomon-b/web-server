@@ -4,7 +4,7 @@ module API.About.Get where
 
 --------------------------------------------------------------------------------
 
-import Auth qualified
+import App.Auth qualified as Auth
 import Control.Lens (filtered, set, traversed, (<&>))
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.Catch.Pure (MonadThrow)

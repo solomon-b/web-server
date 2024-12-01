@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Auth where
+module App.Auth where
 
 --------------------------------------------------------------------------------
 
