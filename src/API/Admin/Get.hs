@@ -13,6 +13,7 @@ import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
+import Data.ByteString (ByteString)
 import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
@@ -35,6 +36,16 @@ import Utils.HTML (HTML, RawHtml, parseFragment, readDocument, readFragment, ren
 --------------------------------------------------------------------------------
 
 type Route = Servant.AuthProtect "cookie-auth" :> "admin" :> Servant.Get '[HTML] RawHtml
+
+--------------------------------------------------------------------------------
+
+template :: ByteString
+template =
+  [i|<div class="flex flex-col justify-center items-center w-full">
+  <h1 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">Admin Page</h1>
+  <div id="db-tables" class="p-4 my-8 border border-solid border-gray-200 rounded-lg shadow-md"></div>
+</div>
+|]
 
 --------------------------------------------------------------------------------
 -- Components
@@ -126,10 +137,10 @@ handler (Auth.Authz User.Domain {..} _) = do
     mailingList <- execQuerySpanThrow MailingList.getEmailListEntries
     mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
 
-    pageFragment <- readFragment "src/Templates/Root/Admin/get.html" <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-    template <- readDocument "src/Templates/index.html" <&> updateTabHighlight . updateAuthLinks authFragment . swapMain pageFragment
+    pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
+    page <- readDocument "src/Templates/index.html" <&> updateTabHighlight . updateAuthLinks authFragment . swapMain pageFragment
 
-    pure $ renderHTML template
+    pure $ renderHTML page
 
 --------------------------------------------------------------------------------
 
