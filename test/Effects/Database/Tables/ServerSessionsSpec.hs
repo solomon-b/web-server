@@ -4,7 +4,7 @@ module Effects.Database.Tables.ServerSessionsSpec where
 
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.ServerSessions qualified as UUT
-import Effects.Database.Tables.User (Model (..), insertUser)
+import Effects.Database.Tables.User (insertUser)
 import Effects.Database.Tables.UserSpec (userInsertGen)
 import Hasql.Interpolate
 import Hasql.Transaction qualified as TRX
