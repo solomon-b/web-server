@@ -15,6 +15,7 @@ import Test.Hspec
 import Test.Hspec.Api.Formatters.V3 (specdoc, useFormatter)
 import Test.Hspec.Runner (Config (..), hspecWith)
 import Test.Hspec.Runner qualified as TR
+import Test.Text.XmlHtml.Optics (spec)
 import Text.Read (readMaybe)
 
 --------------------------------------------------------------------------------
@@ -29,6 +30,9 @@ main = do
           TR.defaultConfig
             { configConcurrentJobs = Just maxResources
             }
+
+  hspec spec
+
   withTmpPG $ hspecWith cfg $ parallel $ do
     MailingList.spec
     ServerSessions.spec

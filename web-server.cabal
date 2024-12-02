@@ -177,6 +177,7 @@ test-suite tests
      Test.Database.Property
      Test.Database.Property.Assert
      Test.Database.Setup
+     Test.Text.XmlHtml.Optics
   hs-source-dirs:
     test
   ghc-options:
@@ -202,14 +203,17 @@ test-suite tests
     , hspec-hedgehog
     , HUnit
     , iproute
+    , lens
     , log-base
     , mtl
     , password
     , postgres-options
+    , string-interpolate
     , text
     , time
     , tmp-postgres
     , typed-process
     , unliftio-core
     , uuid
+    , xmlhtml
     , web-server

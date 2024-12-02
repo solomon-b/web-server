@@ -328,6 +328,7 @@ _any :: Traversal' Node FocusedElement
 _any = deepOf (_FocusedElement . _elChildren . traversed) (_FocusedElement . filtered (const True))
 
 -- | Focus through a nested series of element tags
+-- NOTE: This 'Traversal' will not backtrack.
 path :: [Text] -> Traversal' Node FocusedElement
 path = foldr ((\outer inner -> outer . _elChildren . traversed . inner) . _el) _any
 
