@@ -64,8 +64,7 @@ template =
 	<div class="text-sm font-medium text-gray-500">
 	  <span class="px-2">Not registered?
 	  </span>
-	  <a hx-get="user/register" hx-swap="innerHTML" hx-target="main" class="text-green-700 hover:underline">Create account
-	  </a>
+	  <a href="\#" hx-get="/user/register" hx-swap="innerHTML" hx-target="body" hx-push-url="true" class="text-green-700 hover:underline">Create account</a>
 	</div>
       </form>
     </div>
@@ -99,7 +98,7 @@ handler hxTrigger =
 --------------------------------------------------------------------------------
 
 swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
-swapMain = swapInner _main
+swapMain = swapInner _body
 
 readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
 readUserAuthFragment = \case

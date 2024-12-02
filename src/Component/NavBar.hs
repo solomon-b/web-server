@@ -21,7 +21,7 @@ import Text.XmlHtml.Optics (FocusedElement (..), swapInner', _FocusedElement, _a
 
 template :: ByteString
 template =
-  [i|<nav class="bg-white mb-2">
+  [i|<nav id="navbar" class="bg-white mb-2">
   <div class="max-w-screen-2xl flex flex-wrap justify-between items-center mx-auto p-4">
     <div class="items-center hidden w-full md:flex md:w-auto md:order-1">
       <a href="/" class="flex items-center space-x-3 mr-8">
@@ -74,7 +74,7 @@ template =
 
 loginButton :: ByteString
 loginButton =
-  [i|<button class="py-2 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="main" hx-push-url="true">
+  [i|<button class="py-2 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="body" hx-push-url="true">
   Login
 </button>
 |]
@@ -88,7 +88,7 @@ logoutButton =
 
 signupButton :: ByteString
 signupButton =
-  [i|<button class="text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center" hx-get="/user/register" hx-swap="innerHTML" hx-target="main" hx-push-url="true">
+  [i|<button class="text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center" hx-get="/user/register" hx-swap="innerHTML" hx-target="body" hx-push-url="true">
   Sign Up
 </button>
 |]

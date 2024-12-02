@@ -32,7 +32,7 @@ template =
   </head>
   <body>
     <div id="shell" class="container mx-auto">
-      <navbar id="navbar"></navbar>
+      <nav id="navbar"></nav>
       <main id="main" class="mx-4 flex flex-wrap items-center">
       </main>
       <footer class="bg-white dark:bg-gray-900 m-4">
@@ -56,4 +56,4 @@ loadFrameWithNav :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> [Xml.N
 loadFrameWithNav loginState tabId tab = do
   frame' <- parseDocument' template <&> swapInner _main tab
   navBar' <- loadNavBar loginState tabId
-  pure $ swapOuter _navbar navBar' frame'
+  pure $ swapOuter _nav navBar' frame'

@@ -291,8 +291,8 @@ _head = _el "head"
 _body :: Traversal' Node FocusedElement
 _body = _el "body"
 
-_navbar :: Traversal' Node FocusedElement
-_navbar = _el "navbar"
+_nav :: Traversal' Node FocusedElement
+_nav = _el "nav"
 
 _main :: Traversal' Node FocusedElement
 _main = _el "main"
