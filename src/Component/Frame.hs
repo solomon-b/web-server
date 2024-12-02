@@ -48,6 +48,9 @@ template =
 
 --------------------------------------------------------------------------------
 
+loadFrame :: (MonadThrow m) => [Xml.Node] -> m Xml.Document
+loadFrame tab = parseDocument' template <&> swapInner _main tab
+
 loadFrameWithNav :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> [Xml.Node] -> m Xml.Document
 loadFrameWithNav loginState tabId tab = do
   frame' <- parseDocument' template <&> swapInner _main tab

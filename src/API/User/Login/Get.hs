@@ -5,7 +5,7 @@ module API.User.Login.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import Component.Frame (loadFrameWithNav)
+import Component.Frame (loadFrame)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -87,7 +87,7 @@ handler ::
 handler hxTrigger =
   Observability.handlerSpan "GET /user/login" () (const @Text "RawHtml") $ do
     pageFragment <- parseFragment template
-    page <- loadFrameWithNav Auth.IsNotLoggedIn "" pageFragment
+    page <- loadFrame pageFragment
 
     case hxTrigger of
       Just True ->
