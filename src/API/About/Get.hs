@@ -18,7 +18,7 @@ import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderFragment, renderHTML)
+import Text.HTML (HTML, RawHtml, parseFragment, renderDocument, renderNodes)
 import Text.XmlHtml.Optics (swapInner, _main)
 
 --------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ handler cookie hxTrigger =
 
     case hxTrigger of
       Just True ->
-        pure $ Servant.addHeader "HX-Request" $ renderFragment pageFragment
+        pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
       _ -> do
-        let html = renderHTML $ swapInner _main pageFragment page
+        let html = renderDocument $ swapInner _main pageFragment page
         pure $ Servant.addHeader "HX-Request" html

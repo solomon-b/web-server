@@ -18,7 +18,7 @@ import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml (..), parseFragment, renderHTML)
+import Text.HTML (HTML, RawHtml (..), parseFragment, renderDocument)
 
 --------------------------------------------------------------------------------
 
@@ -76,4 +76,4 @@ handler cookie =
     pageFragment <- parseFragment template
     page <- loadFrameWithNav loginState "home-tab" pageFragment
 
-    pure $ renderHTML page
+    pure $ renderDocument page

@@ -18,7 +18,7 @@ import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, readFragment, renderFragment, renderHTML)
+import Text.HTML (HTML, RawHtml, parseFragment, readNodes, renderDocument, renderNodes)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
 
@@ -88,9 +88,9 @@ handler hxTrigger =
 
     case hxTrigger of
       Just True ->
-        pure $ Servant.addHeader "HX-Request" $ renderFragment pageFragment
+        pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
       _ -> do
-        let html = renderHTML $ swapMain pageFragment page
+        let html = renderDocument $ swapMain pageFragment page
         pure $ Servant.addHeader "HX-Request" html
 
 --------------------------------------------------------------------------------
@@ -100,5 +100,5 @@ swapMain = swapInner _main
 
 readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
 readUserAuthFragment = \case
-  Auth.IsLoggedIn -> readFragment "src/Templates/Root/Logout/button.html"
-  Auth.IsNotLoggedIn -> liftA2 (<>) (readFragment "src/Templates/Root/Login/button.html") (readFragment "src/Templates/Root/Register/button.html")
+  Auth.IsLoggedIn -> readNodes "src/Templates/Root/Logout/button.html"
+  Auth.IsNotLoggedIn -> liftA2 (<>) (readNodes "src/Templates/Root/Login/button.html") (readNodes "src/Templates/Root/Register/button.html")

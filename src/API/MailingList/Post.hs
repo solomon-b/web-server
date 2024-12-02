@@ -29,7 +29,7 @@ import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.OneRow ()
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, renderFragment)
+import Text.HTML (HTML, RawHtml, renderNodes)
 import Text.XmlHtml qualified as Xml
 import Web.FormUrlEncoded (FromForm)
 
@@ -71,7 +71,7 @@ handler req@(MailingListForm emailAddress) = do
     -- TODO: Disable email confirmation in Dev mode
     -- sendConfirmationEmail e
 
-    pure $ renderFragment [Xml.TextNode "You have been added to the mailing list!"]
+    pure $ renderNodes [Xml.TextNode "You have been added to the mailing list!"]
 
 sendConfirmationEmail ::
   ( MonadEmail m,

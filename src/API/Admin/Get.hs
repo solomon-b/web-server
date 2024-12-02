@@ -30,7 +30,7 @@ import Log qualified
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderHTML)
+import Text.HTML (HTML, RawHtml, parseFragment, renderDocument)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics (_elChildren, _id)
 
