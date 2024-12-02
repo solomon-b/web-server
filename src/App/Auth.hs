@@ -48,9 +48,9 @@ data AuthErr
 
 instance ToServerError AuthErr where
   toServerError = \case
-    MissingCookieHeader -> Servant.err307 {Servant.errBody = toErrorBody "No cookie sent in request" 307, Servant.errHeaders = [("Location", "/login")]}
-    MissingCookieValue -> Servant.err307 {Servant.errBody = toErrorBody "Invalid cookie" 307, Servant.errHeaders = [("Location", "/login")]}
-    MalformedSessionId -> Servant.err307 {Servant.errBody = toErrorBody "Bad session data" 307, Servant.errHeaders = [("Location", "/login")]}
+    MissingCookieHeader -> Servant.err307 {Servant.errBody = toErrorBody "No cookie sent in request" 307, Servant.errHeaders = [("Location", "/user/login")]}
+    MissingCookieValue -> Servant.err307 {Servant.errBody = toErrorBody "Invalid cookie" 307, Servant.errHeaders = [("Location", "/user/login")]}
+    MalformedSessionId -> Servant.err307 {Servant.errBody = toErrorBody "Bad session data" 307, Servant.errHeaders = [("Location", "/user/login")]}
 
 authHandler :: HSQL.Pool -> Servant.AuthHandler Request Authz
 authHandler pool = mkAuthHandler $ \req ->
@@ -65,7 +65,7 @@ authHandler pool = mkAuthHandler $ \req ->
               -- TODO: Log censored error here?
               throwErr InternalServerError
             Right Nothing ->
-              throwErr $ Servant.err307 {Servant.errBody = "forbidden", Servant.errHeaders = [("Location", "/login")]}
+              Servant.throwError $ Servant.err307 {Servant.errHeaders = [("Location", "/user/login")]}
             Right (Just (userModel, sessionModel)) ->
               pure $ Authz (User.toDomain userModel) (Session.toDomain sessionModel)
         Left err -> throwErr err
