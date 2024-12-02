@@ -12,9 +12,9 @@ import Data.ByteString (ByteString)
 import Data.Functor ((<&>))
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Text.HTML (parseDocument')
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
-import Text.HTML (parseDocument)
 
 --------------------------------------------------------------------------------
 
@@ -50,6 +50,6 @@ template =
 
 loadFrameWithNav :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> [Xml.Node] -> m Xml.Document
 loadFrameWithNav loginState tabId tab = do
-  frame' <- parseDocument template <&> swapInner _main tab
+  frame' <- parseDocument' template <&> swapInner _main tab
   navBar' <- loadNavBar loginState tabId
   pure $ modifyInner (_id "shell") (navBar' <>) frame'
