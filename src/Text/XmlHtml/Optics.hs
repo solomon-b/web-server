@@ -77,13 +77,16 @@ _Comment f = \case
   n -> pure n
 
 data FocusedElement = FocusedElement {elTag :: Text, elAttributes :: [(Text, Text)], elChildren :: [Node]}
-  deriving (Show)
+  deriving (Show, Eq)
 
 -- | Focus on the @Element@ constructors of a 'Node'.
-_FocusedElement :: Traversal' Node FocusedElement
-_FocusedElement f = \case
-  Element t a ns -> f (FocusedElement t a ns) <&> \(FocusedElement t' a' ns') -> Element t' a' ns'
-  n -> pure n
+_FocusedElement :: Prism' Node FocusedElement
+_FocusedElement = prism' into out
+  where
+    into FocusedElement {..} = Element elTag elAttributes elChildren
+    out = \case
+      Element t a ns -> Just (FocusedElement t a ns)
+      _ -> Nothing
 
 _elTag :: Lens' FocusedElement Text
 _elTag = lens get setter
@@ -306,8 +309,14 @@ _ul = _el "ul"
 _li :: Traversal' Node FocusedElement
 _li = _el "li"
 
+_attr' :: (Text, Text) -> Traversal' FocusedElement FocusedElement
+_attr' attr = deepOf (_elChildren . traversed . _FocusedElement) (filtered (\el -> attr `elem` elAttributes el))
+
 _attr :: (Text, Text) -> Traversal' Node FocusedElement
 _attr attr = deepOf (_FocusedElement . _elChildren . traversed) (_FocusedElement . filtered (\el -> attr `elem` elAttributes el))
+
+_id' :: Text -> Traversal' FocusedElement FocusedElement
+_id' val = _attr' ("id", val)
 
 _id :: Text -> Traversal' Node FocusedElement
 _id val = _attr ("id", val)
@@ -325,20 +334,28 @@ path = foldr ((\outer inner -> outer . _elChildren . traversed . inner) . _el) _
 --------------------------------------------------------------------------------
 -- hx-swap style helpers
 
--- | Replace the inner html of the target element(s)
+-- | Replace the inner html of the target element.
+swapInner' :: Traversal' FocusedElement FocusedElement -> [Node] -> FocusedElement -> FocusedElement
+swapInner' t = set (t . _elChildren)
+
+-- | Replace the inner html of the target element(s) of a document.
 swapInner :: Traversal' Node FocusedElement -> [Node] -> Document -> Document
 swapInner t = set (_docContent' . t . _elChildren)
 
 -- | Modify the inner html of the target element(s)
-modifyInner :: Traversal' Node FocusedElement -> ([Node] -> [Node]) -> Document -> Document
+modifyInner :: Prism' Node FocusedElement -> ([Node] -> [Node]) -> Document -> Document
 modifyInner t = over (_docContent' . t . _elChildren)
+
+-- | Replace the entire target element.
+swapOuter' :: Prism' Node FocusedElement -> FocusedElement -> Node -> Node
+swapOuter' = set
 
 -- | Replace the entire target element(s)
 swapOuter :: Traversal' Node FocusedElement -> FocusedElement -> Document -> Document
 swapOuter t = set (_docContent' . t)
 
 -- | Modify the entire target element(s)
-modifyOuter :: Traversal' Node FocusedElement -> (FocusedElement -> FocusedElement) -> Document -> Document
+modifyOuter :: Prism' Node FocusedElement -> (FocusedElement -> FocusedElement) -> Document -> Document
 modifyOuter t = over (_docContent' . t)
 
 -- | Replace the text content of the target element(s)
