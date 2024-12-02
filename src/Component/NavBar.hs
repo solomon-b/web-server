@@ -5,15 +5,17 @@ module Component.NavBar where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import Control.Lens (filtered, set, traversed, (<&>))
+import App.Errors (InternalServerError (InternalServerError), throwErr)
+import Control.Category ((>>>))
+import Control.Lens (filtered, preview, set, traversed, (<&>), _Just)
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Data.ByteString (ByteString)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Text.HTML (parseFragment, parseNode)
 import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics (swapInner, _a, _docContent', _elAttributes, _elChildren, _elChildren', _id)
-import Text.HTML (parseFragment)
+import Text.XmlHtml.Optics (FocusedElement (..), swapInner', _FocusedElement, _a, _elAttributes, _elChildren', _id')
 
 --------------------------------------------------------------------------------
 
@@ -93,34 +95,29 @@ signupButton =
 
 --------------------------------------------------------------------------------
 
-navBar :: (MonadThrow m) => m [Xml.Node]
-navBar = parseFragment template
+navBar :: (MonadThrow m) => m FocusedElement
+navBar =
+  case preview (_Just . _FocusedElement) (parseNode template) of
+    Nothing -> throwErr InternalServerError
+    Just node -> pure node
 
-updateTabHighlight' :: Text -> [Xml.Node] -> [Xml.Node]
-updateTabHighlight' tabId =
-  set (traversed . _id tabId . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
-  where
-    focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
-
-updateTabHighlight :: Text -> Xml.Document -> Xml.Document
+-- | Update the navbar highlighting.
+updateTabHighlight :: Text -> FocusedElement -> FocusedElement
 updateTabHighlight tabId =
-  set (_docContent' . _id tabId . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
+  set (_id' tabId . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
   where
     focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
 
-updateAuthLinks' :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
-updateAuthLinks' = set (traversed . _id "user-auth-links" . _elChildren)
-
-updateAuthLinks :: [Xml.Node] -> Xml.Document -> Xml.Document
-updateAuthLinks = swapInner (_id "user-auth-links")
+-- | Replace the User Auth Buttons in the Navbar.
+updateAuthLinks :: [Xml.Node] -> FocusedElement -> FocusedElement
+updateAuthLinks = swapInner' (_id' "user-auth-links")
 
 readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
 readUserAuthFragment = \case
   Auth.IsLoggedIn -> parseFragment logoutButton
   Auth.IsNotLoggedIn -> liftA2 (<>) (parseFragment loginButton) (parseFragment signupButton)
 
-loadNavBar :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> m [Xml.Node]
+loadNavBar :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> m FocusedElement
 loadNavBar loginState tabId = do
   authFragment <- readUserAuthFragment loginState
-
-  navBar <&> updateTabHighlight' tabId . updateAuthLinks' authFragment
+  navBar <&> (updateTabHighlight tabId >>> updateAuthLinks authFragment)
