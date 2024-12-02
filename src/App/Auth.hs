@@ -68,7 +68,8 @@ authHandler pool = mkAuthHandler $ \req ->
               Servant.throwError $ Servant.err307 {Servant.errHeaders = [("Location", "/user/login")]}
             Right (Just (userModel, sessionModel)) ->
               pure $ Authz (User.toDomain userModel) (Session.toDomain sessionModel)
-        Left err -> throwErr err
+        Left err ->
+          Servant.throwError $ toServerError err
 
 getAuth :: (MonadDB m) => Session.Id -> m (Either HSQL.UsageError (Maybe Authz))
 getAuth sessionId = do

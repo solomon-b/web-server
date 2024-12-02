@@ -7,15 +7,14 @@ module API.Admin.Get where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
-import App.Errors (Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
 import Control.Lens (set, (<&>))
-import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
@@ -109,6 +108,10 @@ mailingListTable entries =
      </div>
     |]
 
+unauthorized :: BS.ByteString
+unauthorized =
+  [i|<h1 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900">Unauthorized</h1>|]
+
 --------------------------------------------------------------------------------
 -- Handler
 
@@ -126,20 +129,27 @@ handler ::
   Auth.Authz ->
   m RawHtml
 handler (Auth.Authz User.Domain {..} _) = do
-  Observability.handlerSpan "GET /admin" () (const @Text "RawHTML") $ do
-    unless dIsAdmin (throwErr Unauthorized)
+  Observability.handlerSpan "GET /admin" () (const @Text "RawHTML") $
+    if dIsAdmin
+      then do
+        users <- execQuerySpanThrow User.getUsers
+        let x = TE.encodeUtf8 $ userTable users
+        userTableFragment <- parseFragment x
 
-    users <- execQuerySpanThrow User.getUsers
-    let x = TE.encodeUtf8 $ userTable users
-    userTableFragment <- parseFragment x
+        mailingList <- execQuerySpanThrow MailingList.getEmailListEntries
+        mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
 
-    mailingList <- execQuerySpanThrow MailingList.getEmailListEntries
-    mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
+        pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
+        page <- loadFrameWithNav Auth.IsLoggedIn "about-tab" pageFragment
 
-    pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-    page <- loadFrameWithNav Auth.IsLoggedIn "about-tab" pageFragment
-
-    pure $ renderHTML page
+        pure $ renderDocument page
+      else renderUnauthorized
 
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "db-tables" . _elChildren) x)
+
+renderUnauthorized :: (MonadIO m, MonadThrow m) => m RawHtml
+renderUnauthorized = do
+  pageFragment <- parseFragment unauthorized
+  page <- loadFrameWithNav Auth.IsLoggedIn "about-tab" pageFragment
+  pure $ renderDocument page
