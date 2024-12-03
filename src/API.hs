@@ -1,9 +1,31 @@
 module API where
 
+{-
+
+- [-] Blog System
+  - [X] Table Schema / Model
+  - [ ] Index Page
+    - [ ] Filtering/Ordering
+    - [ ] Search
+  - [ ] Post Page
+  - [ ] Editor Page
+  - [ ] Markdown
+    - [ ] Parsing
+    - [ ] Printing
+  - [ ] Auth
+  - [ ] RSS
+-}
+
 --------------------------------------------------------------------------------
 
 import API.About.Get qualified as About.Get
 import API.Admin.Get qualified as Admin.Get
+import API.Blog.Get qualified as Blog.Get
+import API.Blog.Id.Get qualified as Blog.Id.Get
+import API.Blog.New.Edit.Get qualified as Blog.New.Edit.Get
+import API.Blog.New.Get qualified as Blog.New.Get
+import API.Blog.New.Post qualified as Blog.New.Post
+import API.Blog.New.Preview.Get qualified as Blog.New.Preview.Get
 import API.Get qualified as Get
 import API.MailingList.Post qualified as MailingList.Post
 import API.Static.Get qualified as Static.Get
@@ -43,8 +65,17 @@ type API =
   Get.Route
     :<|> Static.Get.Route
     :<|> MailingList.Post.Route
-    -- Unprotected User Routes
+    -- Unprotected BlogPosts Routes
+    :<|> Blog.Get.Route
+    :<|> Blog.Id.Get.Route
+    -- Protected BlogPosts Routes
+    :<|> Blog.New.Get.Route
+    :<|> Blog.New.Post.Route
+    :<|> Blog.New.Edit.Get.Route
+    :<|> Blog.New.Preview.Get.Route
+    -- Unprotected State Page Routes
     :<|> About.Get.Route
+    -- Unprotected User Routes
     :<|> User.Get.Route
     :<|> User.Id.Get.Route
     :<|> User.Register.Get.Route
@@ -83,6 +114,12 @@ server env = do
   Get.handler
     :<|> Static.Get.handler env
     :<|> MailingList.Post.handler
+    :<|> Blog.Get.handler
+    :<|> Blog.Id.Get.handler
+    :<|> Blog.New.Get.handler
+    :<|> Blog.New.Post.handler
+    :<|> Blog.New.Edit.Get.handler
+    :<|> Blog.New.Preview.Get.handler
     :<|> About.Get.handler
     :<|> User.Get.handler
     :<|> User.Id.Get.handler

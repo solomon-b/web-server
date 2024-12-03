@@ -7,8 +7,11 @@ module Effects.Database.Tables.BlogPosts where
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
+import Data.Password.Argon2 (Argon2, PasswordHash)
 import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
+import Domain.Types.DisplayName (DisplayName)
+import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Tables.User qualified as User
 import GHC.Generics
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
@@ -35,13 +38,14 @@ newtype Id = Id Int64
       EncodeValue
     )
 
--- | Database Model for the @user@ table.
+-- | Database Model for the @blog_posts@ table.
 data Model = Model
   { mId :: Id,
     mAuthorId :: User.Id,
     mTitle :: Text,
     mContent :: Text,
-    mPublished :: Bool
+    mPublished :: Bool,
+    mHeroImagePath :: Maybe Text
   }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (DecodeRow)
@@ -53,7 +57,8 @@ data Domain = Domain
     dAuthorId :: User.Id,
     dTitle :: Text,
     dContent :: Text,
-    dPublished :: Bool
+    dPublished :: Bool,
+    dHeroImagePath :: Maybe Text
   }
   deriving stock (Show, Generic, Eq)
   deriving (Display) via (RecordInstance Domain)
@@ -66,26 +71,94 @@ toDomain Model {..} =
       dAuthorId = mAuthorId,
       dTitle = mTitle,
       dContent = mContent,
-      dPublished = mPublished
+      dPublished = mPublished,
+      dHeroImagePath = mHeroImagePath
     }
 
 --------------------------------------------------------------------------------
+
+getBlogPostsWithUsers :: Hasql.Statement () [(Model, User.Model)]
+getBlogPostsWithUsers =
+  fmap fromRows
+    <$> interp
+      False
+      [sql|
+    SELECT
+      bp.id, bp.author_id, bp.title, bp.content, bp.published, bp.hero_image_path,
+      u.id, u.email, u.password, u.display_name, u.avatar_url, u.is_admin 
+    FROM blog_posts AS bp
+    JOIN users AS u ON u.id = bp.author_id
+  |]
+  where
+    fromRows ::
+      ( Id,
+        User.Id,
+        Text,
+        Text,
+        Bool,
+        Maybe Text,
+        User.Id,
+        EmailAddress,
+        PasswordHash Argon2,
+        DisplayName,
+        Maybe Text,
+        Bool
+      ) ->
+      (Model, User.Model)
+    fromRows (bId, bAuthorId, bTitle, bContent, bPublished, bHeroImagePath, uId, uEmail, uPassword, uDisplayname, uAvatarUrl, uIsAdmin) =
+      ( Model bId bAuthorId bTitle bContent bPublished bHeroImagePath,
+        User.Model uId uEmail uPassword uDisplayname uAvatarUrl uIsAdmin
+      )
 
 getBlogPosts :: Hasql.Statement () [Model]
 getBlogPosts =
   interp
     False
     [sql|
-    SELECT id, author_id, title, content, published
+    SELECT id, author_id, title, content, published, hero_image_path
     FROM blog_posts
   |]
+
+getBlogPostWithUser :: Id -> Hasql.Statement () (Maybe (Model, User.Model))
+getBlogPostWithUser postId =
+  fmap fromRows
+    <$> interp
+      False
+      [sql|
+    SELECT
+      bp.id, bp.author_id, bp.title, bp.content, bp.published, bp.hero_image_path,
+      u.id, u.email, u.password, u.display_name, u.avatar_url, u.is_admin 
+    FROM blog_posts AS bp
+    JOIN users AS u ON u.id = bp.author_id
+    WHERE bp.id = #{postId} 
+  |]
+  where
+    fromRows ::
+      ( Id,
+        User.Id,
+        Text,
+        Text,
+        Bool,
+        Maybe Text,
+        User.Id,
+        EmailAddress,
+        PasswordHash Argon2,
+        DisplayName,
+        Maybe Text,
+        Bool
+      ) ->
+      (Model, User.Model)
+    fromRows (bId, bAuthorId, bTitle, bContent, bPublished, bHeroImagePath, uId, uEmail, uPassword, uDisplayname, uAvatarUrl, uIsAdmin) =
+      ( Model bId bAuthorId bTitle bContent bPublished bHeroImagePath,
+        User.Model uId uEmail uPassword uDisplayname uAvatarUrl uIsAdmin
+      )
 
 getBlogPost :: Id -> Hasql.Statement () (Maybe Model)
 getBlogPost postId =
   interp
     False
     [sql|
-    SELECT id, author_id, title, content, published
+    SELECT id, author_id, title, content, published, hero_image_path
     FROM blog_posts
     WHERE id = #{postId} 
   |]
@@ -95,7 +168,7 @@ getPostsByAuthor userId =
   interp
     False
     [sql|
-    SELECT id, author_id, title, content, published
+    SELECT id, author_id, title, content, published, hero_image_path
     FROM blog_posts
     WHERE author_id = #{userId} 
   |]
@@ -104,7 +177,8 @@ data ModelInsert = ModelInsert
   { miAuthorId :: User.Id,
     miTitle :: Text,
     miContent :: Text,
-    miPublished :: Bool
+    miPublished :: Bool,
+    miHeroImagePath :: Maybe Text
   }
   deriving stock (Generic, Show, Eq)
   deriving (EncodeRow) via ModelInsert
@@ -115,8 +189,8 @@ insertBlogPost ModelInsert {..} =
   interp
     False
     [sql|
-    INSERT INTO blog_posts(author_id, title, content, published)
-    VALUES (#{miAuthorId}, #{miTitle}, #{miContent}, #{miPublished})
+    INSERT INTO blog_posts(author_id, title, content, published, hero_image_path)
+    VALUES (#{miAuthorId}, #{miTitle}, #{miContent}, #{miPublished}, #{miHeroImagePath})
     RETURNING id
   |]
 
@@ -133,7 +207,8 @@ data ModelUpdate = ModelUpdate
   { muId :: Id,
     muTitle :: Text,
     muContent :: Text,
-    muPublished :: Bool
+    muPublished :: Bool,
+    muHeroImagePath :: Maybe Text
   }
   deriving stock (Generic, Show, Eq)
   deriving (EncodeRow) via ModelUpdate
@@ -148,6 +223,7 @@ updateBlogPost ModelUpdate {..} =
         SET title = #{muTitle},
             content = #{muContent}
             published = #{muPublished}
+            hero_image_path = #{muHeroImagePath}
         WHERE id = #{muId}
   |]
 

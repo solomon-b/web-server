@@ -9,6 +9,8 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Binary.Builder qualified as Builder
 import Data.ByteString as BS
 import Data.ByteString.Lazy as Lazy hiding (foldr)
+import Data.Text.Display (Display (..))
+import Data.Text.Lazy.Encoding qualified as TE
 import Network.HTTP.Media ((//), (/:))
 import Servant
 import Text.XmlHtml qualified as Xml
@@ -23,6 +25,9 @@ instance Accept HTML where
 
 newtype RawHtml = RawHtml {unRaw :: Lazy.ByteString}
   deriving newtype (Show)
+
+instance Display RawHtml where
+  displayBuilder RawHtml {..} = displayBuilder $ TE.decodeUtf8 unRaw
 
 instance MimeRender HTML RawHtml where
   mimeRender _ = unRaw
@@ -45,7 +50,7 @@ renderDocument =
 -- | Serialize a list of 'Xml.Node' into 'RawHtml'.
 renderNodes :: [Xml.Node] -> RawHtml
 renderNodes =
-  RawHtml . Builder.toLazyByteString . Xml.renderXmlFragment Xml.UTF8
+  RawHtml . Builder.toLazyByteString . Xml.renderHtmlFragment Xml.UTF8
 
 -- | Serialize an 'Xml.Node' into 'RawHtml'.
 renderNode :: Xml.Node -> RawHtml

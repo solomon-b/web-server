@@ -49,6 +49,7 @@ prop_insertSelect cfg = do
         UUT.miTitle blogPostInsert === UUT.mTitle selected
         UUT.miContent blogPostInsert === UUT.mContent selected
         UUT.miPublished blogPostInsert === UUT.mPublished selected
+        UUT.miHeroImagePath blogPostInsert === UUT.mHeroImagePath selected
         userId === UUT.mAuthorId selected
         insertedId === UUT.mId selected
 
@@ -59,6 +60,7 @@ blogPostInsertGen = do
   miTitle <- Gen.text (Range.linear 1 10) Gen.alphaNum
   miContent <- Gen.text (Range.linear 1 10) Gen.alphaNum
   miPublished <- Gen.bool
+  miHeroImagePath <- Gen.maybe $ Gen.text (Range.linear 1 100) Gen.alphaNum
   pure UUT.ModelInsert {..}
 
 userInsertGen :: (MonadIO m, MonadGen m) => m User.ModelInsert

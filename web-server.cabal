@@ -71,7 +71,6 @@ library
                   , hs-opentelemetry-instrumentation-wai
                   , hs-opentelemetry-sdk
                   , hs-opentelemetry-utils-exceptions
-                  , htmx
                   , http-api-data
                   , http-media
                   , http-types
@@ -110,6 +109,11 @@ library
     API.About.Get
     API.Admin.Get
     API.Blog.Get
+    API.Blog.New.Get
+    API.Blog.New.Post
+    API.Blog.New.Edit.Get
+    API.Blog.New.Preview.Get
+    API.Blog.Id.Get
     API.Get
     API.MailingList.Post
     API.Static.Get

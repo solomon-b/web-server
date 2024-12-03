@@ -21,67 +21,63 @@ import Text.XmlHtml.Optics (FocusedElement (..), swapInner', _FocusedElement, _a
 
 template :: ByteString
 template =
-  [i|<nav id="navbar" class="bg-white mb-2">
-  <div class="max-w-screen-2xl flex flex-wrap justify-between items-center mx-auto p-4">
-    <div class="items-center hidden w-full md:flex md:w-auto md:order-1">
-      <a href="/" class="flex items-center space-x-3 mr-8">
-        <span>🌎</span>
-        <span class="self-center text-2xl font-semibold whitespace-nowrap">HyperNet
+  [i|   <nav id='navbar'>
+            <div class='flex flex-wrap justify-between items-center mx-auto p-4'>
+                <div class='items-center flex w-auto order-1'>
+                    <a href='/' class='flex items-center space-x-3 mr-8'>
+                        <span>🌎</span>
+                        <span class='text-2xl font-semibold'>HyperNet
         </span>
-      </a>
-      <ul class="flex flex-col font-medium p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white">
-        <li id="home-tab">
-  	<a href="/" class="block py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700">Home
+                    </a>
+                    <ul class='flex flex-row space-x-8 font-medium p-0 bg-white'>
+                        <li id='home-tab'>
+                            <a href='/' class='text-gray-900 hover:text-green-700'>Home
   	</a>
-        </li>
-        <li id="blog-tab">
-  	<a href="\#" class="block py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700">Blog
+                        </li>
+                        <li id='blog-tab'>
+                            <a href='/blog' class='text-gray-900 hover:text-green-700'>Blog
   	</a>
-        </li>
-        <li id="about-tab">
-  	<a href="/about" class="block py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700">About
+                        </li>
+                        <li id='about-tab'>
+                            <a href='/about' class='text-gray-900 hover:text-green-700'>About
   	</a>
-        </li>
-        <li id="contact-tab">
-  	<a href="\#" class="block py-2 px-3 md:p-0 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700">Contact
+                        </li>
+                        <li id='contact-tab'>
+                            <a href='\#' class='text-gray-900 hover:text-green-700'>Contact
   	</a>
-        </li>
-      </ul>
-    </div>
-    <div id="right-nav" class="flex md:order-2 space-x-3 rtl:space-x-reverse">
-      <form class="max-w-md mx-auto">
-        <label for="default-search" class="mb-2 text-sm font-medium text-gray-900 sr-only">Search
+                        </li>
+                    </ul>
+                </div>
+                <div id='right-nav' class='flex order-2 space-x-3'>
+                    <form class='mx-auto'>
+                        <label for='default-search' class='mb-2 text-sm font-medium text-gray-900 sr-only'>Search
         </label>
-        <div class="relative">
-  	<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-  	  <span>🔎</span>
-  	</div>
-  	<input type="search" id="default-search" class="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-green-500 focus:border-green-500" placeholder="Search..." required>
-        </div>
-      </form>
-      <div id="user-auth-links">
-        <button class="py-2 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="main" hx-push-url="true">
-  	Login
-        </button>
-        <button class="text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center" hx-get="/user/register" hx-swap="innerHTML" hx-target="main" hx-push-url="true">
-  	Sign Up
-        </button>
-      </div>
-    </div>
-  </div>
-</nav>
+                        <div class='relative'>
+                            <div class='absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none'>
+                                <span>🔎</span>
+                            </div>
+                            <input type='search' id='default-search' class='block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-green-500 focus:border-green-500' placeholder='Search...' required />
+                        </div>
+                    </form>
+                    <div id='user-auth-links'><button class='py-2 text-gray-900 hover:bg-transparent hover:text-green-700' hx-post='/user/logout' hx-swap='innerHTML' hx-push-url='true'>
+  Logout
+</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
 |]
 
 loginButton :: ByteString
 loginButton =
-  [i|<button class="py-2 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="body" hx-push-url="true">
+  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="body" hx-push-url="true">
   Login
 </button>
 |]
 
 logoutButton :: ByteString
 logoutButton =
-  [i|<button class="py-2 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-700" hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true">
+  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true">
   Logout
 </button>
 |]
