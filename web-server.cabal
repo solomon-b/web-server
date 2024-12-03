@@ -109,8 +109,9 @@ library
     API
     API.About.Get
     API.Admin.Get
-    API.MailingList.Post
+    API.Blog.Get
     API.Get
+    API.MailingList.Post
     API.Static.Get
     API.User.Get
     API.User.Current.Get
@@ -134,6 +135,7 @@ library
     Effects.Database.SerializedStatement
     Effects.Database.Tables.User
     Effects.Database.Tables.MailingList
+    Effects.Database.Tables.BlogPosts
     Effects.Database.Tables.ServerSessions
     Effects.MailSender
     Effects.Observability
@@ -164,6 +166,7 @@ test-suite tests
      API.User.DeleteSpec
      API.User.GetSpec
      API.User.Id.GetSpec
+     Effects.Database.Tables.BlogPostsSpec
      Effects.Database.Tables.UserSpec
      Effects.Database.Tables.MailingListSpec
      Effects.Database.Tables.ServerSessionsSpec
