@@ -42,8 +42,11 @@ instance MonadDB (AppM ctx) where
 instance MonadEmail (AppM ctx) where
   sendEmail :: Mime.Mail -> AppM ctx ()
   sendEmail mail = do
-    SmtpConfig {..} <- Reader.asks Has.getter
-    liftIO $ SMTP.sendMailWithLoginTLS (Text.unpack smtpConfigServer) (Text.unpack smtpConfigUsername) (Text.unpack smtpConfigPassword) mail
+    Reader.asks Has.getter >>= \case
+      Nothing -> do
+        pure ()
+      Just SmtpConfig {..} ->
+        liftIO $ SMTP.sendMailWithLoginTLS (Text.unpack smtpConfigServer) (Text.unpack smtpConfigUsername) (Text.unpack smtpConfigPassword) mail
 
 instance MonadTracer (AppM ctx) where
   getTracer :: AppM ctx OTEL.Tracer

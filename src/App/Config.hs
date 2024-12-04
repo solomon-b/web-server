@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deriving-defaults #-}
@@ -12,7 +13,8 @@ import Barbies
 import Data.Aeson (ToJSON)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
-import Data.Functor.Compose (Compose)
+import Data.Functor.Classes (Show1)
+import Data.Functor.Compose (Compose (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display)
@@ -64,8 +66,11 @@ instance FetchHKD WarpConfigF where
         warpConfigFServerName = readEnv (pack . Text.unpack) "APP_WARP_SERVERNAME"
       }
 
-  toConcrete :: (Applicative f) => WarpConfigF f -> f WarpConfig
-  toConcrete WarpConfigF {..} = WarpConfig <$> warpConfigFPort <*> warpConfigFTimeout <*> warpConfigFServerName
+  toConcrete WarpConfigF {..} = do
+    warpConfigPort <- getCompose warpConfigFPort
+    warpConfigTimeout <- getCompose warpConfigFTimeout
+    warpConfigServerName <- getCompose warpConfigFServerName
+    pure $ WarpConfig <$> warpConfigPort <*> warpConfigTimeout <*> warpConfigServerName
 
 --------------------------------------------------------------------------------
 
@@ -101,8 +106,14 @@ instance FetchHKD PostgresConfigF where
         postgresConfigFPassword = readEnvOptional packText "APP_POSTGRES_PASSWORD"
       }
 
-  toConcrete :: (Applicative f) => PostgresConfigF f -> f PostgresConfig
-  toConcrete PostgresConfigF {..} = PostgresConfig <$> postgresConfigFHost <*> postgresConfigFPort <*> postgresConfigFDB <*> postgresConfigFUser <*> postgresConfigFPassword
+  toConcrete :: PostgresConfigF (Compose IO Maybe) -> IO (Maybe (Concrete PostgresConfigF))
+  toConcrete PostgresConfigF {..} = do
+    postgresConfigHost <- getCompose postgresConfigFHost
+    postgresConfigPort <- getCompose postgresConfigFPort
+    postgresConfigDB <- getCompose postgresConfigFDB
+    postgresConfigUser <- getCompose postgresConfigFUser
+    postgresConfigPassword <- getCompose postgresConfigFPassword
+    pure $ PostgresConfig <$> postgresConfigHost <*> postgresConfigPort <*> postgresConfigDB <*> postgresConfigUser <*> postgresConfigPassword
 
 --------------------------------------------------------------------------------
 
@@ -135,8 +146,11 @@ instance FetchHKD ObservabilityConfigF where
         observabilityConfigFExporter = readEnvDefault StdOut (\case "StdOut" -> Just StdOut; _ -> Nothing) "APP_OBSERVABILITY_EXPORTER"
       }
 
-  toConcrete :: (Applicative f) => ObservabilityConfigF f -> f ObservabilityConfig
-  toConcrete ObservabilityConfigF {..} = ObservabilityConfig <$> observabilityConfigFVerbosity <*> observabilityConfigFExporter
+  toConcrete :: ObservabilityConfigF (Compose IO Maybe) -> IO (Maybe (Concrete ObservabilityConfigF))
+  toConcrete ObservabilityConfigF {..} = do
+    observabilityConfigVerbosity <- getCompose observabilityConfigFVerbosity
+    observabilityConfigExporter <- getCompose observabilityConfigFExporter
+    pure $ ObservabilityConfig <$> observabilityConfigVerbosity <*> observabilityConfigExporter
 
 --------------------------------------------------------------------------------
 
@@ -151,6 +165,8 @@ data SmtpConfigF f = SmtpConfigF
   deriving stock (Generic)
   deriving anyclass (FunctorB, ApplicativeB, TraversableB, ConstraintsB)
 
+deriving instance (Show1 f) => Show (SmtpConfigF f)
+
 instance FetchHKD SmtpConfigF where
   type Concrete SmtpConfigF = SmtpConfig
 
@@ -162,8 +178,12 @@ instance FetchHKD SmtpConfigF where
         smtpConfigFPassword = readEnv id "APP_SMTP_PASSWORD"
       }
 
-  toConcrete :: (Applicative f) => SmtpConfigF f -> f SmtpConfig
-  toConcrete SmtpConfigF {..} = SmtpConfig <$> smtpConfigFServer <*> smtpConfigFUsername <*> smtpConfigFPassword
+  toConcrete :: SmtpConfigF (Compose IO Maybe) -> IO (Maybe (Concrete SmtpConfigF))
+  toConcrete SmtpConfigF {..} = do
+    smtpConfigServer <- getCompose smtpConfigFServer
+    smtpConfigUsername <- getCompose smtpConfigFUsername
+    smtpConfigPassword <- getCompose smtpConfigFPassword
+    pure $ SmtpConfig <$> smtpConfigServer <*> smtpConfigUsername <*> smtpConfigPassword
 
 --------------------------------------------------------------------------------
 
@@ -172,7 +192,7 @@ data AppConfig = AppConfig
     appConfigPostgresSettings :: PostgresConfig,
     appConfigEnvironment :: Environment,
     appConfigObservability :: ObservabilityConfig,
-    appConfigSmtp :: SmtpConfig,
+    appConfigSmtp :: Maybe SmtpConfig,
     appConfigHostname :: Hostname
   }
   deriving stock (Generic, Show)
@@ -186,7 +206,7 @@ data AppConfigF f = AppConfigF
     appConfigFHostname :: f Hostname
   }
   deriving stock (Generic)
-  deriving anyclass (FunctorB, ApplicativeB, TraversableB, ConstraintsB)
+  deriving anyclass (FunctorB, ApplicativeB, TraversableB)
 
 instance FetchHKD AppConfigF where
   type Concrete AppConfigF = AppConfig
@@ -202,9 +222,16 @@ instance FetchHKD AppConfigF where
         appConfigFHostname = readEnv Hostname "APP_HOSTNAME"
       }
 
-  toConcrete :: (Applicative f) => AppConfigF f -> f AppConfig
-  toConcrete AppConfigF {..} =
-    AppConfig <$> toConcrete appConfigFWarpSettings <*> toConcrete appConfigFPostgresSettings <*> appConfigFEnvironment <*> toConcrete appConfigFObservability <*> toConcrete appConfigFSmtp <*> appConfigFHostname
+  toConcrete :: AppConfigF (Compose IO Maybe) -> IO (Maybe (Concrete AppConfigF))
+  toConcrete AppConfigF {..} = do
+    appConfigWarpSettings <- toConcrete appConfigFWarpSettings
+    appConfigEnvironment <- getCompose appConfigFEnvironment
+    appConfigPostgresSettings <- toConcrete appConfigFPostgresSettings
+    appConfigObservability <- toConcrete appConfigFObservability
+    appConfigSmtp <- toConcrete appConfigFSmtp
+    appConfigHostname <- getCompose appConfigFHostname
+
+    pure $ AppConfig <$> appConfigWarpSettings <*> appConfigPostgresSettings <*> appConfigEnvironment <*> appConfigObservability <*> pure appConfigSmtp <*> appConfigHostname
 
 getConfig :: IO (Maybe AppConfig)
-getConfig = toConcrete @AppConfigF <$> bsequence fromEnv
+getConfig = toConcrete (fromEnv @AppConfigF)

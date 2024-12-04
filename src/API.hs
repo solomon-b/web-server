@@ -95,7 +95,7 @@ server ::
   ( MonadReader env m,
     Has HSQL.Pool env,
     Has OTEL.Tracer env,
-    Has SmtpConfig env,
+    Has (Maybe SmtpConfig) env,
     Has Hostname env,
     Has Environment env,
     Log.MonadLog m,

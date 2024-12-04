@@ -17,7 +17,7 @@ data AppContext context = AppContext
   { appLogger :: Log.Logger,
     appDbPool :: HSQL.Pool,
     appTracer :: OTEL.Tracer,
-    appSmtpConfig :: SmtpConfig,
+    appSmtpConfig :: Maybe SmtpConfig,
     appHostname :: Hostname,
     appEnvironment :: Environment,
     appCustom :: context
@@ -35,7 +35,7 @@ instance Has.Has OTEL.Tracer (AppContext ctx) where
   getter = appTracer
   modifier f ctx@AppContext {appTracer} = ctx {appTracer = f appTracer}
 
-instance Has.Has SmtpConfig (AppContext ctx) where
+instance Has.Has (Maybe SmtpConfig) (AppContext ctx) where
   getter = appSmtpConfig
   modifier f ctx@AppContext {appSmtpConfig} = ctx {appSmtpConfig = f appSmtpConfig}
 

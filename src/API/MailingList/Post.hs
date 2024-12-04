@@ -49,7 +49,7 @@ type Route = "mailing-list" :> "signup" :> Servant.ReqBody '[Servant.JSON, Serva
 
 handler ::
   ( Has OTEL.Tracer env,
-    Has SmtpConfig env,
+    Has (Maybe SmtpConfig) env,
     Has Hostname env,
     Log.MonadLog m,
     MonadCatch m,
@@ -68,8 +68,8 @@ handler req@(MailingListForm emailAddress) = do
     _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert emailAddress
     Log.logInfo "Submited Email Address:" (KeyMap.singleton "email" (display emailAddress))
 
-    -- TODO: Disable email confirmation in Dev mode
-    -- sendConfirmationEmail e
+    -- TODO: Dev Mode SMTP Server?
+    sendConfirmationEmail emailAddress
 
     pure $ renderNodes [Xml.TextNode "You have been added to the mailing list!"]
 

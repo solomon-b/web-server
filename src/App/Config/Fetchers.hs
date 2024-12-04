@@ -48,10 +48,10 @@ class FetchHKD hkd where
   type Concrete hkd :: Type
 
   fromEnv :: hkd (Compose IO Maybe)
-
   -- fromArg :: hkd (Compose IO Maybe)
   -- fromFile :: hkd (Compose IO Maybe)
-  toConcrete :: (Applicative f) => hkd f -> f (Concrete hkd)
+
+  toConcrete :: hkd (Compose IO Maybe) -> IO (Maybe (Concrete hkd))
 
 fetchFromEnv :: (FetchHKD hkd, TraversableB hkd) => IO (hkd Maybe)
 fetchFromEnv = bsequence fromEnv
