@@ -9,6 +9,7 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Binary.Builder qualified as Builder
 import Data.ByteString as BS
 import Data.ByteString.Lazy as Lazy hiding (foldr)
+import Data.Text qualified as Text
 import Data.Text.Display (Display (..))
 import Data.Text.Lazy.Encoding qualified as TE
 import Network.HTTP.Media ((//), (/:))
@@ -62,7 +63,7 @@ renderNode =
 -- | Parses an HTML 'Xml.Document' from a 'BS.ByteString' or throws an
 -- @InternalServerError@ in some Monadic context.
 parseDocument' :: (MonadThrow m) => BS.ByteString -> m Xml.Document
-parseDocument' = either (\_ -> throwErr InternalServerError) pure . Xml.parseHTML "index.html"
+parseDocument' = either (throwErr . InternalServerError . Text.pack) pure . Xml.parseHTML "index.html"
 
 -- | Parses an HTML 'Xml.Document' from a 'BS.ByteString' or returns a
 -- @Nothing@.

@@ -94,7 +94,7 @@ signupButton =
 navBar :: (MonadThrow m) => m FocusedElement
 navBar =
   case preview (_Just . _FocusedElement) (parseNode template) of
-    Nothing -> throwErr InternalServerError
+    Nothing -> throwErr $ InternalServerError "Failed to construct Navbar Element from template."
     Just node -> pure node
 
 -- | Update the navbar highlighting.

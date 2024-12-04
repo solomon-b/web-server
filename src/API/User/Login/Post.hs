@@ -13,6 +13,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Has (Has)
 import Data.Password.Argon2 (Password, PasswordCheck (..), checkPassword, mkPassword)
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Display (Display (..), RecordInstance (..), display)
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.EmailAddress
@@ -93,8 +94,8 @@ handler sockAddr mUserAgent req@Login {..} = do
         execQuerySpanThrow (Session.getServerSessionByUser (User.mId user)) >>= \case
           Nothing -> do
             Auth.login (User.mId user) sockAddr mUserAgent >>= \case
-              Left _err ->
-                throwErr InternalServerError
+              Left err ->
+                throwErr $ InternalServerError $ Text.pack $ show err
               Right sessionId -> do
                 pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
           Just session ->

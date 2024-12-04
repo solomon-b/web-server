@@ -9,6 +9,7 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Observability qualified as Observability
@@ -47,7 +48,7 @@ handler ::
 handler Auth.Authz {authzSession} =
   Observability.handlerSpan "GET /user/logout" () (\_ -> show ()) $ do
     Auth.expireSession (Session.dSessionId authzSession) >>= \case
-      Left _err -> do
-        throwErr InternalServerError
+      Left err -> do
+        throwErr $ InternalServerError $ Text.pack $ show err
       Right _ ->
         pure $ Servant.addHeader "/" Servant.NoContent

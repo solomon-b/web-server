@@ -35,7 +35,12 @@ data Forbidden = Forbidden
 instance ToServerError Forbidden where
   toServerError _ = Servant.err403
 
-data InternalServerError = InternalServerError
+data NotFound = NotFound
+
+instance ToServerError NotFound where
+  toServerError _ = Servant.err404
+
+data InternalServerError = InternalServerError Text
 
 instance ToServerError InternalServerError where
   toServerError _ = Servant.err500

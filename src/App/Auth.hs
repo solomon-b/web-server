@@ -13,6 +13,7 @@ import Data.Foldable (fold)
 import Data.Functor ((<&>))
 import Data.IP (IP (..), IPRange (..), fromSockAddr, makeAddrRange)
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Display (display)
 import Data.Text.Encoding qualified as Text.Encoding
 import Effects.Clock (MonadClock)
@@ -61,9 +62,9 @@ authHandler pool = mkAuthHandler $ \req ->
    in case eSession of
         Right sessionId ->
           liftIO (HSQL.use pool (HSQL.statement () $ Session.getSessionUser sessionId)) >>= \case
-            Left _err -> do
+            Left err -> do
               -- TODO: Log censored error here?
-              throwErr InternalServerError
+              throwErr $ InternalServerError $ Text.pack $ show err
             Right Nothing ->
               Servant.throwError $ Servant.err307 {Servant.errHeaders = [("Location", "/user/login")]}
             Right (Just (userModel, sessionModel)) ->

@@ -114,7 +114,7 @@ execQuerySpanThrow statement = do
   execQuerySpan statement >>= \case
     Left err -> do
       Log.logAttention "Query Execution Error" (show err)
-      throwErr InternalServerError
+      throwErr $ InternalServerError $ Text.pack $ show err
     Right res -> pure res
 
 execQuerySpanThrowMessage ::

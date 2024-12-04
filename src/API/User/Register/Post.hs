@@ -13,6 +13,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Has (Has)
 import Data.Password.Argon2 (Password, hashPassword, mkPassword)
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Display (Display, display)
 import Data.Text.Display.Generic (RecordInstance (..))
 import Deriving.Aeson qualified as Deriving
@@ -111,7 +112,7 @@ handler sockAddr mUserAgent req@Register {..} = do
             throwErr Forbidden
           Just _user -> do
             Auth.login uid sockAddr mUserAgent >>= \case
-              Left _err ->
-                throwErr InternalServerError
+              Left err ->
+                throwErr $ InternalServerError $ Text.pack $ show err
               Right sessionId -> do
                 pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
