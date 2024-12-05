@@ -6,47 +6,113 @@ module Component.NavBar where
 
 import App.Auth qualified as Auth
 import App.Errors (InternalServerError (InternalServerError), throwErr)
-import Control.Category ((>>>))
-import Control.Lens (filtered, preview, set, traversed, (<&>), _Just)
+import Control.Lens (preview, _Just)
 import Control.Monad.Catch (MonadThrow)
-import Control.Monad.IO.Class (MonadIO)
+import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
-import Text.HTML (parseFragment, parseNode)
-import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics (FocusedElement (..), swapInner', _FocusedElement, _a, _elAttributes, _elChildren', _id')
+import Text.HTML (parseNode)
+import Text.XmlHtml.Optics (FocusedElement (..), _FocusedElement)
 
 --------------------------------------------------------------------------------
+-- Components
 
-template :: ByteString
-template =
-  [i|   <nav id='navbar'>
-            <div class='flex flex-wrap justify-between items-center mx-auto p-4'>
+adminNavBar :: ByteString
+adminNavBar =
+  [i|
+            <div id='admin-nav' class='w-full flex flex-wrap justify-between items-center bg-red-400'>
+              <div>
+                <button hx-get='/admin' hx-target='\#main' hx-push-url='true' class='font-medium text-sm p-2.5 text-center inline-flex items-center me-1'>
+                  <i class='fa-solid fa-gauge pe-2'></i>
+                  Dashboard
+                </button>
+                <button id='adminNewButton' data-dropdown-toggle='adminNewDropdown' data-dropdown-offset-distance='0' data-dropdown-trigger='hover' class='font-medium text-sm p-2.5 text-center inline-flex items-center' type='button'>
+                  <i class='fa-solid fa-plus pe-2'></i>
+                  <span class='ps-2'>New</span>
+                </button>
+                
+                <div id='adminNewDropdown' class='z-10 hidden bg-white divide-y divide-gray-100'>
+                    <ul class='text-sm text-gray-700' aria-labelledby='adminNewButton'>
+                      <li>
+                        <button hx-get='/blog/new' hx-target='\#main' hx-push-url='true' class='block px-4 py-2 hover:bg-gray-100'>Blog Post</button>
+                      </li>
+                      <li>
+                        <button class='block px-4 py-2 hover:bg-gray-100'>Event</button>
+                      </li>
+                    </ul>
+                </div>
+
+              </div>
+              <div>
+                <button id='adminUserButton' data-dropdown-toggle='adminUserDropdown' data-dropdown-offset-distance='0' data-dropdown-trigger='hover' class='font-medium text-sm p-2.5 text-center inline-flex items-center' type='button'>
+                  <img src='static/avatar.png' class='size-4' />
+                  <span class='ps-2'>Hello, Solomon</span>
+                </button>
+                
+                <div id='adminUserDropdown' class='z-10 hidden bg-white divide-y divide-gray-100'>
+                    <ul class='text-sm text-gray-700' aria-labelledby='adminUserButton'>
+                      <li>
+                        <button class='block px-4 py-2 hover:bg-gray-100'>Settings</button>
+                      </li>
+                      <li>
+                        <button class='block px-4 py-2 hover:bg-gray-100'>Edit Profile</button>
+                      </li>
+                    </ul>
+                    <div class='py-2 text-sm text-gray-700'>
+                        <button hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true" class='block px-4 py-2 hover:bg-gray-100'>Logout</button>
+                    </div>
+                </div>
+              </div>
+            </div>
+|]
+
+loginSignupButton :: ByteString
+loginSignupButton =
+  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="body" hx-push-url="true"> Login</button>
+<button class="text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center" hx-get="/user/register" hx-swap="innerHTML" hx-target="body" hx-push-url="true">Sign Up</button>
+|]
+
+logoutButton :: ByteString
+logoutButton =
+  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true">Logout</button>
+|]
+
+tabs :: Text -> ByteString
+tabs tabId =
+  let focused :: ByteString
+      focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
+
+      unfocused :: ByteString
+      unfocused = "text-gray-900 hover:text-green-700"
+   in [i|<ul class='flex flex-row space-x-8 font-medium p-0 bg-white'>
+       <li id='home-tab'>
+           <a href='/' class='#{bool unfocused focused (tabId == "home-tab")}'>Home</a>
+       </li>
+       <li id='blog-tab'>
+           <a href='/blog' class='#{bool unfocused focused (tabId == "blog-tab")}'>Blog</a>
+       </li>
+       <li id='about-tab'>
+           <a href='/about' class='#{bool unfocused focused (tabId == "about-tab")}'>About</a>
+       </li>
+       <li id='contact-tab'>
+           <a href='\#' class='#{bool unfocused focused (tabId == "contact-tab")}'>Contact</a>
+       </li>
+</ul>
+|]
+
+navbar :: Auth.LoggedIn -> Text -> ByteString
+navbar loginState tabId =
+  [i|   <nav id='navbar' class='flex flex-col'>
+           #{bool "" adminNavBar (Auth.isLoggedIn loginState)}
+            <div class='flex flex-wrap w-full justify-between items-center mx-auto p-4'>
                 <div class='items-center flex w-auto order-1'>
                     <a href='/' class='flex items-center space-x-3 mr-8'>
                         <span>🌎</span>
                         <span class='text-2xl font-semibold'>HyperNet
         </span>
                     </a>
-                    <ul class='flex flex-row space-x-8 font-medium p-0 bg-white'>
-                        <li id='home-tab'>
-                            <a href='/' class='text-gray-900 hover:text-green-700'>Home
-  	</a>
-                        </li>
-                        <li id='blog-tab'>
-                            <a href='/blog' class='text-gray-900 hover:text-green-700'>Blog
-  	</a>
-                        </li>
-                        <li id='about-tab'>
-                            <a href='/about' class='text-gray-900 hover:text-green-700'>About
-  	</a>
-                        </li>
-                        <li id='contact-tab'>
-                            <a href='\#' class='text-gray-900 hover:text-green-700'>Contact
-  	</a>
-                        </li>
-                    </ul>
+                    #{tabs tabId}
                 </div>
                 <div id='right-nav' class='flex order-2 space-x-3'>
                     <form class='mx-auto'>
@@ -59,61 +125,22 @@ template =
                             <input type='search' id='default-search' class='block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-green-500 focus:border-green-500' placeholder='Search...' required />
                         </div>
                     </form>
-                    <div id='user-auth-links'><button class='py-2 text-gray-900 hover:bg-transparent hover:text-green-700' hx-post='/user/logout' hx-swap='innerHTML' hx-push-url='true'>
-  Logout
-</button>
+                    <div id='user-auth-links'>
+                       #{bool loginSignupButton logoutButton (Auth.isLoggedIn loginState)}
                     </div>
                 </div>
             </div>
         </nav>
 |]
 
-loginButton :: ByteString
-loginButton =
-  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="body" hx-push-url="true">
-  Login
-</button>
-|]
-
-logoutButton :: ByteString
-logoutButton =
-  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true">
-  Logout
-</button>
-|]
-
-signupButton :: ByteString
-signupButton =
-  [i|<button class="text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center" hx-get="/user/register" hx-swap="innerHTML" hx-target="body" hx-push-url="true">
-  Sign Up
-</button>
-|]
-
 --------------------------------------------------------------------------------
 
-navBar :: (MonadThrow m) => m FocusedElement
-navBar =
-  case preview (_Just . _FocusedElement) (parseNode template) of
+loadNavBar ::
+  (MonadThrow m) =>
+  Auth.LoggedIn ->
+  Text ->
+  m FocusedElement
+loadNavBar loginState tabId =
+  case preview (_Just . _FocusedElement) (parseNode $ navbar loginState tabId) of
     Nothing -> throwErr $ InternalServerError "Failed to construct Navbar Element from template."
     Just node -> pure node
-
--- | Update the navbar highlighting.
-updateTabHighlight :: Text -> FocusedElement -> FocusedElement
-updateTabHighlight tabId =
-  set (_id' tabId . _elChildren' . _a . _elAttributes . traversed . filtered (\(k, _) -> k == "class")) ("class", focused)
-  where
-    focused = "block py-2 px-3 text-white bg-green-700 rounded md:bg-transparent md:text-green-700 md:p-0"
-
--- | Replace the User Auth Buttons in the Navbar.
-updateAuthLinks :: [Xml.Node] -> FocusedElement -> FocusedElement
-updateAuthLinks = swapInner' (_id' "user-auth-links")
-
-readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
-readUserAuthFragment = \case
-  Auth.IsLoggedIn -> parseFragment logoutButton
-  Auth.IsNotLoggedIn -> liftA2 (<>) (parseFragment loginButton) (parseFragment signupButton)
-
-loadNavBar :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> m FocusedElement
-loadNavBar loginState tabId = do
-  authFragment <- readUserAuthFragment loginState
-  navBar <&> (updateTabHighlight tabId >>> updateAuthLinks authFragment)

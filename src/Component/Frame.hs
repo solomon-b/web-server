@@ -26,10 +26,9 @@ template =
     <title>HyperNet
     </title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com">
-    </script>
-    <script src="https://unpkg.com/htmx.org@2.0.0">
-    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
   </head>
   <body>
     <div id="shell" class="container mx-auto">

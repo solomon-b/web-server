@@ -9,8 +9,7 @@ import App.Errors (Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
 import Control.Lens (set)
 import Control.Monad (unless)
-import Control.Monad.Catch (MonadCatch, MonadThrow)
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.ByteString (ByteString)
@@ -22,7 +21,7 @@ import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, readNodes, renderDocument)
+import Text.HTML (HTML, RawHtml, parseFragment, renderDocument, renderNodes)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
 
@@ -30,9 +29,10 @@ import Text.XmlHtml.Optics
 
 type Route =
   Servant.AuthProtect "cookie-auth"
+    :> Servant.Header "HX-Request" Bool
     :> "blog"
     :> "new"
-    :> Servant.Get '[HTML] RawHtml
+    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
 
@@ -108,16 +108,21 @@ handler ::
     MonadReader env m
   ) =>
   Auth.Authz ->
-  m RawHtml
-handler (Auth.Authz User.Domain {..} _) =
+  Maybe Bool ->
+  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+handler (Auth.Authz User.Domain {..} _) hxTrigger =
   Observability.handlerSpan "GET /post/new" () (const @Text "RawHtml") $ do
     unless dIsAdmin $ throwErr Unauthorized
 
     pageFragment <- liftA2 swapFragment (parseFragment template) (parseFragment editContentTemplate)
-
     page <- loadFrameWithNav Auth.IsLoggedIn "blog-tab" pageFragment
 
-    pure $ renderDocument page
+    case hxTrigger of
+      Just True ->
+        pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
+      _ -> do
+        let html = renderDocument $ swapMain pageFragment page
+        pure $ Servant.addHeader "HX-Request" html
 
 --------------------------------------------------------------------------------
 
@@ -126,8 +131,3 @@ swapFragment x y = fmap (set (_id "content-field" . _elChildren) y) x
 
 swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
 swapMain = swapInner _main
-
-readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
-readUserAuthFragment = \case
-  Auth.IsLoggedIn -> readNodes "src/Templates/Root/Logout/button.html"
-  Auth.IsNotLoggedIn -> liftA2 (<>) (readNodes "src/Templates/Root/Login/button.html") (readNodes "src/Templates/Root/Register/button.html")
