@@ -14,6 +14,7 @@ import Data.ByteString (ByteString)
 import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Data.Text.Display (display)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace qualified as Trace
@@ -82,7 +83,7 @@ handler ::
   Auth.Authz ->
   m RawHtml
 handler (Auth.Authz User.Domain {..} _) =
-  Observability.handlerSpan "GET /blog/new/edit" () (const @Text "RawHtml") $ do
+  Observability.handlerSpan "GET /blog/new/edit" () display $ do
     unless dIsAdmin $ throwErr Unauthorized
     pageFragment <- parseFragment template
     pure $ renderNodes pageFragment

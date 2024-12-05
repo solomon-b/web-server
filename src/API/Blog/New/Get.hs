@@ -16,6 +16,7 @@ import Data.ByteString (ByteString)
 import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Data.Text.Display (display)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace qualified as Trace
@@ -50,6 +51,7 @@ template =
                         </div>
 
                         <div id="content-field">
+                          #{editContentTemplate}
                         </div>
 
                         <div class='flex justify-end'>
@@ -111,10 +113,10 @@ handler ::
   Maybe Bool ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 handler (Auth.Authz User.Domain {..} _) hxTrigger =
-  Observability.handlerSpan "GET /post/new" () (const @Text "RawHtml") $ do
+  Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     unless dIsAdmin $ throwErr Unauthorized
 
-    pageFragment <- liftA2 swapFragment (parseFragment template) (parseFragment editContentTemplate)
+    pageFragment <- parseFragment template
     page <- loadFrameWithNav Auth.IsLoggedIn "blog-tab" pageFragment
 
     case hxTrigger of
@@ -125,9 +127,6 @@ handler (Auth.Authz User.Domain {..} _) hxTrigger =
         pure $ Servant.addHeader "HX-Request" html
 
 --------------------------------------------------------------------------------
-
-swapFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
-swapFragment x y = fmap (set (_id "content-field" . _elChildren) y) x
 
 swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
 swapMain = swapInner _main

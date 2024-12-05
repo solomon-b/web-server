@@ -129,7 +129,7 @@ handler ::
   Auth.Authz ->
   m RawHtml
 handler (Auth.Authz User.Domain {..} _) = do
-  Observability.handlerSpan "GET /admin" () (const @Text "RawHTML") $
+  Observability.handlerSpan "GET /admin" () display $
     if dIsAdmin
       then do
         users <- execQuerySpanThrow User.getUsers

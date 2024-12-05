@@ -13,6 +13,7 @@ import Data.ByteString (ByteString)
 import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Data.Text.Display (display)
 import Effects.Database.Class (MonadDB)
 import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace (Tracer)
@@ -70,7 +71,7 @@ handler ::
   Maybe Text ->
   m RawHtml
 handler cookie =
-  Observability.handlerSpan "GET /" () (const @Text "RawHtml") $ do
+  Observability.handlerSpan "GET /" () display $ do
     loginState <- Auth.userLoginState cookie
 
     pageFragment <- parseFragment template

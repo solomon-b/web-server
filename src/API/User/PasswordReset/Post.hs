@@ -61,7 +61,7 @@ handler ::
   PasswordReset ->
   m ()
 handler (Auth.Authz User.Domain {dId, dIsAdmin} _) uid PasswordReset {..} =
-  Observability.handlerSpan "POST /user/:id/password-reset" () display $ do
+  Observability.handlerSpan "POST /user/:id/password-reset" uid display $ do
     unless (dId == uid || dIsAdmin) (throwErr Servant.err401)
     hashedPrPassword <- liftIO $ hashPassword prPassword
     hashedPrNewPassword <- liftIO $ hashPassword prNewPassword

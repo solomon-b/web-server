@@ -14,6 +14,7 @@ import Data.ByteString (ByteString)
 import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Data.Text.Display (display)
 import Effects.Observability qualified as Observability
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
@@ -82,7 +83,7 @@ handler ::
   Maybe Bool ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 handler hxTrigger =
-  Observability.handlerSpan "GET /user/login" () (const @Text "RawHtml") $ do
+  Observability.handlerSpan "GET /user/login" () (display . Servant.getResponse) $ do
     pageFragment <- parseFragment template
     page <- loadFrame pageFragment
 

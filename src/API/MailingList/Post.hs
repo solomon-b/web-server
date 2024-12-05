@@ -62,7 +62,7 @@ handler ::
   MailingListForm ->
   m RawHtml
 handler req@(MailingListForm emailAddress) = do
-  Observability.handlerSpan "POST /mailing-list" req (const ()) $ do
+  Observability.handlerSpan "POST /mailing-list" req display $ do
     unless (isValid emailAddress) $ throwErr Unauthorized
 
     _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert emailAddress

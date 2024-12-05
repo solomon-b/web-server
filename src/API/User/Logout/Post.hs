@@ -46,7 +46,7 @@ handler ::
         Servant.NoContent
     )
 handler Auth.Authz {authzSession} =
-  Observability.handlerSpan "GET /user/logout" () (\_ -> show ()) $ do
+  Observability.handlerSpan "GET /user/logout" () (const @String "NoContent") $ do
     Auth.expireSession (Session.dSessionId authzSession) >>= \case
       Left err -> do
         throwErr $ InternalServerError $ Text.pack $ show err

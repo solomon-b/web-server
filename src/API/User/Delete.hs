@@ -38,6 +38,6 @@ handler ::
   User.Id ->
   m ()
 handler (Auth.Authz User.Domain {dId, dIsAdmin} _) uid =
-  Observability.handlerSpan "DELETE /user/:id/delete" () display $ do
+  Observability.handlerSpan "DELETE /user/:id/delete" uid display $ do
     unless (dId == uid || dIsAdmin) (throwErr Unauthorized)
     execQuerySpanThrow $ User.deleteUser uid
