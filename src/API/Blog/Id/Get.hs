@@ -29,13 +29,13 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml (..), parseFragment, renderDocument)
+import Text.HTML (HTML, RawHtml (..), parseFragment, renderDocument, renderNodes)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.Header "Cookie" Text :> "blog" :> Servant.Capture "id" BlogPosts.Id :> Servant.Get '[HTML] RawHtml
+type Route = Servant.Header "Cookie" Text :> Servant.Header "HX-Request" Bool :> "blog" :> Servant.Capture "id" BlogPosts.Id :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
 
@@ -72,18 +72,24 @@ handler ::
     MonadCatch m
   ) =>
   Maybe Text ->
+  Maybe Bool ->
   BlogPosts.Id ->
-  m RawHtml
-handler cookie bid =
-  Observability.handlerSpan "GET /blog/:id" bid display $ do
+  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+handler cookie hxTrigger bid =
+  Observability.handlerSpan "GET /blog/:id" bid (display . Servant.getResponse) $ do
     loginState <- Auth.userLoginState cookie
     post <- maybe (throwErr NotFound) pure . fmap BlogPosts.toDomain =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     postFragment <- parseFragment $ TE.encodeUtf8 $ renderBlogPost post
-
     pageFragment <- parseFragment template <&> swapTableFragment postFragment
-    page <- loadFrameWithNav loginState "blog-tab" pageFragment
 
-    pure $ renderDocument page
+    case hxTrigger of
+      Just True -> do
+        let html = renderNodes pageFragment
+        pure $ Servant.addHeader "HX-Request" html
+      _ -> do
+        page <- loadFrameWithNav loginState "blog-tab" pageFragment
+        let html = renderDocument page
+        pure $ Servant.addHeader "HX-Request" html
 
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "content" . _elChildren) x)

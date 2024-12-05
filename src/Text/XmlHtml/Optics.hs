@@ -344,6 +344,10 @@ swapInner :: Traversal' Node FocusedElement -> [Node] -> Document -> Document
 swapInner t = set (_docContent' . t . _elChildren)
 
 -- | Modify the inner html of the target element(s)
+modifyInner' :: Traversal' FocusedElement FocusedElement -> ([Node] -> [Node]) -> FocusedElement -> FocusedElement
+modifyInner' t = over (t . _elChildren)
+
+-- | Modify the inner html of the target element(s)
 modifyInner :: Prism' Node FocusedElement -> ([Node] -> [Node]) -> Document -> Document
 modifyInner t = over (_docContent' . t . _elChildren)
 

@@ -111,6 +111,11 @@ lookupSessionId =
 
 data LoggedIn = IsLoggedIn | IsNotLoggedIn
 
+isLoggedIn :: LoggedIn -> Bool
+isLoggedIn = \case
+  IsLoggedIn -> True
+  IsNotLoggedIn -> False
+
 userLoginState :: (MonadDB m) => Maybe Text -> m LoggedIn
 userLoginState cookie = do
   let mSessionId = cookie >>= lookupSessionId
