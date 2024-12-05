@@ -128,7 +128,7 @@ handler ::
   ) =>
   Auth.Authz ->
   m RawHtml
-handler (Auth.Authz User.Domain {..} _) = do
+handler (Auth.Authz user@User.Domain {..} _) = do
   Observability.handlerSpan "GET /admin" () display $
     if dIsAdmin
       then do
@@ -140,16 +140,16 @@ handler (Auth.Authz User.Domain {..} _) = do
         mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
 
         pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-        page <- loadFrameWithNav Auth.IsLoggedIn "about-tab" pageFragment
+        page <- loadFrameWithNav (Auth.IsLoggedIn user) "about-tab" pageFragment
 
         pure $ renderDocument page
-      else renderUnauthorized
+      else renderUnauthorized $ Auth.IsLoggedIn user
 
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "db-tables" . _elChildren) x)
 
-renderUnauthorized :: (MonadIO m, MonadThrow m) => m RawHtml
-renderUnauthorized = do
+renderUnauthorized :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m RawHtml
+renderUnauthorized loginState = do
   pageFragment <- parseFragment unauthorized
-  page <- loadFrameWithNav Auth.IsLoggedIn "about-tab" pageFragment
+  page <- loadFrameWithNav loginState "about-tab" pageFragment
   pure $ renderDocument page

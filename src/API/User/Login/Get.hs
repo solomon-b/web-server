@@ -103,5 +103,5 @@ swapMain = swapInner _body
 
 readUserAuthFragment :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
 readUserAuthFragment = \case
-  Auth.IsLoggedIn -> readNodes "src/Templates/Root/Logout/button.html"
+  Auth.IsLoggedIn _ -> readNodes "src/Templates/Root/Logout/button.html"
   Auth.IsNotLoggedIn -> liftA2 (<>) (readNodes "src/Templates/Root/Login/button.html") (readNodes "src/Templates/Root/Register/button.html")

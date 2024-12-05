@@ -7,7 +7,6 @@ module API.Blog.New.Get where
 import App.Auth qualified as Auth
 import App.Errors (Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
-import Control.Lens (set)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -112,12 +111,12 @@ handler ::
   Auth.Authz ->
   Maybe Bool ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler (Auth.Authz User.Domain {..} _) hxTrigger =
+handler (Auth.Authz user@User.Domain {..} _) hxTrigger =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     unless dIsAdmin $ throwErr Unauthorized
 
     pageFragment <- parseFragment template
-    page <- loadFrameWithNav Auth.IsLoggedIn "blog-tab" pageFragment
+    page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
 
     case hxTrigger of
       Just True ->

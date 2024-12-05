@@ -13,7 +13,6 @@ import Control.Monad.Reader (MonadReader)
 import Data.ByteString (ByteString)
 import Data.Has (Has)
 import Data.String.Interpolate (i)
-import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability

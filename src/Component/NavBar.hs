@@ -12,14 +12,42 @@ import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Data.Text.Display (display)
+import Effects.Database.Tables.User qualified as User
 import Text.HTML (parseNode)
 import Text.XmlHtml.Optics (FocusedElement (..), _FocusedElement)
+import Data.Maybe (fromMaybe)
 
 --------------------------------------------------------------------------------
 -- Components
 
-adminNavBar :: ByteString
-adminNavBar =
+userDropdown :: User.Domain -> ByteString
+userDropdown User.Domain {dId, dDisplayName, dAvatarUrl} =
+  let avatar = fromMaybe "/static/avatar.png" dAvatarUrl
+   in [i|
+                <button id='adminUserButton' hx-get='/user/#{display dId}' hx-target='\#main' hx-push-url='true' data-dropdown-toggle='adminUserDropdown' data-dropdown-offset-distance='0' data-dropdown-trigger='hover' class='font-medium text-sm p-2.5 text-center inline-flex items-center' type='button'>
+                  <img src='#{avatar}' class='size-4' />
+                  <span class='ps-2'>Hello, #{display dDisplayName}</span>
+                </button>
+                
+                <div id='adminUserDropdown' class='z-10 hidden bg-white divide-y divide-gray-100'>
+                    <ul class='text-sm text-gray-700' aria-labelledby='adminUserButton'>
+                      <li>
+                        <button class='block px-4 py-2 hover:bg-gray-100'>Settings</button>
+                      </li>
+                      <li>
+                        <button class='block px-4 py-2 hover:bg-gray-100'>Edit Profile</button>
+                      </li>
+                    </ul>
+                    <div class='py-2 text-sm text-gray-700'>
+                        <button hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true" class='block px-4 py-2 hover:bg-gray-100'>Logout</button>
+                    </div>
+                </div>
+|]
+
+adminNavBar :: Auth.LoggedIn -> ByteString
+adminNavBar Auth.IsNotLoggedIn = mempty
+adminNavBar (Auth.IsLoggedIn user) =
   [i|
             <div id='admin-nav' class='w-full flex flex-wrap justify-between items-center bg-red-400'>
               <div>
@@ -45,24 +73,7 @@ adminNavBar =
 
               </div>
               <div>
-                <button id='adminUserButton' data-dropdown-toggle='adminUserDropdown' data-dropdown-offset-distance='0' data-dropdown-trigger='hover' class='font-medium text-sm p-2.5 text-center inline-flex items-center' type='button'>
-                  <img src='static/avatar.png' class='size-4' />
-                  <span class='ps-2'>Hello, Solomon</span>
-                </button>
-                
-                <div id='adminUserDropdown' class='z-10 hidden bg-white divide-y divide-gray-100'>
-                    <ul class='text-sm text-gray-700' aria-labelledby='adminUserButton'>
-                      <li>
-                        <button class='block px-4 py-2 hover:bg-gray-100'>Settings</button>
-                      </li>
-                      <li>
-                        <button class='block px-4 py-2 hover:bg-gray-100'>Edit Profile</button>
-                      </li>
-                    </ul>
-                    <div class='py-2 text-sm text-gray-700'>
-                        <button hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true" class='block px-4 py-2 hover:bg-gray-100'>Logout</button>
-                    </div>
-                </div>
+                #{userDropdown user}
               </div>
             </div>
 |]
@@ -104,7 +115,7 @@ tabs tabId =
 navbar :: Auth.LoggedIn -> Text -> ByteString
 navbar loginState tabId =
   [i|   <nav id='navbar' class='flex flex-col'>
-           #{bool "" adminNavBar (Auth.isLoggedIn loginState)}
+           #{adminNavBar loginState}
             <div class='flex flex-wrap w-full justify-between items-center mx-auto p-4'>
                 <div class='items-center flex w-auto order-1'>
                     <a href='/' class='flex items-center space-x-3 mr-8'>
