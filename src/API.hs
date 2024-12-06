@@ -21,6 +21,7 @@ module API where
 import API.About.Get qualified as About.Get
 import API.Admin.Get qualified as Admin.Get
 import API.Blog.Get qualified as Blog.Get
+import API.Blog.Id.Edit.Get qualified as Blog.Id.Edit.Get
 import API.Blog.Id.Edit.Post qualified as Blog.Id.Edit.Post
 import API.Blog.Id.Get qualified as Blog.Id.Get
 import API.Blog.New.Edit.Get qualified as Blog.New.Edit.Get
@@ -28,6 +29,7 @@ import API.Blog.New.Get qualified as Blog.New.Get
 import API.Blog.New.Post qualified as Blog.New.Post
 import API.Blog.New.Preview.Get qualified as Blog.New.Preview.Get
 import API.Get qualified as Get
+import API.Image.Post qualified as Image.Post
 import API.MailingList.Post qualified as MailingList.Post
 import API.Static.Get qualified as Static.Get
 import API.User.Current.Get qualified as User.Current.Get
@@ -69,12 +71,15 @@ type API =
     -- Unprotected BlogPosts Routes
     :<|> Blog.Get.Route
     :<|> Blog.Id.Get.Route
+    :<|> Blog.Id.Edit.Get.Route
     :<|> Blog.Id.Edit.Post.Route
     -- Protected BlogPosts Routes
     :<|> Blog.New.Get.Route
     :<|> Blog.New.Post.Route
     :<|> Blog.New.Edit.Get.Route
     :<|> Blog.New.Preview.Get.Route
+    -- Protected Image Routes
+    :<|> Image.Post.Route
     -- Unprotected State Page Routes
     :<|> About.Get.Route
     -- Unprotected User Routes
@@ -118,11 +123,13 @@ server env = do
     :<|> MailingList.Post.handler
     :<|> Blog.Get.handler
     :<|> Blog.Id.Get.handler
+    :<|> Blog.Id.Edit.Get.handler
     :<|> Blog.Id.Edit.Post.handler
     :<|> Blog.New.Get.handler
     :<|> Blog.New.Post.handler
     :<|> Blog.New.Edit.Get.handler
     :<|> Blog.New.Preview.Get.handler
+    :<|> Image.Post.handler
     :<|> About.Get.handler
     :<|> User.Get.handler
     :<|> User.Id.Get.handler

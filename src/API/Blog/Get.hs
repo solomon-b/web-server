@@ -47,9 +47,9 @@ template :: [BlogPosts.Domain] -> ByteString
 template posts =
   [i|<div class='flex flex-col justify-center items-center w-full'>
   <div id='content' class='p-4 my-8 flex flex-wrap'>
-  </div>
-  <div class='flex w-full'>
-    #{foldMap blogPost posts}
+    <div class='flex w-full'>
+      #{foldMap blogPost posts}
+    </div>
   </div>
 </div>
 |]

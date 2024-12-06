@@ -221,8 +221,8 @@ updateBlogPost ModelUpdate {..} =
     [sql|
         UPDATE blog_posts
         SET title = #{muTitle},
-            content = #{muContent}
-            published = #{muPublished}
+            content = #{muContent},
+            published = #{muPublished},
             hero_image_path = #{muHeroImagePath}
         WHERE id = #{muId}
   |]

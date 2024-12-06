@@ -47,8 +47,9 @@ userDropdown User.Domain {dId, dDisplayName, dAvatarUrl} =
 
 adminNavBar :: Auth.LoggedIn -> ByteString
 adminNavBar = \case
-  (Auth.IsLoggedIn user@User.Domain {dIsAdmin}) | dIsAdmin ->
-    [i|
+  (Auth.IsLoggedIn user@User.Domain {dIsAdmin})
+    | dIsAdmin ->
+        [i|
 <div id='admin-nav' class='w-full flex flex-wrap justify-between items-center bg-red-400'>
   <div>
     <button hx-get='/admin' hx-target='\#main' hx-push-url='true' class='font-medium text-sm p-2.5 text-center inline-flex items-center me-1'>

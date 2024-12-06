@@ -57,11 +57,14 @@ library
                   , cookie
                   , clock
                   , containers
+                  , cryptohash-sha256
                   , data-has
                   , deriving-aeson
+                  , directory
                   , exceptions
                   , email-validate
                   , errors
+                  , filepath
                   , hasql
                   , hasql-pool
                   , hasql-interpolate
@@ -82,8 +85,10 @@ library
                   , network
                   , network-ip
                   , password
+                  , servant-multipart
                   , servant-server
 		  , smtp-mail
+                  , string-conversions
                   , string-interpolate
                   , text
                   , text-display
@@ -114,9 +119,11 @@ library
     API.Blog.New.Edit.Get
     API.Blog.New.Preview.Get
     API.Blog.Id.Get
+    API.Blog.Id.Edit.Get
     API.Blog.Id.Edit.Post
     API.Get
     API.MailingList.Post
+    API.Image.Post
     API.Static.Get
     API.User.Get
     API.User.Current.Get
@@ -146,6 +153,7 @@ library
     Effects.Observability
     OrphanInstances.CaseInsensitive
     OrphanInstances.IPRange
+    OrphanInstances.MultipartData
     OrphanInstances.OneRow
     OrphanInstances.Password
     OrphanInstances.Servant
