@@ -21,6 +21,7 @@ module API where
 import API.About.Get qualified as About.Get
 import API.Admin.Get qualified as Admin.Get
 import API.Blog.Get qualified as Blog.Get
+import API.Blog.Id.Edit.Post qualified as Blog.Id.Edit.Post
 import API.Blog.Id.Get qualified as Blog.Id.Get
 import API.Blog.New.Edit.Get qualified as Blog.New.Edit.Get
 import API.Blog.New.Get qualified as Blog.New.Get
@@ -68,6 +69,7 @@ type API =
     -- Unprotected BlogPosts Routes
     :<|> Blog.Get.Route
     :<|> Blog.Id.Get.Route
+    :<|> Blog.Id.Edit.Post.Route
     -- Protected BlogPosts Routes
     :<|> Blog.New.Get.Route
     :<|> Blog.New.Post.Route
@@ -116,6 +118,7 @@ server env = do
     :<|> MailingList.Post.handler
     :<|> Blog.Get.handler
     :<|> Blog.Id.Get.handler
+    :<|> Blog.Id.Edit.Post.handler
     :<|> Blog.New.Get.handler
     :<|> Blog.New.Post.handler
     :<|> Blog.New.Edit.Get.handler

@@ -10,13 +10,13 @@ import Control.Lens (preview, _Just)
 import Control.Monad.Catch (MonadThrow)
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
+import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Tables.User qualified as User
 import Text.HTML (parseNode)
 import Text.XmlHtml.Optics (FocusedElement (..), _FocusedElement)
-import Data.Maybe (fromMaybe)
 
 --------------------------------------------------------------------------------
 -- Components

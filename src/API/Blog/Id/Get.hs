@@ -1,7 +1,4 @@
 {-# LANGUAGE QuasiQuotes #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Redundant fmap" #-}
 
 module API.Blog.Id.Get where
 
@@ -78,7 +75,7 @@ handler ::
 handler cookie hxTrigger bid =
   Observability.handlerSpan "GET /blog/:id" bid (display . Servant.getResponse) $ do
     loginState <- Auth.userLoginState cookie
-    post <- maybe (throwErr NotFound) pure . fmap BlogPosts.toDomain =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
+    post <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     postFragment <- parseFragment $ TE.encodeUtf8 $ renderBlogPost post
     pageFragment <- parseFragment template <&> swapTableFragment postFragment
 

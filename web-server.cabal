@@ -114,6 +114,7 @@ library
     API.Blog.New.Edit.Get
     API.Blog.New.Preview.Get
     API.Blog.Id.Get
+    API.Blog.Id.Edit.Post
     API.Get
     API.MailingList.Post
     API.Static.Get
