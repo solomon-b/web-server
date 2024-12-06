@@ -148,7 +148,14 @@ migrations-list:
 # Build and run a development docker container
 postgres-dev-start:
   echo "🟢 Starting the Development Postgres service.."
-  docker run --rm --name dev-postgres -d -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=dev_db -d postgres
+  docker run \
+    --rm \
+    --name dev-postgres \
+    -d -p 5432:5432 \
+    -e POSTGRES_HOST_AUTH_METHOD=trust \
+    -e POSTGRES_DB=dev_db \
+    -v $(HOME)/.webserver-dev-pg-data:/var/lib/postgresql/data \
+    -d postgres
   echo "✨ Success!"
 
 # Halt the development docker container
