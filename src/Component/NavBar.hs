@@ -46,37 +46,38 @@ userDropdown User.Domain {dId, dDisplayName, dAvatarUrl} =
 |]
 
 adminNavBar :: Auth.LoggedIn -> ByteString
-adminNavBar Auth.IsNotLoggedIn = mempty
-adminNavBar (Auth.IsLoggedIn user) =
-  [i|
-            <div id='admin-nav' class='w-full flex flex-wrap justify-between items-center bg-red-400'>
-              <div>
-                <button hx-get='/admin' hx-target='\#main' hx-push-url='true' class='font-medium text-sm p-2.5 text-center inline-flex items-center me-1'>
-                  <i class='fa-solid fa-gauge pe-2'></i>
-                  Dashboard
-                </button>
-                <button id='adminNewButton' data-dropdown-toggle='adminNewDropdown' data-dropdown-offset-distance='0' data-dropdown-trigger='hover' class='font-medium text-sm p-2.5 text-center inline-flex items-center' type='button'>
-                  <i class='fa-solid fa-plus pe-2'></i>
-                  <span class='ps-2'>New</span>
-                </button>
-                
-                <div id='adminNewDropdown' class='z-10 hidden bg-white divide-y divide-gray-100'>
-                    <ul class='text-sm text-gray-700' aria-labelledby='adminNewButton'>
-                      <li>
-                        <button hx-get='/blog/new' hx-target='\#main' hx-push-url='true' class='block px-4 py-2 hover:bg-gray-100'>Blog Post</button>
-                      </li>
-                      <li>
-                        <button class='block px-4 py-2 hover:bg-gray-100'>Event</button>
-                      </li>
-                    </ul>
-                </div>
+adminNavBar = \case
+  (Auth.IsLoggedIn user@User.Domain {dIsAdmin}) | dIsAdmin ->
+    [i|
+<div id='admin-nav' class='w-full flex flex-wrap justify-between items-center bg-red-400'>
+  <div>
+    <button hx-get='/admin' hx-target='\#main' hx-push-url='true' class='font-medium text-sm p-2.5 text-center inline-flex items-center me-1'>
+      <i class='fa-solid fa-gauge pe-2'></i>
+      Dashboard
+    </button>
+    <button id='adminNewButton' data-dropdown-toggle='adminNewDropdown' data-dropdown-offset-distance='0' data-dropdown-trigger='hover' class='font-medium text-sm p-2.5 text-center inline-flex items-center' type='button'>
+      <i class='fa-solid fa-plus pe-2'></i>
+      <span class='ps-2'>New</span>
+    </button>
+    
+    <div id='adminNewDropdown' class='z-10 hidden bg-white divide-y divide-gray-100'>
+        <ul class='text-sm text-gray-700' aria-labelledby='adminNewButton'>
+          <li>
+            <button hx-get='/blog/new' hx-target='\#main' hx-push-url='true' class='block px-4 py-2 hover:bg-gray-100'>Blog Post</button>
+          </li>
+          <li>
+            <button class='block px-4 py-2 hover:bg-gray-100'>Event</button>
+          </li>
+        </ul>
+    </div>
 
-              </div>
-              <div>
-                #{userDropdown user}
-              </div>
-            </div>
+  </div>
+  <div>
+    #{userDropdown user}
+  </div>
+</div>
 |]
+  _ -> mempty
 
 loginSignupButton :: ByteString
 loginSignupButton =
