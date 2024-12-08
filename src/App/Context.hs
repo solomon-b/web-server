@@ -9,6 +9,7 @@ import Hasql.Pool qualified as HSQL (Pool)
 import Log qualified
 import Network.Wai qualified as Wai
 import OpenTelemetry.Trace qualified as OTEL
+import Servant qualified
 import Servant.Server.Experimental.Auth (AuthHandler)
 
 --------------------------------------------------------------------------------
@@ -47,4 +48,4 @@ instance Has.Has Environment (AppContext ctx) where
   getter = appEnvironment
   modifier f ctx@AppContext {appEnvironment} = ctx {appEnvironment = f appEnvironment}
 
-type ServantContext = '[AuthHandler Wai.Request Authz]
+type ServantContext = '[Servant.ErrorFormatters, AuthHandler Wai.Request Authz]

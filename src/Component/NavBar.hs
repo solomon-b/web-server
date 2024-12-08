@@ -121,7 +121,7 @@ navbar loginState tabId =
             <div class='flex flex-wrap w-full justify-between items-center mx-auto p-4'>
                 <div class='items-center flex w-auto order-1'>
                     <a href='/' class='flex items-center space-x-3 mr-8'>
-                        <span>🌎</span>
+                        <i class="fa-solid fa-globe"></i>
                         <span class='text-2xl font-semibold'>HyperNet
         </span>
                     </a>
@@ -133,7 +133,7 @@ navbar loginState tabId =
         </label>
                         <div class='relative'>
                             <div class='absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none'>
-                                <span>🔎</span>
+                                <i class="fa-solid fa-magnifying-glass"></i>
                             </div>
                             <input type='search' id='default-search' class='block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-green-500 focus:border-green-500' placeholder='Search...' required />
                         </div>

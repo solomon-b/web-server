@@ -85,6 +85,7 @@ library
                   , network
                   , network-ip
                   , password
+                  , servant
                   , servant-multipart
                   , servant-server
 		  , smtp-mail
@@ -109,6 +110,7 @@ library
     App.Config.Fetchers
     App.Context
     App.Errors
+    App.Errors.HTML
     App.Monad
     API
     API.About.Get

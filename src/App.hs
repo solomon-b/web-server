@@ -20,6 +20,7 @@ import API
 import App.Auth (authHandler)
 import App.Config
 import App.Context
+import App.Errors.HTML (error401template, error403template, error404template, error500template)
 import App.Monad
 import Control.Exception (catch)
 import Control.Monad (void)
@@ -69,13 +70,21 @@ runApp ctx =
         let poolSettings = HSQL.Pool.Config.settings [HSQL.Pool.Config.staticConnectionSettings hsqlSettings]
         pgPool <- HSQL.Pool.acquire poolSettings
 
-        let cfg = authHandler pgPool :. Servant.EmptyContext
+        let cfg = customFormatters :. authHandler pgPool :. Servant.EmptyContext
 
         -- Run App with tracing
         Observability.withTracer appConfigObservability $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
           Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname appConfigEnvironment ctx))
+
+notFoundFormatter :: Servant.NotFoundErrorFormatter
+notFoundFormatter _ =
+  Servant.err404 {Servant.errBody = error404template}
+
+customFormatters :: Servant.ErrorFormatters
+customFormatters =
+  Servant.defaultErrorFormatters {Servant.notFoundErrorFormatter = notFoundFormatter}
 
 warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
 warpSettings logger' WarpConfig {..} =
@@ -112,7 +121,16 @@ shutdownHandler closeSocket =
 
 interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
 interpret ctx@AppContext {appLogger} (AppM appM) =
-  Servant.Handler $ ExceptT $ catch (Right <$> appM ctx (Log.LoggerEnv appLogger "webserver-backend" [] [] Log.defaultLogLevel)) $ \(e :: Servant.ServerError) -> pure $ Left e
+  Servant.Handler $
+    ExceptT $
+      catch (Right <$> appM ctx (Log.LoggerEnv appLogger "webserver-backend" [] [] Log.defaultLogLevel)) $
+        \e ->
+          case Servant.errHTTPCode e of
+            401 -> pure $ Left Servant.err401 {Servant.errBody = error401template}
+            403 -> pure $ Left Servant.err401 {Servant.errBody = error403template}
+            404 -> pure $ Left Servant.err401 {Servant.errBody = error404template}
+            500 -> pure $ Left Servant.err401 {Servant.errBody = error500template}
+            _ -> pure $ Left e
 
 mkApp :: Servant.Context ServantContext -> AppContext ctx -> Servant.Application
 mkApp cfg ctx =
