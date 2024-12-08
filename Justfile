@@ -17,7 +17,7 @@ SHELLCHECK := "$(shellcheck --external-sources --source-path=SCRIPTDIR)"
 
 # Run the backend service
 run:
-  cabal run exe:web-server
+  cabal run exe:server
 
 # Build all haskell packages.
 build:
@@ -29,7 +29,7 @@ clean:
 
 # Run all test suites.
 test: 
-  cabal test --test-show-details=direct --test-option=--format=specdoc
+  cabal test all --test-show-details=direct --test-option=--format=specdoc
 
 # Build docs
 haddock: 

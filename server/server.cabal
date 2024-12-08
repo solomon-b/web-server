@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               web-server
+name:               server
 version:            0.1.0.0
 license:            Apache-2.0
 license-file:       LICENSE
@@ -34,11 +34,11 @@ common common-extensions
 
 --------------------------------------------------------------------------------
 
-executable web-server
+executable server
   import:           common-extensions
   main-is:          Main.hs
   build-depends:    base ^>=4.18.1.0
-                  , web-server
+                  , server
   hs-source-dirs:   app
   default-language: Haskell2010
   ghc-options:    -Wall -threaded -rtsopts -with-rtsopts=-N
@@ -234,4 +234,4 @@ test-suite tests
     , unliftio-core
     , uuid
     , xmlhtml
-    , web-server
+    , server
