@@ -1,4 +1,4 @@
-cabal-version:      3.0
+cabal-version:      3.4
 name:               server
 version:            0.1.0.0
 license:            Apache-2.0
@@ -102,6 +102,7 @@ library
                   , wai
                   , warp
                   , xmlhtml
+                  , xmlhtml-lens
   exposed-modules:
     App
     App.Auth
@@ -161,7 +162,6 @@ library
     OrphanInstances.Servant
     OrphanInstances.UTCTime
     OrphanInstances.UUID
-    Text.XmlHtml.Optics
     Utils
     Text.HTML
 
@@ -195,7 +195,6 @@ test-suite tests
      Test.Database.Property
      Test.Database.Property.Assert
      Test.Database.Setup
-     Test.Text.XmlHtml.Optics
   hs-source-dirs:
     test
   ghc-options:

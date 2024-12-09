@@ -1,28 +1,7 @@
 -- | Lensy Interface for 'Text.XmlHtml
---
--- For all examples we will use the following HTML:
---
--- <!DOCTYPE html>
---   <html>
---     <head>
---     </head>
---     <body>
---       <div id='main'>
---         <div class='foo'>hello</div>
---         <div class='bar'>
---           <div class='foo'>
---             world
---           </div>
---           <ul>
---             <li id='home-tab'>One</li>
---             <li id='focused'>Two</li>
---             <li>Three</li>
---           </ul>
---         </div>
---       </div>
---     </body>
--- </html>
 module Text.XmlHtml.Optics where
+
+--------------------------------------------------------------------------------
 
 import Control.Lens
 import Data.HashMap.Strict (HashMap)
@@ -390,10 +369,3 @@ insertBeforeEnd t n = over (_docContent' . t . _elChildren) (<> [n])
 -- | Deletes the target element regardless of the response
 -- delete :: Traversal' Node FocusedElement -> Document -> Document
 -- delete = _
-
--- | HTML Example
-xml :: Document
-xml = either undefined id $ parseHTML "" "<!DOCTYPE html>\n  <html>\n    <head>\n    </head>\n    <body>\n      <div id='main'>\n        <div class='foo'>hello</div>\n        <div class='bar'>\n          <div class='foo'>\n            world\n          </div>\n          <ul>\n            <li id='home-tab'><a class='derp'>One</a></li>\n            <li id='focused'>Two</li>\n            <li>Three</li>\n          </ul>\n        </div>\n      </div>\n    </body>\n</html>\n"
-
-ex :: Document -> Document
-ex node = node & transformOnOf _docContent' (_FocusedElement . _elChildren') (over (_el "div") (over _elChildren (const [TextNode "UPDATED!!"])))

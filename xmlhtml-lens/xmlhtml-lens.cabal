@@ -1,0 +1,57 @@
+cabal-version:      3.4
+name:               xmlhtml-lens
+version:            0.1.0.0
+license:            Apache-2.0
+author:             Solomon Bothwell
+maintainer:         ssbothwell@gmail.com
+category:           Web
+build-type:         Simple
+
+--------------------------------------------------------------------------------
+
+common common-extensions
+  ghc-options: -Wall
+  default-extensions:
+    ImportQualifiedPost
+    LambdaCase
+    OverloadedStrings
+    RankNTypes 
+    RecordWildCards 
+
+--------------------------------------------------------------------------------
+
+library
+    import:           common-extensions
+    exposed-modules:  Text.XmlHtml.Optics
+    build-depends:    base ^>=4.18.1.0
+                    , lens
+                    , text
+                    , unordered-containers
+                    , xmlhtml
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+--------------------------------------------------------------------------------
+
+test-suite xmlhtml-lens-test
+    import:           common-extensions
+    default-language: Haskell2010
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    other-modules:
+        Test.Text.XmlHtml.Optics
+    build-depends:
+        aeson,
+        base ^>=4.18.1.0,
+        bytestring,
+        directory,
+        filepath,
+        hspec,
+        hspec-golden,
+        lens,
+        pretty-simple,
+        string-interpolate,
+        text,
+        xmlhtml,
+        xmlhtml-lens
