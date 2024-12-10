@@ -23,7 +23,8 @@ import App.Context
 import App.Errors.HTML (error401template, error403template, error404template, error500template)
 import App.Monad
 import Control.Exception (catch)
-import Control.Monad (void)
+import Control.Monad (void, when)
+import Control.Monad.Reader (runReaderT)
 import Control.Monad.Trans.Except (ExceptT (..))
 import Data.Aeson ((.=))
 import Data.Aeson.KeyMap qualified as KeyMap
@@ -34,6 +35,7 @@ import Data.Foldable (fold)
 import Data.Function ((&))
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text.Encoding qualified as Text.Encoding
+import Effects.Database.Class (execStatement, healthCheck)
 import Effects.Observability qualified as Observability
 import Hasql.Connection qualified as HSQL
 import Hasql.Pool qualified as HSQL.Pool
@@ -49,6 +51,7 @@ import OpenTelemetry.Trace qualified as OTEL
 import Servant (Context ((:.)))
 import Servant qualified
 import System.Posix.Signals qualified as Posix
+import Control.Error (isLeft)
 
 --------------------------------------------------------------------------------
 
@@ -69,6 +72,10 @@ runApp ctx =
         let hsqlSettings = HSQL.settings (fold postgresConfigHost) (fromMaybe 0 postgresConfigPort) (fold postgresConfigUser) (fold postgresConfigPassword) (fold postgresConfigDB)
         let poolSettings = HSQL.Pool.Config.settings [HSQL.Pool.Config.staticConnectionSettings hsqlSettings]
         pgPool <- HSQL.Pool.acquire poolSettings
+
+        -- TODO: We need better logging:
+        healthCheckResult <- flip runReaderT pgPool $ execStatement healthCheck
+        when (isLeft healthCheckResult) $ error $ "Postgres healthcheck failed: " <> show healthCheckResult
 
         let cfg = customFormatters :. authHandler pgPool :. Servant.EmptyContext
 

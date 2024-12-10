@@ -82,14 +82,14 @@ library
                   , lens
                   , log-base
                   , mtl
-		  , mime-mail
+                  , mime-mail
                   , network
                   , network-ip
                   , password
                   , servant
                   , servant-multipart
                   , servant-server
-		  , smtp-mail
+                  , smtp-mail
                   , string-conversions
                   , string-interpolate
                   , text

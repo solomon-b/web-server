@@ -105,6 +105,9 @@ tabs tabId =
        <li id='blog-tab'>
            <a href='/blog' class='#{bool unfocused focused (tabId == "blog-tab")}'>Blog</a>
        </li>
+       <li id='store-tab'>
+           <a href='/store' class='#{bool unfocused focused (tabId == "store-tab")}'>Store</a>
+       </li>
        <li id='about-tab'>
            <a href='/about' class='#{bool unfocused focused (tabId == "about-tab")}'>About</a>
        </li>
