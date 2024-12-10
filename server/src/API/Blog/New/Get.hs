@@ -4,6 +4,7 @@ module API.Blog.New.Get where
 
 --------------------------------------------------------------------------------
 
+import API.Blog.New.Edit.Get (contentField)
 import App.Auth qualified as Auth
 import App.Errors (Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
@@ -35,46 +36,6 @@ type Route =
     :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
-
-contentField :: ByteString
-contentField =
-  [i|
-<div id='content-field'>
-  <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
-  <div class='flex flex-col border border-gray-300 rounded-lg'>
-      <div class='flex mb-2'>
-          <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
-            <button href='\#' role='tab' hx-get='/blog/new/edit' hx-swap='innerHTML' hx-target='\#content-field'>
-              Write
-            </button>
-          </div>
-  
-          <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-            <button href='\#' role='tab' hx-get='/blog/new/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
-              Preview
-            </button>
-          </div>
-  
-          <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500 grow flex justify-end'>
-              <i title='Heading' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-heading'></i>
-              <i title='Bold' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-bold'></i>
-              <i title='Italic' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-italic'></i>
-              <i class='border-l border-t-0 border-gray-300'></i>
-              <i title='Quote' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-quote-left'></i>
-              <i title='Code' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-code'></i>
-              <i title='Link' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-link'></i>
-              <i class='border-l border-t-0 border-gray-300'></i>
-              <i title='Numbered List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-ol'></i>
-              <i title='Unordered List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list'></i>
-              <i title='Task List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-check'></i>
-          </div>
-      </div>
-      <div class='m-2 min-h-60'>
-          <textarea name='content' placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500'></textarea>
-      </div>
-  </div>
-</div>
-|]
 
 publishToggle :: ByteString
 publishToggle =
@@ -111,7 +72,7 @@ submitButton =
   [i|
 <div class='flex justify-end'>
   #{publishToggle}
-  <button id='publishedStatusButton' data-dropdown-toggle='publishedDropdown' type='submit' class='text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center'>
+  <button id='publishedStatusButton' type='submit' class='text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center'>
     Create Post
   </button>
 </div>
@@ -128,7 +89,7 @@ template =
       <form hx-post='/blog/new' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
           #{titleField}
           #{fileUploadField}
-          #{contentField}
+          #{contentField Nothing}
           #{submitButton}
       </form>
   </div>
