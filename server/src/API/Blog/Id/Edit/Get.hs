@@ -39,25 +39,26 @@ type Route =
     :> "blog"
     :> Servant.Capture "id" BlogPosts.Id
     :> "edit"
+    :> Servant.QueryParam "content" Text
     :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
 
-contentField :: Text -> ByteString
-contentField content =
+contentField :: BlogPosts.Id -> Text -> ByteString
+contentField bid content =
   [i|
 <div id='content-field'>
   <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
   <div class='flex flex-col border border-gray-300 rounded-lg'>
       <div class='flex mb-2'>
           <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
-            <button href='\#' role='tab' hx-get='/blog/new/edit' hx-swap='innerHTML' hx-target='\#content-field'>
+            <button role='tab' hx-get="/blog/#{bid}/edit" hx-swap="innerHTML" hx-target="\#main" hx-include='next textarea'>
               Write
             </button>
           </div>
   
           <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-            <button href='\#' role='tab' hx-get='/blog/new/preview' hx-swap='innerHTML' hx-target='\#content-field'>
+            <button href='\#' role='tab' hx-get='/blog/#{bid}/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
               Preview
             </button>
           </div>
@@ -137,7 +138,7 @@ template bid title content isPublished heroImagePath =
       <form hx-post='/blog/#{bid}/edit' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
           #{titleField title}
           #{fileUploadField heroImagePath}
-          #{contentField content}
+          #{contentField bid content}
           #{submitButton isPublished}
       </form>
   </div>
@@ -158,17 +159,18 @@ handler ::
   Auth.Authz ->
   Maybe Bool ->
   BlogPosts.Id ->
+  Maybe Text ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid =
+handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid content =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     BlogPosts.Domain {..} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     unless (dIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 
-    pageFragment <- parseFragment $ template bid dTitle dContent dPublished dHeroImagePath
+    pageFragment <- parseFragment $ template bid dTitle (fromMaybe dContent content) dPublished dHeroImagePath
     page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
 
     case hxTrigger of
-      Just True ->
+      Just True -> do
         pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
       _ -> do
         let html = renderDocument $ swapMain pageFragment page

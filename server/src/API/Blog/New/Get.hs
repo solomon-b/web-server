@@ -50,7 +50,7 @@ contentField =
           </div>
   
           <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-            <button href='\#' role='tab' hx-get='/blog/new/preview' hx-swap='innerHTML' hx-target='\#content-field'>
+            <button href='\#' role='tab' hx-get='/blog/new/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
               Preview
             </button>
           </div>
