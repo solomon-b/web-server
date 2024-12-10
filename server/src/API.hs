@@ -24,6 +24,7 @@ import API.Blog.Get qualified as Blog.Get
 import API.Blog.Id.Edit.Get qualified as Blog.Id.Edit.Get
 import API.Blog.Id.Edit.Post qualified as Blog.Id.Edit.Post
 import API.Blog.Id.Get qualified as Blog.Id.Get
+import API.Blog.Id.Preview.Get qualified as Blog.Id.Preview.Get
 import API.Blog.New.Edit.Get qualified as Blog.New.Edit.Get
 import API.Blog.New.Get qualified as Blog.New.Get
 import API.Blog.New.Post qualified as Blog.New.Post
@@ -71,9 +72,10 @@ type API =
     -- Unprotected BlogPosts Routes
     :<|> Blog.Get.Route
     :<|> Blog.Id.Get.Route
+    -- Protected BlogPosts Routes
     :<|> Blog.Id.Edit.Get.Route
     :<|> Blog.Id.Edit.Post.Route
-    -- Protected BlogPosts Routes
+    :<|> Blog.Id.Preview.Get.Route
     :<|> Blog.New.Get.Route
     :<|> Blog.New.Post.Route
     :<|> Blog.New.Edit.Get.Route
@@ -125,6 +127,7 @@ server env = do
     :<|> Blog.Id.Get.handler
     :<|> Blog.Id.Edit.Get.handler
     :<|> Blog.Id.Edit.Post.handler
+    :<|> Blog.Id.Preview.Get.handler
     :<|> Blog.New.Get.handler
     :<|> Blog.New.Post.handler
     :<|> Blog.New.Edit.Get.handler

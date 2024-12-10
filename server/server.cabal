@@ -125,6 +125,7 @@ library
     API.Blog.Id.Get
     API.Blog.Id.Edit.Get
     API.Blog.Id.Edit.Post
+    API.Blog.Id.Preview.Get
     API.Get
     API.MailingList.Post
     API.Image.Post

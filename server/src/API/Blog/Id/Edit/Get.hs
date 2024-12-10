@@ -52,13 +52,13 @@ contentField bid content =
   <div class='flex flex-col border border-gray-300 rounded-lg'>
       <div class='flex mb-2'>
           <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
-            <button role='tab' hx-get="/blog/#{bid}/edit" hx-swap="innerHTML" hx-target="\#main" hx-include='next textarea'>
+            <button role='tab' hx-get="/blog/#{display bid}/edit" hx-swap="innerHTML" hx-target="\#content-field" hx-include='next textarea'>
               Write
             </button>
           </div>
   
           <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-            <button href='\#' role='tab' hx-get='/blog/#{bid}/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
+            <button href='\#' role='tab' hx-get='/blog/#{display bid}/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
               Preview
             </button>
           </div>
@@ -161,18 +161,19 @@ handler ::
   BlogPosts.Id ->
   Maybe Text ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid content =
+handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid contentParam =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     BlogPosts.Domain {..} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     unless (dIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 
-    pageFragment <- parseFragment $ template bid dTitle (fromMaybe dContent content) dPublished dHeroImagePath
-    page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
-
+    let content = fromMaybe dContent contentParam
     case hxTrigger of
       Just True -> do
+        pageFragment <- parseFragment $ contentField bid content
         pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
       _ -> do
+        pageFragment <- parseFragment $ template bid dTitle content dPublished dHeroImagePath
+        page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
         let html = renderDocument $ swapMain pageFragment page
         pure $ Servant.addHeader "HX-Request" html
 
