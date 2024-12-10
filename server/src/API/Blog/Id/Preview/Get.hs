@@ -6,6 +6,7 @@ module API.Blog.Id.Preview.Get where
 
 import App.Auth qualified as Auth
 import App.Errors (Unauthorized (..), throwErr)
+import CMark qualified
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -81,5 +82,5 @@ handler ::
 handler (Auth.Authz User.Domain {..} _) bid content =
   Observability.handlerSpan "GET /blog/new/preview" () display $ do
     unless dIsAdmin $ throwErr Unauthorized
-    pageFragment <- parseFragment $ template bid content
+    pageFragment <- parseFragment $ template bid $ fmap (CMark.commonmarkToHtml []) content
     pure $ renderNodes pageFragment
