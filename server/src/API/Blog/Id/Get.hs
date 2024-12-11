@@ -21,6 +21,7 @@ import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.BlogPosts (Domain (dContent))
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
+import Effects.Database.Tables.Images qualified as Images
 import Effects.Observability qualified as Observability
 import Log qualified
 import OpenTelemetry.Trace qualified as Trace
@@ -46,15 +47,18 @@ template =
 --------------------------------------------------------------------------------
 -- Components
 
-renderImage :: Maybe Text -> Text
-renderImage = maybe "" (\fp -> mconcat ["<img src='", fp, "' />"])
+renderImage :: Text -> Text
+renderImage fp = mconcat ["<img src='", fp, "' />"]
 
 renderBlogPost :: BlogPosts.Domain -> Text
-renderBlogPost (BlogPosts.Domain {dContent, dTitle, dHeroImagePath}) =
-  [i|<h1>#{dTitle}</h1>
-       #{renderImage dHeroImagePath}
-       <p>#{dContent}</p>
-    |]
+renderBlogPost (BlogPosts.Domain {dContent, dTitle, dHeroImage}) =
+  let heroImage :: Text
+      heroImage = maybe "" (renderImage . Images.dFilePath) dHeroImage
+   in [i|
+<h1>#{dTitle}</h1>
+  #{heroImage}
+<p>#{dContent}</p>
+|]
 
 --------------------------------------------------------------------------------
 

@@ -1,3 +1,4 @@
+HOME := "$HOME"
 HS_FILES := "$(git ls-files '*.hs' '*.hs-boot')"
 CHANGED_HS_FILES := '$(git diff --diff-filter=d --name-only `git merge-base HEAD origin/main` | grep ".*\.hs$")'
 NIX_FILES := "$(git ls-files '*.nix' 'nix/*.nix')"
@@ -131,15 +132,15 @@ psql-dev:
 
 # Create a new SQL migration.
 migrations-add MIGRATION:
-  sqlx migrate add {{MIGRATION}} --source migrations
+  sqlx migrate add {{MIGRATION}} --source server/migrations
 
 # Run SQL migrations.
 migrations-run:
-  sqlx migrate run --source migrations
+  sqlx migrate run --source server/migrations
 
 # Reset PG Database.
 migrations-reset:
-  sqlx database reset
+  sqlx database reset --source server/migrations
 
 # List all SQL migrations.
 migrations-list:
@@ -154,7 +155,7 @@ postgres-dev-start:
     -d -p 5432:5432 \
     -e POSTGRES_HOST_AUTH_METHOD=trust \
     -e POSTGRES_DB=dev_db \
-    -v $(HOME)/.webserver-dev-pg-data:/var/lib/postgresql/data \
+    -v {{HOME}}/.webserver-dev-pg-data:/var/lib/postgresql/data \
     -d postgres
   echo "✨ Success!"
 

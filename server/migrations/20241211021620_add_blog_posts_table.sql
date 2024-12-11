@@ -4,6 +4,7 @@ CREATE TABLE blog_posts
   , title VARCHAR NOT NULL
   , content VARCHAR NOT NULL
   , published BOOLEAN NOT NULL DEFAULT False
+  , hero_image_id INTEGER NULL REFERENCES images(id) ON DELETE SET NULL
   , created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
   , updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );

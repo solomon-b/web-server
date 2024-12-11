@@ -21,6 +21,7 @@ import Data.Text.Display (display)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
+import Effects.Database.Tables.Images qualified as Images
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import Log qualified
@@ -280,7 +281,7 @@ handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid contentPar
         pageFragment <- parseFragment $ contentField bid content
         pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
       _ -> do
-        pageFragment <- parseFragment $ template bid dTitle content dPublished dHeroImagePath
+        pageFragment <- parseFragment $ template bid dTitle content dPublished (fmap Images.dFilePath dHeroImage)
         page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
         let html = renderDocument $ swapMain pageFragment page
         pure $ Servant.addHeader "HX-Request" html

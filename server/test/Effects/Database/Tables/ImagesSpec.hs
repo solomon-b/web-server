@@ -1,12 +1,11 @@
-module Effects.Database.Tables.BlogPostsSpec where
+module Effects.Database.Tables.ImagesSpec where
 
 --------------------------------------------------------------------------------
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
 import Effects.Database.Class (MonadDB (..))
-import Effects.Database.Tables.BlogPosts qualified as UUT
-import Effects.Database.Tables.Images qualified as Images
+import Effects.Database.Tables.Images qualified as UUT
 import Effects.Database.Tables.User qualified as User
 import Hasql.Interpolate
 import Hasql.Transaction qualified as TRX
@@ -29,66 +28,63 @@ import Test.Hspec.Hedgehog (hedgehog)
 spec :: Spec
 spec =
   withTestDB $
-    describe "Effects.Database.Tables.BlogPosts" $ do
+    describe "Effects.Database.Tables.Images" $ do
       runs 30 . it "insert ; select" $ hedgehog . prop_insertSelect
       runs 30 . it "insert ; update ; select" $ hedgehog . prop_insertUpdateSelect
+
+--------------------------------------------------------------------------------
 
 prop_insertSelect :: TestDBConfig -> PropertyT IO ()
 prop_insertSelect cfg = do
   arrange (bracketConn cfg) $ do
     userInsert <- forAllT userInsertGen
-    (iTitle, iContent, iPublished, iHeroImageId) <- forAllT blogPostInsertGen
+    (iTitle, miFilePath) <- forAllT imageInsertGen
 
     act $ do
       result <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
         (OneRow userId) <- TRX.statement () (User.insertUser userInsert)
-        (OneRow insertedId) <- TRX.statement () (UUT.insertBlogPost UUT.Insert {UUT.iAuthorId = userId, ..})
-        selected <- TRX.statement () (UUT.getBlogPost insertedId)
+        (OneRow insertedId) <- TRX.statement () (UUT.insertImage UUT.ModelInsert {UUT.miUserId = userId, ..})
+        selected <- TRX.statement () (UUT.getImage insertedId)
         pure (userId, insertedId, selected)
 
       assert $ do
         (userId, insertedId, mSelected) <- assertRight result
-        (blogPost, _heroImage) <- assertJust mSelected
-        iTitle === UUT.mTitle blogPost
-        iContent === UUT.mContent blogPost
-        iPublished === UUT.mPublished blogPost
-        iHeroImageId === UUT.mHeroImageId blogPost
-        userId === UUT.mAuthorId blogPost
-        insertedId === UUT.mId blogPost
+        selected <- assertJust mSelected
+        iTitle === UUT.mTitle selected
+        miFilePath === UUT.mFilePath selected
+        userId === UUT.mUserId selected
+        insertedId === UUT.mId selected
 
 prop_insertUpdateSelect :: TestDBConfig -> PropertyT IO ()
 prop_insertUpdateSelect cfg = do
   arrange (bracketConn cfg) $ do
     userInsert <- forAllT userInsertGen
-    (iTitle, iContent, iPublished, iHeroImageId) <- forAllT blogPostInsertGen
-    (mTitle, mContent, mPublished, mHeroImageId) <- forAllT blogPostUpdateGen
+    (iTitle, miFilePath) <- forAllT imageInsertGen
+    (muTitle, muFilePath) <- forAllT imageUpdateGen
 
     act $ do
       result <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
         (OneRow userId) <- TRX.statement () (User.insertUser userInsert)
-        (OneRow insertedId) <- TRX.statement () (UUT.insertBlogPost UUT.Insert {UUT.iAuthorId = userId, ..})
-        () <- TRX.statement () (UUT.updateBlogPost UUT.Model {UUT.mId = insertedId, UUT.mAuthorId = userId, ..})
-        selected <- TRX.statement () (UUT.getBlogPost insertedId)
+        (OneRow insertedId) <- TRX.statement () (UUT.insertImage UUT.ModelInsert {UUT.miUserId = userId, ..})
+        () <- TRX.statement () (UUT.updateImage UUT.ModelUpdate {UUT.muId = insertedId, ..})
+        selected <- TRX.statement () (UUT.getImage insertedId)
         pure (userId, insertedId, selected)
 
       assert $ do
         (userId, insertedId, mSelected) <- assertRight result
-        (blogPost, _heroImage) <- assertJust mSelected
-        mTitle === UUT.mTitle blogPost
-        mContent === UUT.mContent blogPost
-        mPublished === UUT.mPublished blogPost
-        mHeroImageId === UUT.mHeroImageId blogPost
-        userId === UUT.mAuthorId blogPost
-        insertedId === UUT.mId blogPost
+        selected <- assertJust mSelected
+        muTitle === UUT.mTitle selected
+        muFilePath === UUT.mFilePath selected
+        userId === UUT.mUserId selected
+        insertedId === UUT.mId selected
 
 --------------------------------------------------------------------------------
 
-blogPostInsertGen :: (MonadIO m, MonadGen m) => m (Text, Text, Bool, Maybe Images.Id)
-blogPostInsertGen = do
+imageInsertGen :: (MonadIO m, MonadGen m) => m (Text, Text)
+imageInsertGen = do
   iTitle <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  iContent <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  iPublished <- Gen.bool
-  pure (iTitle, iContent, iPublished, Nothing)
+  miFilePath <- Gen.text (Range.linear 1 100) Gen.alphaNum
+  pure (iTitle, miFilePath)
 
 userInsertGen :: (MonadIO m, MonadGen m) => m User.ModelInsert
 userInsertGen = do
@@ -99,9 +95,8 @@ userInsertGen = do
   miIsAdmin <- Gen.bool
   pure User.ModelInsert {..}
 
-blogPostUpdateGen :: (MonadIO m, MonadGen m) => m (Text, Text, Bool, Maybe Images.Id)
-blogPostUpdateGen = do
+imageUpdateGen :: (MonadIO m, MonadGen m) => m (Text, Text)
+imageUpdateGen = do
   muTitle <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  muContent <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  muPublished <- Gen.bool
-  pure (muTitle, muContent, muPublished, Nothing)
+  muFilePath <- Gen.text (Range.linear 1 100) Gen.alphaNum
+  pure (muTitle, muFilePath)

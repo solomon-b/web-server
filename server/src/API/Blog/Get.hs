@@ -18,6 +18,7 @@ import Data.Text.Display (display)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
+import Effects.Database.Tables.Images qualified as Images
 import Effects.Observability qualified as Observability
 import Log qualified
 import OpenTelemetry.Trace.Core qualified as Trace
@@ -32,20 +33,24 @@ type Route = Servant.Header "Cookie" Text :> "blog" :> Servant.Get '[HTML] RawHt
 --------------------------------------------------------------------------------
 -- Components
 
-renderImage :: Maybe Text -> Text
-renderImage = maybe "" (\fp -> mconcat ["<img src='", fp, "' />"])
+renderImage :: Text -> Text
+renderImage fp = mconcat ["<img src='", fp, "' />"]
 
 blogPost :: BlogPosts.Domain -> Text
-blogPost (BlogPosts.Domain {dId, dTitle, dHeroImagePath}) =
-  [i|<div hx-get='/blog/#{display dId}' hx-target='\#content' hx-push-url="true" class='m-4 w-64 h-64'>
-       #{renderImage dHeroImagePath}
-       <p class='font-medium text-gray-500'>#{display dTitle}</p>
-     </div>
-    |]
+blogPost (BlogPosts.Domain {dId, dTitle, dHeroImage}) =
+  let heroImagePath :: Text
+      heroImagePath = maybe "" (renderImage . Images.dFilePath) dHeroImage
+   in [i|
+<div hx-get='/blog/#{display dId}' hx-target='\#content' hx-push-url="true" class='m-4 w-64 h-64'>
+  #{heroImagePath}
+  <p class='font-medium text-gray-500'>#{display dTitle}</p>
+</div>
+|]
 
 template :: [BlogPosts.Domain] -> ByteString
 template posts =
-  [i|<div class='flex flex-col justify-center items-center w-full'>
+  [i|
+<div class='flex flex-col justify-center items-center w-full'>
   <div id='content' class='p-4 my-8 flex flex-wrap'>
     <div class='flex w-full'>
       #{foldMap blogPost posts}

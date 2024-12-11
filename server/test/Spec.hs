@@ -7,6 +7,7 @@ import API.User.GetSpec qualified as User.Get
 import API.User.Id.GetSpec qualified as User.Id.Get
 import Data.Maybe (fromMaybe)
 import Effects.Database.Tables.BlogPostsSpec qualified as BlogPosts
+import Effects.Database.Tables.ImagesSpec qualified as Images
 import Effects.Database.Tables.MailingListSpec qualified as MailingList
 import Effects.Database.Tables.ServerSessionsSpec qualified as ServerSessions
 import Effects.Database.Tables.UserSpec qualified as User
@@ -34,6 +35,7 @@ main = do
   withTmpPG $ hspecWith cfg $ parallel $ do
     -- DB Models
     BlogPosts.spec
+    Images.spec
     MailingList.spec
     ServerSessions.spec
     User.spec

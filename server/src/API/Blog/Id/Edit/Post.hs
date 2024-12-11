@@ -26,9 +26,11 @@ import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.BlogPosts (Domain (dAuthorId))
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
+import Effects.Database.Tables.Images qualified as Images
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import GHC.Generics (Generic)
+import Hasql.Interpolate (OneRow (..))
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.MultipartData (Extension (..), lookupFilePathMaybe, readInputMaybe)
@@ -53,6 +55,7 @@ type Route =
 
 --------------------------------------------------------------------------------
 
+-- | DTO type for editing a blog post.
 data EditPost = EditPost
   { title :: Text,
     content :: Text,
@@ -95,20 +98,38 @@ handler ::
          ]
         Servant.NoContent
     )
-handler (Auth.Authz User.Domain {..} _) bid req@EditPost {..} = do
+handler (Auth.Authz User.Domain {dId = userId, dIsAdmin} _) bid req@EditPost {..} = do
   Observability.handlerSpan "POST /blog/new" req display $ do
-    BlogPosts.Domain {dAuthorId, dHeroImagePath} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
-    unless (dIsAdmin || dId == dAuthorId) $ throwErr Unauthorized
-    heroImagePath' <- traverse copyFile heroImagePath
-    void $ execQuerySpanThrow $ BlogPosts.updateBlogPost $ BlogPosts.ModelUpdate bid title content published (fmap Text.pack heroImagePath' <|> dHeroImagePath)
+    BlogPosts.Domain {dAuthorId, dHeroImage} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
+    unless (dIsAdmin || userId == dAuthorId) $ throwErr Unauthorized
+    let oldHeroImageId = fmap Images.dId dHeroImage
+    heroImageId <- traverse (insertImage userId) heroImagePath
+    void $ execQuerySpanThrow $ BlogPosts.updateBlogPost $ BlogPosts.Model bid dAuthorId title content published (heroImageId <|> oldHeroImageId)
     pure $ Servant.addHeader ("/blog/" <> display bid) Servant.NoContent
 
-copyFile :: (MonadIO m) => (Extension, FilePath) -> m FilePath
+insertImage ::
+  ( MonadIO m,
+    Log.MonadLog m,
+    MonadDB m,
+    MonadThrow m,
+    MonadReader env m,
+    Has OTEL.Tracer env,
+    MonadUnliftIO m
+  ) =>
+  User.Id ->
+  (Extension, FilePath) ->
+  m Images.Id
+insertImage uid fp = do
+  path' <- copyFile fp
+  OneRow imageId <- execQuerySpanThrow $ Images.insertImage $ Images.ModelInsert uid "Hero Image" path'
+  pure imageId
+
+copyFile :: (MonadIO m) => (Extension, FilePath) -> m Text
 copyFile (Extension ext, path) = liftIO $ do
   let name = encodeFilename path
       destination = "/static/images/" <> name <> Text.unpack ext
-  Dir.copyFile path $ "." <> destination
-  pure destination
+  Dir.copyFile path $ "./server" <> destination
+  pure $ Text.pack destination
 
 encodeFilename :: FilePath -> FilePath
 encodeFilename = Char8.unpack . Base64.extractBase64 . Base64.Url.encodeBase64' . SHA256.hash . TE.encodeUtf8 . Text.pack
