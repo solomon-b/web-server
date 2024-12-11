@@ -131,15 +131,15 @@ psql-dev:
 
 # Create a new SQL migration.
 migrations-add MIGRATION:
-  sqlx migrate add {{MIGRATION}} --source migrations
+  sqlx migrate add {{MIGRATION}} --source server/migrations
 
 # Run SQL migrations.
 migrations-run:
-  sqlx migrate run --source migrations
+  sqlx migrate run --source server/migrations
 
 # Reset PG Database.
 migrations-reset:
-  sqlx database reset
+  sqlx database reset --source server/migrations
 
 # List all SQL migrations.
 migrations-list:

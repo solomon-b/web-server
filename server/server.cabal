@@ -151,9 +151,10 @@ library
     Effects.Database.Class
     Effects.Database.Execute
     Effects.Database.SerializedStatement
-    Effects.Database.Tables.User
-    Effects.Database.Tables.MailingList
     Effects.Database.Tables.BlogPosts
+    Effects.Database.Tables.MailingList
+    Effects.Database.Tables.Images
+    Effects.Database.Tables.User
     Effects.Database.Tables.ServerSessions
     Effects.MailSender
     Effects.Observability
@@ -185,8 +186,9 @@ test-suite tests
      API.User.GetSpec
      API.User.Id.GetSpec
      Effects.Database.Tables.BlogPostsSpec
-     Effects.Database.Tables.UserSpec
      Effects.Database.Tables.MailingListSpec
+     Effects.Database.Tables.ImagesSpec
+     Effects.Database.Tables.UserSpec
      Effects.Database.Tables.ServerSessionsSpec
      Test.Database.Expectation
      Test.Gen.DisplayName

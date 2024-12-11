@@ -22,6 +22,7 @@ import App.Config
 import App.Context
 import App.Errors.HTML (error401template, error403template, error404template, error500template)
 import App.Monad
+import Control.Error (isLeft)
 import Control.Exception (catch)
 import Control.Monad (void, when)
 import Control.Monad.Reader (runReaderT)
@@ -51,7 +52,6 @@ import OpenTelemetry.Trace qualified as OTEL
 import Servant (Context ((:.)))
 import Servant qualified
 import System.Posix.Signals qualified as Posix
-import Control.Error (isLeft)
 
 --------------------------------------------------------------------------------
 

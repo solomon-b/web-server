@@ -67,9 +67,9 @@ lookupFileMaybe iname =
   find ((== iname) . Multipart.fdInputName) . files
 
 -- | Lookup the 'FilePath' for a file input with the given @name@ attribute.
-lookupFilePath :: Text -> MultipartData Multipart.Tmp -> Either String FilePath
+lookupFilePath :: Text -> MultipartData Multipart.Tmp -> Either String (Extension, FilePath)
 lookupFilePath iname =
-  fmap Multipart.fdPayload . Multipart.lookupFile iname
+  fmap (Extension . Text.pack . FilePath.takeExtension . Text.unpack . Multipart.fdFileName &&& Multipart.fdPayload) . Multipart.lookupFile iname
 
 newtype Extension = Extension {getExtension :: Text}
   deriving newtype (FromJSON, ToJSON, Display)
