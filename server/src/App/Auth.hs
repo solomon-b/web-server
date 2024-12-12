@@ -59,18 +59,24 @@ authHandler pool = mkAuthHandler $ \req ->
         cookie <- note MissingCookieHeader $ lookup "cookie" $ requestHeaders req
         sessionId <- note MissingCookieValue $ lookup "session-id" $ parseCookies cookie
         note MalformedSessionId $ Session.parseSessionId sessionId
-   in case eSession of
-        Right sessionId ->
-          liftIO (HSQL.use pool (HSQL.statement () $ Session.getSessionUser sessionId)) >>= \case
-            Left err -> do
-              -- TODO: Log censored error here?
-              throwErr $ InternalServerError $ Text.pack $ show err
-            Right Nothing ->
-              Servant.throwError $ Servant.err307 {Servant.errHeaders = [("Location", "/user/login")]}
-            Right (Just (userModel, sessionModel)) ->
-              pure $ Authz (User.toDomain userModel) (Session.toDomain sessionModel)
-        Left err ->
-          Servant.throwError $ toServerError err
+      reqPath = rawPathInfo req
+      reqQuery = rawQueryString req
+      requestPath = reqPath <> reqQuery
+      redirect = "/user/login?redirect=" <> requestPath
+   in do
+        case eSession of
+          Right sessionId ->
+            liftIO (HSQL.use pool (HSQL.statement () $ Session.getSessionUser sessionId)) >>= \case
+              Left err -> do
+                -- TODO: Log censored error here?
+                throwErr $ InternalServerError $ Text.pack $ show err
+              Right Nothing ->
+                Servant.throwError $ Servant.err307 {Servant.errHeaders = [("Location", redirect)]}
+              Right (Just (userModel, sessionModel)) ->
+                pure $ Authz (User.toDomain userModel) (Session.toDomain sessionModel)
+          Left MissingCookieHeader -> Servant.throwError Servant.err307 {Servant.errBody = "No cookie sent in request", Servant.errHeaders = [("Location", redirect)]}
+          Left MissingCookieValue -> Servant.throwError Servant.err307 {Servant.errBody = "Invalid cookie", Servant.errHeaders = [("Location", redirect)]}
+          Left MalformedSessionId -> Servant.throwError Servant.err307 {Servant.errBody = "Bad session data", Servant.errHeaders = [("Location", redirect)]}
 
 getAuth :: (MonadDB m) => Session.Id -> m (Either HSQL.UsageError (Maybe Authz))
 getAuth sessionId = do

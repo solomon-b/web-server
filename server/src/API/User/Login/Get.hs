@@ -6,6 +6,7 @@ module API.User.Login.Get where
 
 import App.Auth qualified as Auth
 import Component.Frame (loadFrame)
+import Control.Applicative ((<|>))
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -25,12 +26,18 @@ import Text.XmlHtml.Optics
 
 --------------------------------------------------------------------------------
 
-type Route = "user" :> "login" :> Servant.Header "HX-Request" Bool :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+type Route =
+  "user"
+    :> "login"
+    :> Servant.Header "HX-Current-Url" Text
+    :> Servant.Header "HX-Request" Bool
+    :> Servant.QueryParam "redirect" Text
+    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
 
-template :: ByteString
-template =
+template :: Maybe Text -> ByteString
+template redirectLink =
   [i|<div class="relative p-4 w-full max-w-md max-h-full mx-auto">
   <div class="relative bg-white rounded-lg shadow">
     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
@@ -38,7 +45,7 @@ template =
       </h3>
     </div>
     <div class="p-4 md:p-5">
-      <form hx-post="/user/login" class="space-y-4" data-bitwarden-watching="1">
+      <form hx-post="/user/login#{maybe "" ("?redirect=" <>) redirectLink}" class="space-y-4" data-bitwarden-watching="1">
 	<div>
 	  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
 	  </label>
@@ -82,11 +89,13 @@ handler ::
     MonadUnliftIO m,
     MonadReader env m
   ) =>
+  Maybe Text ->
   Maybe Bool ->
+  Maybe Text ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler hxTrigger =
+handler hxCurrentUrl hxTrigger redirectQueryParam =
   Observability.handlerSpan "GET /user/login" () (display . Servant.getResponse) $ do
-    pageFragment <- parseFragment template
+    pageFragment <- parseFragment $ template $ hxCurrentUrl <|> redirectQueryParam
     page <- loadFrame pageFragment
 
     case hxTrigger of

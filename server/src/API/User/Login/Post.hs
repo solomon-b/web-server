@@ -11,6 +11,7 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Has (Has)
+import Data.Maybe (fromMaybe)
 import Data.Password.Argon2 (Password, PasswordCheck (..), checkPassword, mkPassword)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -42,6 +43,7 @@ type Route =
     :> Servant.RemoteHost
     :> Servant.Header "User-Agent" Text
     :> Servant.ReqBody '[Servant.FormUrlEncoded] Login
+    :> Servant.QueryParam "redirect" Text
     :> Servant.PostAccepted '[HTML] (Servant.Headers '[Servant.Header "Set-Cookie" Text, Servant.Header "HX-Redirect" Text] Servant.NoContent)
 
 --------------------------------------------------------------------------------
@@ -78,6 +80,7 @@ handler ::
   SockAddr ->
   Maybe Text ->
   Login ->
+  Maybe Text ->
   m
     ( Servant.Headers
         '[ Servant.Header "Set-Cookie" Text,
@@ -85,7 +88,8 @@ handler ::
          ]
         Servant.NoContent
     )
-handler sockAddr mUserAgent req@Login {..} = do
+handler sockAddr mUserAgent req@Login {..} redirect = do
+  let redirectLink = fromMaybe "/" redirect
   Observability.handlerSpan "POST /user/login" req display $ do
     execQuerySpanThrow (User.getUserByEmail ulEmail) >>= \case
       Just user -> do
@@ -97,10 +101,10 @@ handler sockAddr mUserAgent req@Login {..} = do
               Left err ->
                 throwErr $ InternalServerError $ Text.pack $ show err
               Right sessionId -> do
-                pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
+                pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader redirectLink Servant.NoContent
           Just session ->
             let sessionId = Session.mSessionId session
-             in pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
+             in pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader redirectLink Servant.NoContent
       Nothing -> do
         Log.logInfo "Invalid Credentials" ulEmail
         throwErr Unauthorized
