@@ -1,5 +1,5 @@
 {
-  description = "kpbj.fm";
+  description = "web-server";
 
   inputs = {
     nixpkgs.url = github:NixOS/nixpkgs/nixpkgs-unstable;
@@ -21,16 +21,14 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, hasql-interpolate-src, hasql-src, tmp-postgres-src }:
-    let
-      ghcVersion = "963";
-      compiler = "ghc${ghcVersion}";
-    in
-    flake-utils.lib.eachDefaultSystem
+    flake-utils.lib.eachSystem [ "x86_64-linux" ]
       (system:
         let
-          pkgs = import nixpkgs { inherit system; };
-          hsPkgs = pkgs.haskell.packages.${compiler}.override {
+          pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+          hsPkgs = pkgs.haskellPackages.override {
             overrides = hfinal: hprev: {
+              base64 = hfinal.base64_1_0;
+
               hasql = pkgs.haskell.lib.dontCheck (
                 hfinal.callCabal2nix
                   "hasql"
@@ -54,7 +52,6 @@
                 }
                 { });
 
-              # External Packages from source
               hasql-interpolate = pkgs.haskell.lib.dontCheck (
                 hfinal.callCabal2nix
                   "hasql-interpolate"
@@ -87,7 +84,11 @@
                 { });
 
               # TODO: Figure out how to run effectful integration tests in the nix build. Nix Shell
-              web-server = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./. { });
+              web-server = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./server { });
+
+              xmlhtml-lens = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./xmlhtml-lens { });
+
+              xmlhtml-qq = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./xmlhtml-qq { });
 
               tmp-postgres = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "tmp-postgres" tmp-postgres-src { });
             };
@@ -98,11 +99,12 @@
             buildInputs = [
               pkgs.cabal-install
               pkgs.flyctl
-              pkgs.haskell.compiler.${compiler}
-              pkgs.haskell.packages.${compiler}.haskell-language-server
-              pkgs.haskell.packages.${compiler}.hlint
+              pkgs.haskellPackages.ghc
+              pkgs.haskellPackages.haskell-language-server
+              pkgs.haskellPackages.hlint
               pkgs.just
               pkgs.nixpkgs-fmt
+              pkgs.ngrok
               pkgs.ormolu
               pkgs.openssl
               pkgs.postgresql
@@ -115,9 +117,9 @@
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
               pkgs.cabal-install
               pkgs.flyctl
-              pkgs.haskell.compiler.${compiler}
-              pkgs.haskell.packages.${compiler}.haskell-language-server
-              pkgs.haskell.packages.${compiler}.hlint
+              pkgs.haskellPackages.ghc
+              pkgs.haskellPackages.haskell-language-server
+              pkgs.haskellPackages.hlint
               pkgs.just
               pkgs.nixpkgs-fmt
               pkgs.ormolu
@@ -132,18 +134,19 @@
           };
 
           formatter = pkgs.nixpkgs-fmt;
-          packages = flake-utils.lib.flattenTree {
+
+          packages = flake-utils.lib.flattenTree rec {
             web-server = hsPkgs.web-server;
+            ngrok-runner = pkgs.writeShellScriptBin "ngrok-runner.sh" ''
+              ${pkgs.ngrok}/bin/ngrok http http://localhost:2000
+
+            '';
+            default = hsPkgs.web-server;
           };
 
-          defaultPackage = packages.web-server;
-
           apps = {
-            web-server = {
-              type = "app";
-              program = "${self.packages.${system}.webserver-backend}/bin/web-server";
-            };
-
+            web-server = flake-utils.lib.mkApp { drv = self.packages.${system}.web-server; };
+            ngrok = flake-utils.lib.mkApp { drv = self.packages.${system}.ngrok-runner; };
             default = self.apps.${system}.web-server;
           };
         });
