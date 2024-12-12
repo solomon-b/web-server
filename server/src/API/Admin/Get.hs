@@ -52,8 +52,8 @@ template =
 
 userRow :: User.Model -> Text
 userRow User.Model {..} =
-  [i|<tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-       <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">#{display mId}</th>
+  [i|<tr class="bg-white border-b">
+       <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">#{display mId}</th>
        <td class="px-6 py-4">#{display mEmail}</td>
        <td class="px-6 py-4">#{display mDisplayName}</td>
        <td class="px-6 py-4">#{display mAvatarUrl}</td>
@@ -64,9 +64,9 @@ userRow User.Model {..} =
 userTable :: [User.Model] -> Text
 userTable entries =
   [i|<div class="relative overflow-x-auto">
-       <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 ">
+       <table class="w-full text-sm text-left rtl:text-right text-gray-500">
          <h3 class="mt-3 text-xl font-extrabold tracking-tight text-slate-900">Users</h3>
-         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
            <tr>
              <th scope="col" class="px-6 py-3">id</th>
              <th scope="col" class="px-6 py-3">email</th>
@@ -84,8 +84,8 @@ userTable entries =
 
 mailingListRow :: MailingList.Model -> Text
 mailingListRow MailingList.Model {..} =
-  [i|<tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-       <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">#{display mId}</th>
+  [i|<tr class="bg-white border-b">
+       <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">#{display mId}</th>
        <td class="px-6 py-4">#{display mEmail}</td>
      </tr>
     |]
@@ -93,9 +93,9 @@ mailingListRow MailingList.Model {..} =
 mailingListTable :: [MailingList.Model] -> Text
 mailingListTable entries =
   [i|<div class="relative overflow-x-auto">
-       <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 ">
+       <table class="w-full text-sm text-left rtl:text-right text-gray-500">
          <h3 class="mt-3 text-xl font-extrabold tracking-tight text-slate-900">Mailing List</h3>
-         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
            <tr>
              <th scope="col" class="px-6 py-3">id</th>
              <th scope="col" class="px-6 py-3">email</th>

@@ -34,23 +34,23 @@ template =
   [i|<div class="relative p-4 w-full max-w-md max-h-full mx-auto">
   <div class="relative bg-white rounded-lg shadow">
     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
-      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Sign Up
+      <h3 class="text-xl font-semibold text-gray-900">Sign Up
       </h3>
     </div>
     <div class="p-4 md:p-5">
       <form hx-post="/user/register" class="space-y-4" data-bitwarden-watching="1">
 	<div>
-	  <label for="displayName" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your name
+	  <label for="displayName" class="block mb-2 text-sm font-medium text-gray-900">Your name
 	  </label>
 	  <input type="displayName" name="displayName" id="displayName" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="Tim Berners-Lee">
 	</div>
 	<div>
-	  <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your email
+	  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
 	  </label>
 	  <input type="email" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="name@company.com">
 	</div>
 	<div>
-	  <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your password
+	  <label for="password" class="block mb-2 text-sm font-medium text-gray-900">Your password
 	  </label>
 	  <input type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5">
 	</div>

@@ -41,7 +41,7 @@ template redirectLink =
   [i|<div class="relative p-4 w-full max-w-md max-h-full mx-auto">
   <div class="relative bg-white rounded-lg shadow">
     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
-      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Sign in
+      <h3 class="text-xl font-semibold text-gray-900">Sign in
       </h3>
     </div>
     <div class="p-4 md:p-5">
