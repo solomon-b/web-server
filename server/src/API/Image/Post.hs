@@ -3,18 +3,20 @@ module API.Image.Post where
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
+import App.Config (Hostname, getHostName)
 import App.Errors (Unauthorized (..), throwErr)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Control.Monad.Reader (MonadReader)
+import Control.Monad.Reader (MonadReader, asks)
 import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Base64.Types qualified as Base64
 import Data.ByteString.Base64.URL qualified as Base64.Url
 import Data.ByteString.Char8 qualified as Char8
 import Data.Has (Has)
+import Data.Has qualified as Has
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display, RecordInstance (..), display)
@@ -36,7 +38,6 @@ import Servant qualified
 import Servant.Multipart (FromMultipart, MultipartForm, Tmp)
 import Servant.Multipart qualified as Multipart
 import System.Directory qualified as Dir
-import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
@@ -45,7 +46,7 @@ type Route =
     :> "image"
     :> "new"
     :> MultipartForm Tmp NewImage
-    :> Servant.PostAccepted '[HTML] Servant.NoContent
+    :> Servant.PostAccepted '[Servant.JSON] NewImageResponse
 
 --------------------------------------------------------------------------------
 
@@ -62,15 +63,23 @@ data NewImage = NewImage
 instance FromMultipart Tmp NewImage where
   fromMultipart form = do
     title <- Multipart.lookupInput "title" form
-    filePath <- lookupFilePath "filePath" form
+    filePath <- lookupFilePath "file" form
 
     pure NewImage {..}
+
+newtype NewImageResponse = NewImageResponse {url :: Text}
+  deriving stock (Generic)
+  deriving (Display) via (RecordInstance NewImageResponse)
+  deriving
+    (FromJSON, ToJSON)
+    via Deriving.CustomJSON '[Deriving.FieldLabelModifier '[Deriving.CamelToSnake]] NewImageResponse
 
 --------------------------------------------------------------------------------
 
 handler ::
   ( MonadReader env m,
     Has OTEL.Tracer env,
+    Has Hostname env,
     Log.MonadLog m,
     MonadDB m,
     MonadThrow m,
@@ -79,19 +88,20 @@ handler ::
   ) =>
   Auth.Authz ->
   NewImage ->
-  m Servant.NoContent
+  m NewImageResponse
 handler (Auth.Authz User.Domain {dId = userId, dIsAdmin} _) NewImage {..} = do
   Observability.handlerSpan "POST /blog/new" () display $ do
     unless dIsAdmin $ throwErr Unauthorized
     filePath' <- copyFile filePath
     _ <- execQuerySpanThrow $ Images.insertImage $ Images.ModelInsert userId title (Text.pack filePath')
-    pure Servant.NoContent
+    hostName <- asks Has.getter
+    pure $ NewImageResponse $ getHostName hostName <> Text.pack filePath'
 
 copyFile :: (MonadIO m) => (Extension, FilePath) -> m FilePath
 copyFile (Extension ext, path) = liftIO $ do
   let name = encodeFilename path
       destination = "/static/images/" <> name <> Text.unpack ext
-  Dir.copyFile path $ "." <> destination
+  Dir.copyFile path $ "./server" <> destination
   pure destination
 
 encodeFilename :: FilePath -> FilePath

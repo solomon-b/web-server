@@ -35,6 +35,7 @@ import Data.Data (Proxy (..))
 import Data.Foldable (fold)
 import Data.Function ((&))
 import Data.Maybe (catMaybes, fromMaybe)
+import Data.Text.Display (display)
 import Data.Text.Encoding qualified as Text.Encoding
 import Effects.Database.Class (execStatement, healthCheck)
 import Effects.Observability qualified as Observability
@@ -68,7 +69,7 @@ runApp ctx =
           Log.logInfo "Launching Service" (KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment])
 
         -- Setup DB Pool
-        let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname "localhost:3000"
+        let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname $ "localhost:" <> display (warpConfigPort appConfigWarpSettings)
         let hsqlSettings = HSQL.settings (fold postgresConfigHost) (fromMaybe 0 postgresConfigPort) (fold postgresConfigUser) (fold postgresConfigPassword) (fold postgresConfigDB)
         let poolSettings = HSQL.Pool.Config.settings [HSQL.Pool.Config.staticConnectionSettings hsqlSettings]
         pgPool <- HSQL.Pool.acquire poolSettings

@@ -34,7 +34,7 @@ isProduction = \case
 
 --------------------------------------------------------------------------------
 
-newtype Hostname = Hostname Text
+newtype Hostname = Hostname {getHostName :: Text}
   deriving (Generic)
   deriving newtype (Show, Display, ToJSON)
 

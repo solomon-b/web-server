@@ -160,8 +160,8 @@ contentFieldFooter =
     </a>
   </div>
   <i class='border-l border-t-0 border-gray-300 my-2'></i>
-  <div class="p-1">
-    <button type="button">
+  <div class="p-1" x-data="fileUpload">
+    <button type='button' @click="selectAndUpload">
       <span class="flex p-2 rounded-lg hover:bg-gray-200">
         <span class="px-1">
           <svg height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="octicon octicon-image">
@@ -171,8 +171,53 @@ contentFieldFooter =
         <span class="Button-label">Click to add files</span>
       </span>
     </button>
+    <input type="file" x-ref="fileInput" @change="uploadFile" style="display: none;">
   </div>
 </div>
+
+<script>
+  function fileUpload() {
+    return {
+      file: null,
+      fileName: '',
+      selectAndUpload() {
+        // Open the file picker
+        this.$refs.fileInput.click(); 
+      },
+      async uploadFile(event) {
+        const files = event.target.files;
+
+        this.file = files[0];
+        this.fileName = this.file.name;
+
+        const formData = new FormData();
+        formData.append('title', this.fileName);
+        formData.append('file', this.file);
+
+        try {
+          const response = await fetch('/image/new', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (response.ok) {
+            const {url} = await response.json();
+
+            this.contentModel += `![${this.fileName}](${url})\n`
+            this.$refs.contentRef.focus();
+            this.$nextTick(() => {
+              this.$refs.contentRef.focus();
+            });
+          } else {
+            console.log(`Upload failed: ${response.statusText}`);
+          }
+        } catch (error) {
+          console.log(`Error: ${error.message}`);
+        }
+      },
+    };
+  } 
+</script>
 |]
 
 contentField :: Maybe Text -> ByteString
