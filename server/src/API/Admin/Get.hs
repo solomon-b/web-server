@@ -29,13 +29,17 @@ import Log qualified
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderDocument)
+import Text.HTML (HTML, RawHtml, parseFragment, renderDocument, renderNodes)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics (_elChildren, _id)
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.AuthProtect "cookie-auth" :> "admin" :> Servant.Get '[HTML] RawHtml
+type Route =
+  Servant.AuthProtect "cookie-auth"
+    :> Servant.Header "HX-Request" Bool
+    :> "admin"
+    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
 
@@ -127,9 +131,10 @@ handler ::
     MonadIO m
   ) =>
   Auth.Authz ->
-  m RawHtml
-handler (Auth.Authz user@User.Domain {..} _) = do
-  Observability.handlerSpan "GET /admin" () display $
+  Maybe Bool ->
+  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+handler (Auth.Authz user@User.Domain {..} _) hxTrigger = do
+  Observability.handlerSpan "GET /admin" () (display . Servant.getResponse) $
     if dIsAdmin
       then do
         users <- execQuerySpanThrow User.getUsers
@@ -139,17 +144,24 @@ handler (Auth.Authz user@User.Domain {..} _) = do
         mailingList <- execQuerySpanThrow MailingList.getEmailListEntries
         mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
 
-        pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-        page <- loadFrameWithNav (Auth.IsLoggedIn user) "about-tab" pageFragment
-
-        pure $ renderDocument page
+        case hxTrigger of
+          Just True -> do
+            pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
+            let html = renderNodes pageFragment
+            pure $ Servant.addHeader "HX-Request" html
+          _ -> do
+            pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
+            page <- loadFrameWithNav (Auth.IsLoggedIn user) "about-tab" pageFragment
+            let html = renderDocument page
+            pure $ Servant.addHeader "HX-Request" html
       else renderUnauthorized $ Auth.IsLoggedIn user
 
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "db-tables" . _elChildren) x)
 
-renderUnauthorized :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m RawHtml
+renderUnauthorized :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 renderUnauthorized loginState = do
   pageFragment <- parseFragment unauthorized
   page <- loadFrameWithNav loginState "about-tab" pageFragment
-  pure $ renderDocument page
+  let html = renderDocument page
+  pure $ Servant.addHeader "HX-Request" html
