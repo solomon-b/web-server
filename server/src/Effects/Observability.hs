@@ -78,7 +78,7 @@ stdoutFormatter verbosity ImmutableSpan {..} =
           )
       additionalInformation = case verbosity of
         Quiet -> ""
-        Loud -> events
+        _ -> events
    in "[" <> spanIdText <> "]" <> " " <> name <> " - " <> start <> " " <> duration <> "\n" <> additionalInformation
 
 noOpExporter :: SpanExporter

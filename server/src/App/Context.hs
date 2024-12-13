@@ -21,6 +21,7 @@ data AppContext context = AppContext
     appSmtpConfig :: Maybe SmtpConfig,
     appHostname :: Hostname,
     appEnvironment :: Environment,
+    appLogLevel :: Log.LogLevel,
     appCustom :: context
   }
 
@@ -47,5 +48,9 @@ instance Has.Has Hostname (AppContext ctx) where
 instance Has.Has Environment (AppContext ctx) where
   getter = appEnvironment
   modifier f ctx@AppContext {appEnvironment} = ctx {appEnvironment = f appEnvironment}
+
+instance Has.Has Log.LogLevel (AppContext ctx) where
+  getter = appLogLevel
+  modifier f ctx@AppContext {appLogLevel} = ctx {appLogLevel = f appLogLevel}
 
 type ServantContext = '[Servant.ErrorFormatters, AuthHandler Wai.Request Authz]

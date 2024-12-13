@@ -123,7 +123,14 @@ data ObservabilityConfig = ObservabilityConfig
   }
   deriving stock (Generic, Show)
 
-data Verbosity = Quiet | Loud
+-- | https://discourse.ubuntu.com/t/cli-verbosity-levels/26973
+--
+-- These correspond to log-base log levels as follow:
+-- - Quiet: Show @LogAttention@.
+-- - Brief: Show @LogInfo@ and @LogAttention@.
+-- - Verbose: Show @LogInfo@ and @LogAttention@ (with additional details?)
+-- - Debug: Show @LogInfo@, @LogAttention@, and @LogTrace@.
+data Verbosity = Quiet | Brief | Verbose | Debug
   deriving stock (Generic, Show)
 
 data AppExporter = StdOut | Otel
@@ -141,8 +148,9 @@ instance FetchHKD ObservabilityConfigF where
 
   fromEnv :: ObservabilityConfigF (Compose IO Maybe)
   fromEnv =
+    -- TODO: Case insensitive env parsing:
     ObservabilityConfigF
-      { observabilityConfigFVerbosity = readEnvDefault Quiet (\case "Quiet" -> Just Quiet; "Loud" -> Just Loud; _ -> Nothing) "APP_OBSERVABILITY_VERBOSITY",
+      { observabilityConfigFVerbosity = readEnvDefault Quiet (\case "Quiet" -> Just Quiet; "Brief" -> Just Brief; "Verbose" -> Just Verbose; "Debug" -> Just Debug; _ -> Nothing) "APP_OBSERVABILITY_VERBOSITY",
         observabilityConfigFExporter = readEnvDefault StdOut (\case "StdOut" -> Just StdOut; _ -> Nothing) "APP_OBSERVABILITY_EXPORTER"
       }
 

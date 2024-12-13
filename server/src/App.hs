@@ -65,7 +65,8 @@ runApp ctx =
       Just AppConfig {..} -> do
         let PostgresConfig {..} = appConfigPostgresSettings
         -- TODO: Is it weird to be instantiating 'LogT' multiple times?
-        Log.runLogT "webserver-backend" stdOutLogger Log.defaultLogLevel $
+        let maxLogLevel = maybe Log.LogInfo (mkLogLevel . observabilityConfigVerbosity) appConfigObservability
+        Log.runLogT "webserver-backend" stdOutLogger maxLogLevel $
           Log.logInfo "Launching Service" (KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment])
 
         -- Setup DB Pool
@@ -84,7 +85,14 @@ runApp ctx =
         Observability.withTracer appConfigObservability $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname appConfigEnvironment ctx))
+          Warp.runSettings (warpSettings stdOutLogger maxLogLevel appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname appConfigEnvironment maxLogLevel ctx))
+
+mkLogLevel :: Verbosity -> Log.LogLevel
+mkLogLevel = \case
+  Quiet -> Log.LogAttention
+  Brief -> Log.LogInfo
+  Verbose -> Log.LogInfo
+  Debug -> Log.LogTrace
 
 notFoundFormatter :: Servant.NotFoundErrorFormatter
 notFoundFormatter _ =
@@ -94,19 +102,19 @@ customFormatters :: Servant.ErrorFormatters
 customFormatters =
   Servant.defaultErrorFormatters {Servant.notFoundErrorFormatter = notFoundFormatter}
 
-warpSettings :: Log.Logger -> WarpConfig -> Warp.Settings
-warpSettings logger' WarpConfig {..} =
+warpSettings :: Log.Logger -> Log.LogLevel -> WarpConfig -> Warp.Settings
+warpSettings logger' logLevel WarpConfig {..} =
   Warp.defaultSettings
     & Warp.setServerName warpConfigServerName
-    & Warp.setLogger (warpStructuredLogger logger')
+    & Warp.setLogger (warpStructuredLogger logger' logLevel)
     & Warp.setPort warpConfigPort
     & Warp.setGracefulShutdownTimeout (Just warpConfigTimeout)
     & Warp.setInstallShutdownHandler shutdownHandler
 
-warpStructuredLogger :: Log.Logger -> Wai.Request -> Status.Status -> Maybe Integer -> IO ()
-warpStructuredLogger logger' req s sz = do
+warpStructuredLogger :: Log.Logger -> Log.LogLevel -> Wai.Request -> Status.Status -> Maybe Integer -> IO ()
+warpStructuredLogger logger' logLevel req s sz = do
   reqBody <- Wai.getRequestBodyChunk req
-  Log.runLogT "webserver-backend" logger' Log.defaultLogLevel $
+  Log.runLogT "webserver-backend" logger' logLevel $
     Log.logInfo "Request" $
       KeyMap.fromList $
         [ "statusCode" .= Status.statusCode s,
@@ -128,10 +136,10 @@ shutdownHandler closeSocket =
 --------------------------------------------------------------------------------
 
 interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
-interpret ctx@AppContext {appLogger} (AppM appM) =
+interpret ctx@AppContext {appLogger, appLogLevel} (AppM appM) =
   Servant.Handler $
     ExceptT $
-      catch (Right <$> appM ctx (Log.LoggerEnv appLogger "webserver-backend" [] [] Log.defaultLogLevel)) $
+      catch (Right <$> appM ctx (Log.LoggerEnv appLogger "webserver-backend" [] [] appLogLevel)) $
         \e ->
           case Servant.errHTTPCode e of
             401 -> pure $ Left Servant.err401 {Servant.errBody = error401template}
