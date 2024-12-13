@@ -20,7 +20,8 @@ import Data.Time.Clock (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX qualified as Time
 import Data.Time.Format.ISO8601 (iso8601Show)
 import OpenTelemetry.Attributes (getAttributes)
-import OpenTelemetry.Exporter.Handle (stdoutExporter')
+import OpenTelemetry.Exporter.Handle.Span (stdoutExporter')
+import OpenTelemetry.Exporter.Span (ExportResult (..), SpanExporter (..))
 import OpenTelemetry.Processor.Simple (SimpleProcessorConfig (SimpleProcessorConfig), simpleProcessor)
 import OpenTelemetry.Trace (ImmutableSpan (..))
 import OpenTelemetry.Trace qualified as OTEL
@@ -80,18 +81,33 @@ stdoutFormatter verbosity ImmutableSpan {..} =
         Loud -> events
    in "[" <> spanIdText <> "]" <> " " <> name <> " - " <> start <> " " <> duration <> "\n" <> additionalInformation
 
-withTracer :: ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
-withTracer (ObservabilityConfig verbosity exporter) f =
+noOpExporter :: SpanExporter
+noOpExporter = SpanExporter (\_ -> pure Success) (pure ())
+
+mkAcquire :: SpanExporter -> IO Trace.TracerProvider
+mkAcquire exporter = do
+  providerOpts <- snd <$> OTEL.getTracerProviderInitializationOptions
+  processor <- simpleProcessor . SimpleProcessorConfig $ exporter
+  OTEL.createTracerProvider [processor] providerOpts
+
+withTracer :: Maybe ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
+withTracer cfg f =
+  case cfg of
+    Nothing ->
+      let acquire' = mkAcquire noOpExporter
+          release' _ = pure ()
+          work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "test-suite"
+       in bracket acquire' release' work
+    Just cfg' -> withTracer' cfg' f
+
+withTracer' :: ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
+withTracer' (ObservabilityConfig verbosity exporter) f =
   let acquire = case exporter of
         Otel -> OTEL.initializeGlobalTracerProvider
-        StdOut -> do
-          providerOpts <- snd <$> OTEL.getTracerProviderInitializationOptions
-          processor <-
-            simpleProcessor . SimpleProcessorConfig $
-              stdoutExporter' (pure . stdoutFormatter verbosity)
-          OTEL.createTracerProvider [processor] providerOpts
+        StdOut -> mkAcquire $ stdoutExporter' (pure . stdoutFormatter verbosity)
       release = OTEL.shutdownTracerProvider
-      work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "kpbj-fm"
+      -- TODO: Propagate hostname here:
+      work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "web-server"
    in bracket acquire release work
 
 handlerSpan ::
@@ -120,7 +136,6 @@ handlerSpan handlerName req getRes handlerAction = do
 
     handlerResult <-
       handlerAction `catchAll` \exception -> do
-        liftIO $ print exception
         OTEL.addEvent reqSpan $
           OTEL.NewEvent
             { newEventName = "handler error",

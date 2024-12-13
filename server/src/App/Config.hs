@@ -191,7 +191,7 @@ data AppConfig = AppConfig
   { appConfigWarpSettings :: WarpConfig,
     appConfigPostgresSettings :: PostgresConfig,
     appConfigEnvironment :: Environment,
-    appConfigObservability :: ObservabilityConfig,
+    appConfigObservability :: Maybe ObservabilityConfig,
     appConfigSmtp :: Maybe SmtpConfig,
     appConfigHostname :: Hostname
   }
@@ -231,7 +231,7 @@ instance FetchHKD AppConfigF where
     appConfigSmtp <- toConcrete appConfigFSmtp
     appConfigHostname <- getCompose appConfigFHostname
 
-    pure $ AppConfig <$> appConfigWarpSettings <*> appConfigPostgresSettings <*> appConfigEnvironment <*> appConfigObservability <*> pure appConfigSmtp <*> appConfigHostname
+    pure $ AppConfig <$> appConfigWarpSettings <*> appConfigPostgresSettings <*> appConfigEnvironment <*> pure appConfigObservability <*> pure appConfigSmtp <*> appConfigHostname
 
 getConfig :: IO (Maybe AppConfig)
 getConfig = toConcrete (fromEnv @AppConfigF)
