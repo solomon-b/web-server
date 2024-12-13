@@ -119,6 +119,7 @@ library
     API.About.Get
     API.Admin.Get
     API.Blog.Get
+    API.Blog.New.Template
     API.Blog.New.Get
     API.Blog.New.Post
     API.Blog.New.Edit.Get
@@ -127,6 +128,7 @@ library
     API.Blog.Id.Edit.Get
     API.Blog.Id.Edit.Post
     API.Blog.Id.Preview.Get
+    API.Blog.Id.Template
     API.Get
     API.MailingList.Post
     API.Image.Post
