@@ -83,7 +83,10 @@
                 }
                 { });
 
+              ## Local Packages
               # TODO: Figure out how to run effectful integration tests in the nix build. Nix Shell
+              config-hkd = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "config-hkd" ./config-hkd { });
+
               web-server = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./server { });
 
               xmlhtml-lens = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./xmlhtml-lens { });
