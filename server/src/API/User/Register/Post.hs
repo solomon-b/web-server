@@ -19,6 +19,7 @@ import Data.Text.Display.Generic (RecordInstance (..))
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress, isValid)
+import Domain.Types.FullName (FullName)
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -51,7 +52,8 @@ type Route =
 data Register = Register
   { urEmail :: EmailAddress,
     urPassword :: Password,
-    urDisplayName :: DisplayName
+    urDisplayName :: DisplayName,
+    urFullName :: FullName
   }
   deriving stock (Generic)
   deriving (Display) via (RecordInstance Register)
@@ -65,6 +67,7 @@ instance FormUrlEncoded.FromForm Register where
       <$> FormUrlEncoded.parseUnique "email" f
       <*> fmap mkPassword (FormUrlEncoded.parseUnique "password" f)
       <*> FormUrlEncoded.parseUnique "displayName" f
+      <*> FormUrlEncoded.parseUnique "fullName" f
 
 --------------------------------------------------------------------------------
 
@@ -106,7 +109,7 @@ handler sockAddr mUserAgent req@Register {..} = do
       Nothing -> do
         Log.logInfo "Registering New User" urEmail
         hashedPassword <- hashPassword urPassword
-        OneRow uid <- execQuerySpanThrow $ User.insertUser $ User.ModelInsert urEmail hashedPassword urDisplayName Nothing False
+        OneRow uid <- execQuerySpanThrow $ User.insertUser $ User.ModelInsert urEmail hashedPassword urDisplayName urFullName Nothing False
         execQuerySpanThrow (User.getUser uid) >>= \case
           Nothing ->
             throwErr Forbidden

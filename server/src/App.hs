@@ -44,7 +44,6 @@ import Effects.Observability qualified as Observability
 import Hasql.Connection qualified as HSQL
 import Hasql.Pool qualified as HSQL.Pool
 import Hasql.Pool.Config as HSQL.Pool.Config
-import Log (runLogT)
 import Log qualified
 import Log.Backend.StandardOutput qualified as Log
 import Network.HTTP.Types.Status qualified as Status
@@ -92,7 +91,7 @@ runApp ctx = do
 
           let servantContext = customFormatters :. authHandler pgPool :. Servant.EmptyContext
               appContext = AppContext pgPool tracer appConfigSmtp hostname appConfigEnvironment logEnv ctx
-              warpSettings = mkWarpSettings stdOutLogger maxLogLevel appConfigWarpSettings
+              warpSettings = mkWarpSettings logEnv appConfigWarpSettings
           Warp.runSettings warpSettings (otelMiddleware $ mkApp servantContext appContext)
 
 mkLogLevel :: Verbosity -> Log.LogLevel
@@ -110,20 +109,21 @@ customFormatters :: Servant.ErrorFormatters
 customFormatters =
   Servant.defaultErrorFormatters {Servant.notFoundErrorFormatter = notFoundFormatter}
 
-mkWarpSettings :: Log.Logger -> Log.LogLevel -> WarpConfig -> Warp.Settings
-mkWarpSettings logger' logLevel WarpConfig {..} =
+mkWarpSettings :: Log.LoggerEnv -> WarpConfig -> Warp.Settings
+mkWarpSettings logEnv WarpConfig {..} =
   Warp.defaultSettings
     & Warp.setServerName warpConfigServerName
-    & Warp.setLogger (warpStructuredLogger logger' logLevel)
+    & Warp.setLogger (mkWarpLogger logEnv)
     & Warp.setPort warpConfigPort
     & Warp.setGracefulShutdownTimeout (Just warpConfigTimeout)
     & Warp.setInstallShutdownHandler shutdownHandler
 
-warpStructuredLogger :: Log.Logger -> Log.LogLevel -> Wai.Request -> Status.Status -> Maybe Integer -> IO ()
-warpStructuredLogger logger' logLevel req s sz = do
+mkWarpLogger :: Log.LoggerEnv -> Wai.Request -> Status.Status -> Maybe Integer -> IO ()
+mkWarpLogger logEnv req s sz = do
+  time <- getCurrentTime
   reqBody <- Wai.getRequestBodyChunk req
-  Log.runLogT "webserver-backend" logger' logLevel $
-    Log.logInfo "Request" $
+  Log.logMessageIO logEnv time Log.LogInfo "Request" $
+    Aeson.toJSON $
       KeyMap.fromList $
         [ "statusCode" .= Status.statusCode s,
           "method" .= Text.Encoding.decodeUtf8 (Wai.requestMethod req),

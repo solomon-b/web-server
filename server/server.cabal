@@ -47,6 +47,9 @@ executable server
 
 library
   import: common-extensions
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded
   build-depends:  , aeson
                   , barbies
                   , base ^>=4.18.1.0
@@ -149,6 +152,7 @@ library
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
     Domain.Types.EmailAddress
+    Domain.Types.FullName
     Effects.Clock
     Effects.Database.Class
     Effects.Database.Execute
@@ -171,10 +175,6 @@ library
     Utils
     Text.HTML
 
-  hs-source-dirs: src
-  default-language: Haskell2010
-  ghc-options:    -Wall -threaded
-
 --------------------------------------------------------------------------------
 
 test-suite tests
@@ -183,25 +183,6 @@ test-suite tests
     exitcode-stdio-1.0
   main-is:
     Spec.hs
-  other-modules:
-     API.User.DeleteSpec
-     API.User.GetSpec
-     API.User.Id.GetSpec
-     Effects.Database.Tables.BlogPostsSpec
-     Effects.Database.Tables.MailingListSpec
-     Effects.Database.Tables.ImagesSpec
-     Effects.Database.Tables.UserSpec
-     Effects.Database.Tables.ServerSessionsSpec
-     Test.Database.Expectation
-     Test.Gen.DisplayName
-     Test.Gen.EmailAddress
-     Test.Gen.Network
-     Test.Gen.Password
-     Test.Gen.Time
-     Test.Database.Monad
-     Test.Database.Property
-     Test.Database.Property.Assert
-     Test.Database.Setup
   hs-source-dirs:
     test
   ghc-options:
@@ -241,3 +222,23 @@ test-suite tests
     , uuid
     , xmlhtml
     , server
+  other-modules:
+     API.User.DeleteSpec
+     API.User.GetSpec
+     API.User.Id.GetSpec
+     Effects.Database.Tables.BlogPostsSpec
+     Effects.Database.Tables.MailingListSpec
+     Effects.Database.Tables.ImagesSpec
+     Effects.Database.Tables.UserSpec
+     Effects.Database.Tables.ServerSessionsSpec
+     Test.Database.Expectation
+     Test.Gen.DisplayName
+     Test.Gen.EmailAddress
+     Test.Gen.FullName
+     Test.Gen.Network
+     Test.Gen.Password
+     Test.Gen.Time
+     Test.Database.Monad
+     Test.Database.Property
+     Test.Database.Property.Assert
+     Test.Database.Setup

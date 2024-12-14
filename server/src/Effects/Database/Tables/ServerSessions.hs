@@ -14,6 +14,7 @@ import Data.Time (UTCTime)
 import Data.UUID (UUID, fromASCIIBytes)
 import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
+import Domain.Types.FullName (FullName)
 import Effects.Database.Tables.User qualified as User
 import GHC.Generics
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
@@ -105,7 +106,7 @@ getSessionUser sId =
       False
       [sql|
     SELECT
-      u.id as user_id, u.email, u.password, u.display_name, u.avatar_url, u.is_admin,
+      u.id as user_id, u.email, u.password, u.display_name, u.full_name, u.avatar_url, u.is_admin,
       s.id as server_session_id, s.user_id as session_user_id, s.ip_address, s.user_agent, s.expires_at
     FROM server_sessions s
     JOIN users u ON u.id = s.user_id
@@ -118,6 +119,7 @@ getSessionUser sId =
         EmailAddress,
         PasswordHash Argon2,
         DisplayName,
+        FullName,
         Maybe Text,
         Bool,
         Id,
@@ -132,6 +134,7 @@ getSessionUser sId =
         mEmail,
         mPassword,
         mDisplayName,
+        mFullName,
         mAvatarUrl,
         mIsAdmin,
         mSessionId,

@@ -3,6 +3,7 @@ CREATE TABLE users
   , email VARCHAR NOT NULL
   , password VARCHAR NOT NULL
   , display_name VARCHAR NOT NULL
+  , full_name VARCHAR NOT NULL
   , avatar_url VARCHAR
   , is_admin BOOL NOT NULL
   , created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
