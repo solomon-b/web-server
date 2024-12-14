@@ -67,29 +67,33 @@ runApp ctx = do
         let logEnv = Log.LoggerEnv stdOutLogger "webserver-backend" [] [] Log.LogInfo
         Log.logMessageIO logEnv time Log.LogAttention "Config Failure" (Aeson.toJSON ())
       Just AppConfig {..} -> do
-        let PostgresConfig {..} = appConfigPostgresSettings
+        let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname $ "localhost:" <> display (warpConfigPort appConfigWarpSettings)
+
+        -- Log Env
         let maxLogLevel = mkLogLevel $ observabilityConfigVerbosity appConfigObservability
             logEnv = Log.LoggerEnv stdOutLogger "webserver-backend" [] [] maxLogLevel
         Log.logMessageIO logEnv time Log.LogInfo "Launching Service" (Aeson.toJSON $ KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment, "log-level" .= maxLogLevel])
 
-        -- Setup DB Pool
-        let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname $ "localhost:" <> display (warpConfigPort appConfigWarpSettings)
+        -- DB Pool
+        let PostgresConfig {..} = appConfigPostgresSettings
         let hsqlSettings = HSQL.settings (fold postgresConfigHost) (fromMaybe 0 postgresConfigPort) (fold postgresConfigUser) (fold postgresConfigPassword) (fold postgresConfigDB)
         let poolSettings = HSQL.Pool.Config.settings [HSQL.Pool.Config.staticConnectionSettings hsqlSettings]
         pgPool <- HSQL.Pool.acquire poolSettings
 
-        -- TODO: We need better logging:
+        -- DB Healthcheck
         healthCheckResult <- flip runReaderT pgPool $ execStatement healthCheck
         when (isLeft healthCheckResult) $
           Log.logMessageIO logEnv time Log.LogAttention "webserver-backend: Postres healthcheck failed" (Aeson.toJSON $ KeyMap.fromList ["error" .= show healthCheckResult])
-
-        let cfg = customFormatters :. authHandler pgPool :. Servant.EmptyContext
 
         -- Run App with tracing
         Observability.withTracer appConfigObservability $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger maxLogLevel appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext pgPool tracer appConfigSmtp hostname appConfigEnvironment logEnv maxLogLevel ctx))
+
+          let servantContext = customFormatters :. authHandler pgPool :. Servant.EmptyContext
+              appContext = AppContext pgPool tracer appConfigSmtp hostname appConfigEnvironment logEnv ctx
+              warpSettings = mkWarpSettings stdOutLogger maxLogLevel appConfigWarpSettings
+          Warp.runSettings warpSettings (otelMiddleware $ mkApp servantContext appContext)
 
 mkLogLevel :: Verbosity -> Log.LogLevel
 mkLogLevel = \case
@@ -106,8 +110,8 @@ customFormatters :: Servant.ErrorFormatters
 customFormatters =
   Servant.defaultErrorFormatters {Servant.notFoundErrorFormatter = notFoundFormatter}
 
-warpSettings :: Log.Logger -> Log.LogLevel -> WarpConfig -> Warp.Settings
-warpSettings logger' logLevel WarpConfig {..} =
+mkWarpSettings :: Log.Logger -> Log.LogLevel -> WarpConfig -> Warp.Settings
+mkWarpSettings logger' logLevel WarpConfig {..} =
   Warp.defaultSettings
     & Warp.setServerName warpConfigServerName
     & Warp.setLogger (warpStructuredLogger logger' logLevel)
