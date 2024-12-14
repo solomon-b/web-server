@@ -19,6 +19,7 @@ import Test.Database.Property
 import Test.Database.Property.Assert
 import Test.Gen.DisplayName
 import Test.Gen.EmailAddress
+import Test.Gen.FullName
 import Test.Gen.Password
 import Test.Hspec
 import Test.Hspec.Hedgehog (hedgehog)
@@ -90,6 +91,7 @@ userInsertGen :: (MonadIO m, MonadGen m) => m User.ModelInsert
 userInsertGen = do
   miEmail <- genEmail
   miDisplayName <- genDisplayName
+  miFullName <- genFullName
   miPassword <- genPassword
   miAvatarUrl <- Gen.maybe $ Gen.text (Range.linear 1 10) Gen.alphaNum
   miIsAdmin <- Gen.bool

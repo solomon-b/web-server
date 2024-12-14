@@ -12,6 +12,7 @@ import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
 import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
+import Domain.Types.FullName (FullName)
 import Effects.Database.Tables.Images qualified as Images
 import Effects.Database.Tables.User qualified as User
 import GHC.Generics
@@ -100,7 +101,7 @@ getBlogPostsWithUsers =
       [sql|
     SELECT
       bp.id, bp.author_id, bp.title, bp.content, bp.published, bp.hero_image_id,
-      u.id, u.email, u.password, u.display_name, u.avatar_url, u.is_admin 
+      u.id, u.email, u.password, u.display_name, u.full_name, u.avatar_url, u.is_admin 
     FROM blog_posts AS bp
     JOIN users AS u ON u.id = bp.author_id
   |]
@@ -116,13 +117,14 @@ getBlogPostsWithUsers =
         EmailAddress,
         PasswordHash Argon2,
         DisplayName,
+        FullName,
         Maybe Text,
         Bool
       ) ->
       (Model, User.Model)
-    fromRows (bId, bAuthorId, bTitle, bContent, bPublished, bHeroImageId, uId, uEmail, uPassword, uDisplayname, uAvatarUrl, uIsAdmin) =
+    fromRows (bId, bAuthorId, bTitle, bContent, bPublished, bHeroImageId, uId, uEmail, uPassword, uDisplayname, uFullName, uAvatarUrl, uIsAdmin) =
       ( Model bId bAuthorId bTitle bContent bPublished bHeroImageId,
-        User.Model uId uEmail uPassword uDisplayname uAvatarUrl uIsAdmin
+        User.Model uId uEmail uPassword uDisplayname uFullName uAvatarUrl uIsAdmin
       )
 
 getBlogPosts :: Hasql.Statement () [(Model, Maybe Images.Model)]
@@ -163,7 +165,7 @@ getBlogPostWithUser postId =
       [sql|
     SELECT
       bp.id, bp.author_id, bp.title, bp.content, bp.published, bp.hero_image_id,
-      u.id, u.email, u.password, u.display_name, u.avatar_url, u.is_admin 
+      u.id, u.email, u.password, u.display_name, u.full_name, u.avatar_url, u.is_admin 
     FROM blog_posts AS bp
     JOIN users AS u ON u.id = bp.author_id
     WHERE bp.id = #{postId} 
@@ -180,13 +182,14 @@ getBlogPostWithUser postId =
         EmailAddress,
         PasswordHash Argon2,
         DisplayName,
+        FullName,
         Maybe Text,
         Bool
       ) ->
       (Model, User.Model)
-    fromRows (bId, bAuthorId, bTitle, bContent, bPublished, bHeroImageId, uId, uEmail, uPassword, uDisplayname, uAvatarUrl, uIsAdmin) =
+    fromRows (bId, bAuthorId, bTitle, bContent, bPublished, bHeroImageId, uId, uEmail, uPassword, uDisplayname, uFullName, uAvatarUrl, uIsAdmin) =
       ( Model bId bAuthorId bTitle bContent bPublished bHeroImageId,
-        User.Model uId uEmail uPassword uDisplayname uAvatarUrl uIsAdmin
+        User.Model uId uEmail uPassword uDisplayname uFullName uAvatarUrl uIsAdmin
       )
 
 getBlogPost :: Id -> Hasql.Statement () (Maybe (Model, Maybe Images.Model))

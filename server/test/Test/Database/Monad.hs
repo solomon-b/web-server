@@ -44,6 +44,7 @@ import Data.UUID (toString)
 import Data.UUID.V4 (nextRandom)
 import Domain.Types.DisplayName (mkDisplayNameUnsafe)
 import Domain.Types.EmailAddress (mkEmailAddress)
+import Domain.Types.FullName (mkFullNameUnsafe)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
@@ -215,7 +216,7 @@ withAuth = beforeWith getAuth
       bracketConn cfg $ do
         pass <- hashPassword $ mkPassword "foo"
         auth <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
-          uid <- TRX.statement () $ User.insertUser $ User.ModelInsert (mkEmailAddress "user@host.com") pass (mkDisplayNameUnsafe "user") Nothing True
+          uid <- TRX.statement () $ User.insertUser $ User.ModelInsert (mkEmailAddress "user@host.com") pass (mkDisplayNameUnsafe "user") (mkFullNameUnsafe "fullUserName") Nothing True
           u <- TRX.statement () $ User.getUser $ getOneRow uid
           sm <- TRX.statement () $ Session.insertServerSession $ Session.ServerSessionInsert (getOneRow uid) Nothing Nothing (read "2099-01-01 10:30:20 UTC")
           pure $ Authz (User.toDomain $ fromMaybe (error "withAuth failure: Failed to look up user") u) (Session.toDomain $ getOneRow sm)

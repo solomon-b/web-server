@@ -12,6 +12,7 @@ import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
 import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
+import Domain.Types.FullName (FullName)
 import GHC.Generics
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
 import Hasql.Statement qualified as Hasql
@@ -43,6 +44,7 @@ data Model = Model
     mEmail :: EmailAddress,
     mPassword :: PasswordHash Argon2,
     mDisplayName :: DisplayName,
+    mFullName :: FullName,
     mAvatarUrl :: Maybe Text,
     mIsAdmin :: Bool
   }
@@ -55,6 +57,7 @@ data Domain = Domain
   { dId :: Id,
     dEmail :: EmailAddress,
     dDisplayName :: DisplayName,
+    dFullName :: FullName,
     dAvatarUrl :: Maybe Text,
     dIsAdmin :: Bool
   }
@@ -68,6 +71,7 @@ toDomain Model {..} =
     { dId = mId,
       dEmail = mEmail,
       dDisplayName = mDisplayName,
+      dFullName = mFullName,
       dAvatarUrl = mAvatarUrl,
       dIsAdmin = mIsAdmin
     }
@@ -79,7 +83,7 @@ getUsers =
   interp
     False
     [sql|
-    SELECT id, email, password, display_name, avatar_url, is_admin
+    SELECT id, email, password, display_name, full_name, avatar_url, is_admin
     FROM users
   |]
 
@@ -88,7 +92,7 @@ getUser userId =
   interp
     False
     [sql|
-    SELECT id, email, password, display_name, avatar_url, is_admin
+    SELECT id, email, password, display_name, full_name, avatar_url, is_admin
     FROM users
     WHERE id = #{userId} 
   |]
@@ -98,7 +102,7 @@ getUserByEmail email =
   interp
     False
     [sql|
-    SELECT id, email, password, display_name, avatar_url, is_admin
+    SELECT id, email, password, display_name, full_name, avatar_url, is_admin
     FROM users
     WHERE email = #{email} 
   |]
@@ -108,7 +112,7 @@ getUserByCredential email password =
   interp
     False
     [sql|
-      SELECT id, email, password, display_name, avatar_url, is_admin
+      SELECT id, email, password, display_name, full_name, avatar_url, is_admin
       FROM users
       WHERE email = #{email} && password = #{password}
     |]
@@ -117,6 +121,7 @@ data ModelInsert = ModelInsert
   { miEmail :: EmailAddress,
     miPassword :: PasswordHash Argon2,
     miDisplayName :: DisplayName,
+    miFullName :: FullName,
     miAvatarUrl :: Maybe Text,
     miIsAdmin :: Bool
   }
@@ -129,8 +134,8 @@ insertUser ModelInsert {..} =
   interp
     False
     [sql|
-    INSERT INTO users(email, password, display_name, avatar_url, is_admin)
-    VALUES (#{miEmail}, #{miPassword}, #{miDisplayName}, #{miAvatarUrl}, #{miIsAdmin})
+    INSERT INTO users(email, password, display_name, full_name, avatar_url, is_admin)
+    VALUES (#{miEmail}, #{miPassword}, #{miDisplayName}, #{miFullName}, #{miAvatarUrl}, #{miIsAdmin})
     RETURNING id
   |]
 
