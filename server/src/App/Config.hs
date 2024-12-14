@@ -8,15 +8,14 @@ module App.Config where
 
 --------------------------------------------------------------------------------
 
-import App.Config.Fetchers (FetchHKD (..), packText, readEnv, readEnvDefault, readEnvOptional, readText)
+import App.Config.Fetchers (FetchHKD (..), packText, parseEnv, parseEnvDefault, parseEnvDefaultStr, parseEnvOptional, parseEnvStr, readEnvDefault, readText)
 import Barbies
 import Data.Aeson (ToJSON)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 (pack)
 import Data.Functor.Classes (Show1)
 import Data.Functor.Compose (Compose (..))
+import Data.String (IsString)
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Text.Display (Display)
 import Data.Word (Word16)
 import GHC.Generics
@@ -36,7 +35,7 @@ isProduction = \case
 
 newtype Hostname = Hostname {getHostName :: Text}
   deriving (Generic)
-  deriving newtype (Show, Display, ToJSON)
+  deriving newtype (Show, Display, ToJSON, IsString)
 
 --------------------------------------------------------------------------------
 
@@ -61,11 +60,12 @@ instance FetchHKD WarpConfigF where
   fromEnv :: WarpConfigF (Compose IO Maybe)
   fromEnv =
     WarpConfigF
-      { warpConfigFPort = readEnv (read . Text.unpack) "APP_WARP_PORT",
-        warpConfigFTimeout = readEnv (read . Text.unpack) "APP_WARP_TIMEOUT",
-        warpConfigFServerName = readEnv (pack . Text.unpack) "APP_WARP_SERVERNAME"
+      { warpConfigFPort = readEnvDefault 3000 "APP_WARP_PORT",
+        warpConfigFTimeout = readEnvDefault 30 "APP_WARP_TIMEOUT",
+        warpConfigFServerName = parseEnvDefaultStr "server" "APP_WARP_SERVERNAME"
       }
 
+  toConcrete :: WarpConfigF (Compose IO Maybe) -> IO (Maybe (Concrete WarpConfigF))
   toConcrete WarpConfigF {..} = do
     warpConfigPort <- getCompose warpConfigFPort
     warpConfigTimeout <- getCompose warpConfigFTimeout
@@ -99,11 +99,11 @@ instance FetchHKD PostgresConfigF where
   fromEnv :: PostgresConfigF (Compose IO Maybe)
   fromEnv =
     PostgresConfigF
-      { postgresConfigFHost = readEnvOptional packText "APP_POSTGRES_HOST",
-        postgresConfigFPort = readEnvOptional readText "APP_POSTGRES_PORT",
-        postgresConfigFDB = readEnvOptional packText "APP_POSTGRES_DB",
-        postgresConfigFUser = readEnvOptional packText "APP_POSTGRES_USER",
-        postgresConfigFPassword = readEnvOptional packText "APP_POSTGRES_PASSWORD"
+      { postgresConfigFHost = parseEnvOptional packText "APP_POSTGRES_HOST",
+        postgresConfigFPort = parseEnvOptional readText "APP_POSTGRES_PORT",
+        postgresConfigFDB = parseEnvOptional packText "APP_POSTGRES_DB",
+        postgresConfigFUser = parseEnvOptional packText "APP_POSTGRES_USER",
+        postgresConfigFPassword = parseEnvOptional packText "APP_POSTGRES_PASSWORD"
       }
 
   toConcrete :: PostgresConfigF (Compose IO Maybe) -> IO (Maybe (Concrete PostgresConfigF))
@@ -150,8 +150,8 @@ instance FetchHKD ObservabilityConfigF where
   fromEnv =
     -- TODO: Case insensitive env parsing:
     ObservabilityConfigF
-      { observabilityConfigFVerbosity = readEnvDefault Brief (\case "Quiet" -> Just Quiet; "Brief" -> Just Brief; "Verbose" -> Just Verbose; "Debug" -> Just Debug; _ -> Just Brief) "APP_OBSERVABILITY_VERBOSITY",
-        observabilityConfigFExporter = readEnvDefault None (\case "StdOut" -> Just StdOut; "Otel" -> Just Otel; _ -> Just None) "APP_OBSERVABILITY_EXPORTER"
+      { observabilityConfigFVerbosity = parseEnvDefault Brief (\case "Quiet" -> Just Quiet; "Brief" -> Just Brief; "Verbose" -> Just Verbose; "Debug" -> Just Debug; _ -> Just Brief) "APP_OBSERVABILITY_VERBOSITY",
+        observabilityConfigFExporter = parseEnvDefault None (\case "StdOut" -> Just StdOut; "Otel" -> Just Otel; _ -> Just None) "APP_OBSERVABILITY_EXPORTER"
       }
 
   toConcrete :: ObservabilityConfigF (Compose IO Maybe) -> IO (Maybe (Concrete ObservabilityConfigF))
@@ -181,9 +181,9 @@ instance FetchHKD SmtpConfigF where
   fromEnv :: SmtpConfigF (Compose IO Maybe)
   fromEnv =
     SmtpConfigF
-      { smtpConfigFServer = readEnv id "APP_SMTP_SERVER",
-        smtpConfigFUsername = readEnv id "APP_SMTP_USERNAME",
-        smtpConfigFPassword = readEnv id "APP_SMTP_PASSWORD"
+      { smtpConfigFServer = parseEnvStr "APP_SMTP_SERVER",
+        smtpConfigFUsername = parseEnvStr "APP_SMTP_USERNAME",
+        smtpConfigFPassword = parseEnvStr "APP_SMTP_PASSWORD"
       }
 
   toConcrete :: SmtpConfigF (Compose IO Maybe) -> IO (Maybe (Concrete SmtpConfigF))
@@ -223,11 +223,11 @@ instance FetchHKD AppConfigF where
   fromEnv =
     AppConfigF
       { appConfigFWarpSettings = fromEnv,
-        appConfigFEnvironment = readEnvDefault Development (\case "Development" -> Just Development; "Production" -> Just Production; _ -> Nothing) "APP_ENVIRONMENT",
+        appConfigFEnvironment = parseEnvDefault Development (\case "Development" -> Just Development; "Production" -> Just Production; _ -> Nothing) "APP_ENVIRONMENT",
         appConfigFPostgresSettings = fromEnv,
         appConfigFObservability = fromEnv,
         appConfigFSmtp = fromEnv,
-        appConfigFHostname = readEnv Hostname "APP_HOSTNAME"
+        appConfigFHostname = parseEnvStr "APP_HOSTNAME"
       }
 
   toConcrete :: AppConfigF (Compose IO Maybe) -> IO (Maybe (Concrete AppConfigF))
