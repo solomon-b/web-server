@@ -8,6 +8,8 @@ import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
 import Control.Monad.IO.Unlift
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Reader qualified as Reader
+import Data.Aeson ((.=))
+import Data.Aeson qualified as Aeson
 import Data.Fixed (Pico)
 import Data.Has qualified as Has
 import Data.HashMap.Strict qualified as HashMap
@@ -19,6 +21,7 @@ import Data.Text.Lazy qualified as Lazy
 import Data.Time.Clock (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX qualified as Time
 import Data.Time.Format.ISO8601 (iso8601Show)
+import Log qualified
 import OpenTelemetry.Attributes (getAttributes)
 import OpenTelemetry.Exporter.Handle.Span (stdoutExporter')
 import OpenTelemetry.Exporter.Span (ExportResult (..), SpanExporter (..))
@@ -107,9 +110,12 @@ handlerSpan ::
   ( MonadReader env m,
     Has.Has OTEL.Tracer env,
     MonadIO m,
-    Display req,
     MonadCatch m,
     MonadUnliftIO m,
+    Log.MonadLog m,
+    Aeson.ToJSON req,
+    Aeson.ToJSON res,
+    Display req,
     Display res
   ) =>
   Text ->
@@ -118,6 +124,7 @@ handlerSpan ::
   m a ->
   m a
 handlerSpan handlerName req getRes handlerAction = do
+  -- TODO: Disambiguate Response data from rendered Response
   tracer <- Reader.asks Has.getter
   OTEL.inSpan' tracer ("handler " <> handlerName) OTEL.defaultSpanArguments $ \reqSpan -> do
     OTEL.addEvent reqSpan $
@@ -144,4 +151,5 @@ handlerSpan handlerName req getRes handlerAction = do
           newEventTimestamp = Nothing
         }
 
+    Log.logInfo handlerName $ Aeson.object ["request-data" .= req, "response-data" .= ("getRes handlerResult" :: Text)]
     pure handlerResult

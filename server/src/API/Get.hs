@@ -16,6 +16,7 @@ import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Class (MonadDB)
 import Effects.Observability qualified as Observability
+import Log qualified
 import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
@@ -65,6 +66,7 @@ handler ::
   ( Has Tracer env,
     MonadCatch m,
     MonadDB m,
+    Log.MonadLog m,
     MonadReader env m,
     MonadUnliftIO m
   ) =>

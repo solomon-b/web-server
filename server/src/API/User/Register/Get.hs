@@ -16,6 +16,7 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Observability qualified as Observability
+import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
@@ -77,6 +78,7 @@ handler ::
   ( Applicative m,
     Has Trace.Tracer env,
     MonadCatch m,
+    Log.MonadLog m,
     MonadUnliftIO m,
     MonadReader env m
   ) =>
