@@ -7,7 +7,6 @@ author:             Solomon Bothwell
 maintainer:         ssbothwell@gmail.com
 category:           Web
 build-type:         Simple
-extra-doc-files:    CHANGELOG.md
 
 --------------------------------------------------------------------------------
 
