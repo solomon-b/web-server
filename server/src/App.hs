@@ -150,10 +150,10 @@ interpret ctx (AppM appM) =
       catch (Right <$> appM ctx) $
         \e ->
           case Servant.errHTTPCode e of
-            401 -> pure $ Left Servant.err401 {Servant.errBody = error401template}
-            403 -> pure $ Left Servant.err401 {Servant.errBody = error403template}
-            404 -> pure $ Left Servant.err401 {Servant.errBody = error404template}
-            500 -> pure $ Left Servant.err401 {Servant.errBody = error500template}
+            401 -> pure $ Left e {Servant.errBody = error401template}
+            403 -> pure $ Left e {Servant.errBody = error403template}
+            404 -> pure $ Left e {Servant.errBody = error404template}
+            500 -> pure $ Left e {Servant.errBody = error500template}
             _ -> pure $ Left e
 
 mkApp :: Servant.Context ServantContext -> AppContext ctx -> Servant.Application
