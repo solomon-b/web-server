@@ -57,21 +57,22 @@ instance MonadTracer (AppM ctx) where
 
 instance Log.MonadLog (AppM ctx) where
   logMessage :: Log.LogLevel -> Text -> Aeson.Value -> AppM ctx ()
-  logMessage level message json = AppM $ \AppContext {appLoggerEnv} -> do
-    time <- getCurrentTime
-    Log.logMessageIO appLoggerEnv time level message json
+  logMessage level message json = do
+    appLoggerEnv <- Reader.asks Has.getter
+    time <- currentSystemTime
+    liftIO $ Log.logMessageIO appLoggerEnv time level message json
 
   localData :: [Aeson.Pair] -> AppM ctx a -> AppM ctx a
   localData data_ =
-    AppM . Reader.local (\ctx@AppContext {appLoggerEnv = e} -> ctx {appLoggerEnv = e {Log.leData = data_ ++ Log.leData e}}) . runAppM
+    Reader.local $ Has.modifier $ \e -> e {Log.leData = data_ ++ Log.leData e}
 
   localDomain :: Text -> AppM ctx a -> AppM ctx a
   localDomain domain =
-    AppM . Reader.local (\ctx@AppContext {appLoggerEnv = e} -> ctx {appLoggerEnv = e {Log.leDomain = Log.leDomain e ++ [domain]}}) . runAppM
+    Reader.local $ Has.modifier $ \e -> e {Log.leDomain = Log.leDomain e ++ [domain]}
 
   localMaxLogLevel :: Log.LogLevel -> AppM ctx a -> AppM ctx a
   localMaxLogLevel level =
-    AppM . Reader.local (\ctx@AppContext {appLoggerEnv = e} -> ctx {appLoggerEnv = e {Log.leMaxLogLevel = level}}) . runAppM
+    Reader.local $ Has.modifier $ \e -> e {Log.leMaxLogLevel = level}
 
   getLoggerEnv :: AppM ctx Log.LoggerEnv
-  getLoggerEnv = AppM $ \AppContext {appLoggerEnv} -> pure appLoggerEnv
+  getLoggerEnv = Reader.asks Has.getter

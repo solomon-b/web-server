@@ -21,7 +21,6 @@ data AppContext context = AppContext
     appHostname :: Hostname,
     appEnvironment :: Environment,
     appLoggerEnv :: Log.LoggerEnv,
-    appLogLevel :: Log.LogLevel,
     appCustom :: context
   }
 
@@ -48,9 +47,5 @@ instance Has.Has Environment (AppContext ctx) where
 instance Has.Has Log.LoggerEnv (AppContext ctx) where
   getter = appLoggerEnv
   modifier f ctx@AppContext {appLoggerEnv} = ctx {appLoggerEnv = f appLoggerEnv}
-
-instance Has.Has Log.LogLevel (AppContext ctx) where
-  getter = appLogLevel
-  modifier f ctx@AppContext {appLogLevel} = ctx {appLogLevel = f appLogLevel}
 
 type ServantContext = '[Servant.ErrorFormatters, AuthHandler Wai.Request Authz]
