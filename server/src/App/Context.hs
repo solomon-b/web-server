@@ -15,19 +15,15 @@ import Servant.Server.Experimental.Auth (AuthHandler)
 --------------------------------------------------------------------------------
 
 data AppContext context = AppContext
-  { appLogger :: Log.Logger,
-    appDbPool :: HSQL.Pool,
+  { appDbPool :: HSQL.Pool,
     appTracer :: OTEL.Tracer,
     appSmtpConfig :: Maybe SmtpConfig,
     appHostname :: Hostname,
     appEnvironment :: Environment,
+    appLoggerEnv :: Log.LoggerEnv,
     appLogLevel :: Log.LogLevel,
     appCustom :: context
   }
-
-instance Has.Has Log.Logger (AppContext ctx) where
-  getter = appLogger
-  modifier f ctx@AppContext {appLogger} = ctx {appLogger = f appLogger}
 
 instance Has.Has HSQL.Pool (AppContext ctx) where
   getter = appDbPool
@@ -48,6 +44,10 @@ instance Has.Has Hostname (AppContext ctx) where
 instance Has.Has Environment (AppContext ctx) where
   getter = appEnvironment
   modifier f ctx@AppContext {appEnvironment} = ctx {appEnvironment = f appEnvironment}
+
+instance Has.Has Log.LoggerEnv (AppContext ctx) where
+  getter = appLoggerEnv
+  modifier f ctx@AppContext {appLoggerEnv} = ctx {appLoggerEnv = f appLoggerEnv}
 
 instance Has.Has Log.LogLevel (AppContext ctx) where
   getter = appLogLevel

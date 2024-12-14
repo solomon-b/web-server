@@ -28,6 +28,7 @@ import Control.Monad (void, when)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.Trans.Except (ExceptT (..))
 import Data.Aeson ((.=))
+import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Bifunctor (bimap)
 import Data.CaseInsensitive qualified as CI
@@ -37,6 +38,7 @@ import Data.Function ((&))
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text.Display (display)
 import Data.Text.Encoding qualified as Text.Encoding
+import Data.Time (getCurrentTime)
 import Effects.Database.Class (execStatement, healthCheck)
 import Effects.Observability qualified as Observability
 import Hasql.Connection qualified as HSQL
@@ -57,17 +59,18 @@ import System.Posix.Signals qualified as Posix
 --------------------------------------------------------------------------------
 
 runApp :: customCtx -> IO ()
-runApp ctx =
+runApp ctx = do
+  time <- getCurrentTime
   Log.withJsonStdOutLogger $ \stdOutLogger -> do
     getConfig >>= \case
-      Nothing ->
-        Log.runLogT "webserver-backend" stdOutLogger Log.defaultLogLevel $ Log.logAttention "Config Failure" (show ())
+      Nothing -> do
+        let logEnv = Log.LoggerEnv stdOutLogger "webserver-backend" [] [] Log.LogInfo
+        Log.logMessageIO logEnv time Log.LogAttention "Config Failure" (Aeson.toJSON ())
       Just AppConfig {..} -> do
         let PostgresConfig {..} = appConfigPostgresSettings
-        -- TODO: Is it weird to be instantiating 'LogT' multiple times?
-        let maxLogLevel = maybe Log.LogInfo (mkLogLevel . observabilityConfigVerbosity) appConfigObservability
-        Log.runLogT "webserver-backend" stdOutLogger maxLogLevel $
-          Log.logInfo "Launching Service" (KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment])
+        let maxLogLevel = mkLogLevel $ observabilityConfigVerbosity appConfigObservability
+            logEnv = Log.LoggerEnv stdOutLogger "webserver-backend" [] [] maxLogLevel
+        Log.logMessageIO logEnv time Log.LogInfo "Launching Service" (Aeson.toJSON $ KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment, "log-level" .= maxLogLevel])
 
         -- Setup DB Pool
         let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname $ "localhost:" <> display (warpConfigPort appConfigWarpSettings)
@@ -77,7 +80,8 @@ runApp ctx =
 
         -- TODO: We need better logging:
         healthCheckResult <- flip runReaderT pgPool $ execStatement healthCheck
-        when (isLeft healthCheckResult) $ error $ "Postgres healthcheck failed: " <> show healthCheckResult
+        when (isLeft healthCheckResult) $
+          Log.logMessageIO logEnv time Log.LogAttention "webserver-backend: Postres healthcheck failed" (Aeson.toJSON $ KeyMap.fromList ["error" .= show healthCheckResult])
 
         let cfg = customFormatters :. authHandler pgPool :. Servant.EmptyContext
 
@@ -85,7 +89,7 @@ runApp ctx =
         Observability.withTracer appConfigObservability $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
-          Warp.runSettings (warpSettings stdOutLogger maxLogLevel appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext stdOutLogger pgPool tracer appConfigSmtp hostname appConfigEnvironment maxLogLevel ctx))
+          Warp.runSettings (warpSettings stdOutLogger maxLogLevel appConfigWarpSettings) (otelMiddleware $ mkApp cfg (AppContext pgPool tracer appConfigSmtp hostname appConfigEnvironment logEnv maxLogLevel ctx))
 
 mkLogLevel :: Verbosity -> Log.LogLevel
 mkLogLevel = \case
@@ -136,10 +140,10 @@ shutdownHandler closeSocket =
 --------------------------------------------------------------------------------
 
 interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
-interpret ctx@AppContext {appLogger, appLogLevel} (AppM appM) =
+interpret ctx (AppM appM) =
   Servant.Handler $
     ExceptT $
-      catch (Right <$> appM ctx (Log.LoggerEnv appLogger "webserver-backend" [] [] appLogLevel)) $
+      catch (Right <$> appM ctx) $
         \e ->
           case Servant.errHTTPCode e of
             401 -> pure $ Left Servant.err401 {Servant.errBody = error401template}

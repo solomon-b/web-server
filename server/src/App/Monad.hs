@@ -9,7 +9,10 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import Control.Monad.Reader (MonadReader, ReaderT (..))
 import Control.Monad.Reader qualified as Reader
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
 import Data.Has qualified as Has
+import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Time (getCurrentTime)
 import Effects.Clock (MonadClock (..))
@@ -25,10 +28,10 @@ import OpenTelemetry.Trace.Monad (MonadTracer (..))
 
 --------------------------------------------------------------------------------
 
-newtype AppM ctx a = AppM {runAppM' :: AppContext ctx -> Log.LoggerEnv -> IO a}
+newtype AppM ctx a = AppM {runAppM :: AppContext ctx -> IO a}
   deriving
-    (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO, Log.MonadLog)
-    via ReaderT (AppContext ctx) (Log.LogT IO)
+    (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO)
+    via ReaderT (AppContext ctx) IO
 
 instance MonadClock (AppM ctx) where
   currentSystemTime = liftIO getCurrentTime
@@ -51,3 +54,24 @@ instance MonadEmail (AppM ctx) where
 instance MonadTracer (AppM ctx) where
   getTracer :: AppM ctx OTEL.Tracer
   getTracer = Reader.asks Has.getter
+
+instance Log.MonadLog (AppM ctx) where
+  logMessage :: Log.LogLevel -> Text -> Aeson.Value -> AppM ctx ()
+  logMessage level message json = AppM $ \AppContext {appLoggerEnv} -> do
+    time <- getCurrentTime
+    Log.logMessageIO appLoggerEnv time level message json
+
+  localData :: [Aeson.Pair] -> AppM ctx a -> AppM ctx a
+  localData data_ =
+    AppM . Reader.local (\ctx@AppContext {appLoggerEnv = e} -> ctx {appLoggerEnv = e {Log.leData = data_ ++ Log.leData e}}) . runAppM
+
+  localDomain :: Text -> AppM ctx a -> AppM ctx a
+  localDomain domain =
+    AppM . Reader.local (\ctx@AppContext {appLoggerEnv = e} -> ctx {appLoggerEnv = e {Log.leDomain = Log.leDomain e ++ [domain]}}) . runAppM
+
+  localMaxLogLevel :: Log.LogLevel -> AppM ctx a -> AppM ctx a
+  localMaxLogLevel level =
+    AppM . Reader.local (\ctx@AppContext {appLoggerEnv = e} -> ctx {appLoggerEnv = e {Log.leMaxLogLevel = level}}) . runAppM
+
+  getLoggerEnv :: AppM ctx Log.LoggerEnv
+  getLoggerEnv = AppM $ \AppContext {appLoggerEnv} -> pure appLoggerEnv

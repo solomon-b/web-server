@@ -13,7 +13,6 @@ import Data.ByteString.Char8 (pack)
 import Data.Functor.Barbie (TraversableB, bsequence)
 import Data.Functor.Compose (Compose (..))
 import Data.Kind (Type)
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import System.Environment (lookupEnv)
@@ -40,7 +39,10 @@ readEnvOptional cstr envKey = Compose $ do
     Just val -> pure $ Just $ cstr $ Text.pack val
 
 readEnvDefault :: a -> (Text -> Maybe a) -> String -> (IO `Compose` Maybe) a
-readEnvDefault def cstr envKey = Compose $ fmap (fromMaybe def . cstr . Text.pack) <$> lookupEnv envKey
+readEnvDefault def cstr envKey = Compose $ do
+  lookupEnv envKey >>= \case
+    Nothing -> pure $ Just def
+    Just val -> pure $ cstr $ Text.pack val
 
 --------------------------------------------------------------------------------
 

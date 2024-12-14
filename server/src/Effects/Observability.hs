@@ -90,22 +90,15 @@ mkAcquire exporter = do
   processor <- simpleProcessor . SimpleProcessorConfig $ exporter
   OTEL.createTracerProvider [processor] providerOpts
 
-withTracer :: Maybe ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
-withTracer cfg f =
-  case cfg of
-    Nothing ->
-      let acquire' = mkAcquire noOpExporter
-          release' _ = pure ()
-          work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "test-suite"
-       in bracket acquire' release' work
-    Just cfg' -> withTracer' cfg' f
-
-withTracer' :: ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
-withTracer' (ObservabilityConfig verbosity exporter) f =
+withTracer :: ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
+withTracer (ObservabilityConfig verbosity exporter) f =
   let acquire = case exporter of
         Otel -> OTEL.initializeGlobalTracerProvider
         StdOut -> mkAcquire $ stdoutExporter' (pure . stdoutFormatter verbosity)
-      release = OTEL.shutdownTracerProvider
+        None -> mkAcquire noOpExporter
+      release = case exporter of
+        None -> \_ -> pure ()
+        _ -> OTEL.shutdownTracerProvider
       -- TODO: Propagate hostname here:
       work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "web-server"
    in bracket acquire release work

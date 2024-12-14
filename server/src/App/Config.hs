@@ -133,7 +133,7 @@ data ObservabilityConfig = ObservabilityConfig
 data Verbosity = Quiet | Brief | Verbose | Debug
   deriving stock (Generic, Show)
 
-data AppExporter = StdOut | Otel
+data AppExporter = StdOut | Otel | None
   deriving (Generic, Show)
 
 data ObservabilityConfigF f = ObservabilityConfigF
@@ -150,8 +150,8 @@ instance FetchHKD ObservabilityConfigF where
   fromEnv =
     -- TODO: Case insensitive env parsing:
     ObservabilityConfigF
-      { observabilityConfigFVerbosity = readEnvDefault Quiet (\case "Quiet" -> Just Quiet; "Brief" -> Just Brief; "Verbose" -> Just Verbose; "Debug" -> Just Debug; _ -> Nothing) "APP_OBSERVABILITY_VERBOSITY",
-        observabilityConfigFExporter = readEnvDefault StdOut (\case "StdOut" -> Just StdOut; _ -> Nothing) "APP_OBSERVABILITY_EXPORTER"
+      { observabilityConfigFVerbosity = readEnvDefault Brief (\case "Quiet" -> Just Quiet; "Brief" -> Just Brief; "Verbose" -> Just Verbose; "Debug" -> Just Debug; _ -> Just Brief) "APP_OBSERVABILITY_VERBOSITY",
+        observabilityConfigFExporter = readEnvDefault None (\case "StdOut" -> Just StdOut; "Otel" -> Just Otel; _ -> Just None) "APP_OBSERVABILITY_EXPORTER"
       }
 
   toConcrete :: ObservabilityConfigF (Compose IO Maybe) -> IO (Maybe (Concrete ObservabilityConfigF))
@@ -199,7 +199,7 @@ data AppConfig = AppConfig
   { appConfigWarpSettings :: WarpConfig,
     appConfigPostgresSettings :: PostgresConfig,
     appConfigEnvironment :: Environment,
-    appConfigObservability :: Maybe ObservabilityConfig,
+    appConfigObservability :: ObservabilityConfig,
     appConfigSmtp :: Maybe SmtpConfig,
     appConfigHostname :: Hostname
   }
@@ -239,7 +239,8 @@ instance FetchHKD AppConfigF where
     appConfigSmtp <- toConcrete appConfigFSmtp
     appConfigHostname <- getCompose appConfigFHostname
 
-    pure $ AppConfig <$> appConfigWarpSettings <*> appConfigPostgresSettings <*> appConfigEnvironment <*> pure appConfigObservability <*> pure appConfigSmtp <*> appConfigHostname
+    pure $ AppConfig <$> appConfigWarpSettings <*> appConfigPostgresSettings <*> appConfigEnvironment <*> appConfigObservability <*> pure appConfigSmtp <*> appConfigHostname
 
+-- TODO: Replace Maybe with Either
 getConfig :: IO (Maybe AppConfig)
 getConfig = toConcrete (fromEnv @AppConfigF)
