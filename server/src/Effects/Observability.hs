@@ -151,5 +151,6 @@ handlerSpan handlerName req getRes handlerAction = do
           newEventTimestamp = Nothing
         }
 
+    -- TODO: Disambiguate Response data from rendered Response
     Log.logInfo handlerName $ Aeson.object ["request-data" .= req, "response-data" .= ("getRes handlerResult" :: Text)]
     pure handlerResult

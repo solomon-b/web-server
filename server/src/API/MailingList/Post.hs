@@ -68,8 +68,8 @@ handler req@(MailingListForm emailAddress) = do
     _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert emailAddress
     Log.logInfo "Submited Email Address:" (KeyMap.singleton "email" (display emailAddress))
 
-    -- TODO: Dev Mode SMTP Server?
     sendConfirmationEmail emailAddress
+    Log.logInfo "Sent confirmation email to:" (KeyMap.singleton "email" (display emailAddress))
 
     pure $ renderNodes [Xml.TextNode "You have been added to the mailing list!"]
 

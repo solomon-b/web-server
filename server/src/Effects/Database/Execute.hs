@@ -6,7 +6,7 @@ import App.Errors (InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader qualified as Reader
-import Data.ByteString.Char8 qualified as Char8
+import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteString.Lazy qualified as BL
 import Data.Foldable (fold)
 import Data.Function ((&))
@@ -16,6 +16,7 @@ import Data.List (intersperse)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display, display)
+import Data.Text.Encoding qualified as TE
 import Effects.Database.Class
 import Effects.Database.SerializedStatement (SerializedStatement (..), serializeStatement)
 import GHC.Num.Natural (Natural)
@@ -43,7 +44,7 @@ execQuerySpan ::
 execQuerySpan statement@(HSQL.Statement bs _ _ _) = do
   tracer <- Reader.asks Has.getter
   Trace.inSpan' tracer "database_session" Trace.defaultSpanArguments $ \reqSpan -> do
-    Log.logInfo "db query" $ Text.pack $ Char8.unpack bs
+    Log.logInfo "db query" $ KeyMap.singleton "query" (TE.decodeUtf8 bs)
     Trace.addEvent reqSpan $
       Trace.NewEvent
         { newEventName = "statement",
