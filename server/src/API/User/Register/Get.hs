@@ -4,6 +4,7 @@ module API.User.Register.Get where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (userRegisterPostLink)
 import App.Auth qualified as Auth
 import Component.Frame (loadFrame)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
@@ -20,6 +21,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
+import Servant.Links qualified as Link
 import Text.HTML (HTML, RawHtml, parseFragment, readNodes, renderDocument, renderNodes)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
@@ -30,6 +32,9 @@ type Route = "user" :> "register" :> Servant.Header "HX-Request" Bool :> Servant
 
 --------------------------------------------------------------------------------
 
+userRegisterPostUrl :: Link.URI
+userRegisterPostUrl = Link.linkURI userRegisterPostLink
+
 template :: ByteString
 template =
   [i|<div class="relative p-4 w-full max-w-md max-h-full mx-auto">
@@ -39,7 +44,7 @@ template =
       </h3>
     </div>
     <div class="p-4 md:p-5">
-      <form hx-post="/user/register" class="space-y-4" data-bitwarden-watching="1">
+      <form hx-post="/#{userRegisterPostUrl}" class="space-y-4" data-bitwarden-watching="1">
 	<div>
 	  <label for="displayName" class="block mb-2 text-sm font-medium text-gray-900">What should we call you?
 	  </label>

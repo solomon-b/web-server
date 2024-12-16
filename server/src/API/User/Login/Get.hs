@@ -4,6 +4,7 @@ module API.User.Login.Get where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (userLoginPostLink, userRegisterGetLink)
 import App.Auth qualified as Auth
 import Component.Frame (loadFrame)
 import Control.Applicative ((<|>))
@@ -21,6 +22,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
+import Servant.Links qualified as Link
 import Text.HTML (HTML, RawHtml, parseFragment, readNodes, renderDocument, renderNodes)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
@@ -37,16 +39,23 @@ type Route =
 
 --------------------------------------------------------------------------------
 
+userLoginPostUrl :: Maybe Text -> Link.URI
+userLoginPostUrl = Link.linkURI . userLoginPostLink
+
+userRegisterGetUrl :: Link.URI
+userRegisterGetUrl = Link.linkURI userRegisterGetLink
+
 template :: Maybe Text -> ByteString
 template redirectLink =
-  [i|<div class="relative p-4 w-full max-w-md max-h-full mx-auto">
+  [i|
+<div class="relative p-4 w-full max-w-md max-h-full mx-auto">
   <div class="relative bg-white rounded-lg shadow">
     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
       <h3 class="text-xl font-semibold text-gray-900">Sign in
       </h3>
     </div>
     <div class="p-4 md:p-5">
-      <form hx-post="/user/login#{maybe "" ("?redirect=" <>) redirectLink}" class="space-y-4" data-bitwarden-watching="1">
+      <form hx-post="/#{userLoginPostUrl redirectLink}" class="space-y-4" data-bitwarden-watching="1">
 	<div>
 	  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
 	  </label>
@@ -73,7 +82,7 @@ template redirectLink =
 	<div class="text-sm font-medium text-gray-500">
 	  <span class="px-2">Not registered?
 	  </span>
-	  <a href="\#" hx-get="/user/register" hx-swap="innerHTML" hx-target="body" hx-push-url="true" class="text-green-700 hover:underline">Create account</a>
+	  <a href="\#" hx-get="/#{userRegisterGetUrl}" hx-swap="innerHTML" hx-target="body" hx-push-url="true" class="text-green-700 hover:underline">Create account</a>
 	</div>
       </form>
     </div>

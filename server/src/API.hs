@@ -1,21 +1,5 @@
 module API where
 
-{-
-
-- [-] Blog System
-  - [X] Table Schema / Model
-  - [ ] Index Page
-    - [ ] Filtering/Ordering
-    - [ ] Search
-  - [ ] Post Page
-  - [ ] Editor Page
-  - [ ] Markdown
-    - [ ] Parsing
-    - [ ] Printing
-  - [ ] Auth
-  - [ ] RSS
--}
-
 --------------------------------------------------------------------------------
 
 import API.About.Get qualified as About.Get
@@ -52,8 +36,12 @@ import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
+import Data.Proxy (Proxy (..))
+import Data.Text (Text)
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
+import Effects.Database.Tables.BlogPosts qualified as BlogPosts
+import Effects.Database.Tables.User qualified as User
 import Effects.MailSender (MonadEmail)
 import Hasql.Pool qualified as HSQL
 import Log qualified
@@ -61,6 +49,7 @@ import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Monad (MonadTracer)
 import Servant ((:<|>) (..))
 import Servant qualified
+import Servant.Links qualified as Links
 
 --------------------------------------------------------------------------------
 
@@ -99,6 +88,8 @@ type API =
     :<|> User.PasswordReset.Post.Route
     -- Protected Admin Routes
     :<|> Admin.Get.Route
+
+--------------------------------------------------------------------------------
 
 server ::
   ( MonadReader env m,
@@ -146,3 +137,83 @@ server env = do
     :<|> Delete.handler
     :<|> PasswordReset.Post.handler
     :<|> Admin.Get.handler
+
+--------------------------------------------------------------------------------
+
+rootGetLink :: Links.Link
+rootGetLink = Links.safeLink (Proxy @API) (Proxy @Get.Route)
+
+staticGetLink :: Links.Link
+staticGetLink = Links.safeLink (Proxy @API) (Proxy @Static.Get.Route)
+
+mailingListPostLink :: Links.Link
+mailingListPostLink = Links.safeLink (Proxy @API) (Proxy @MailingList.Post.Route)
+
+blogGetLink :: Links.Link
+blogGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Get.Route)
+
+blogIdGetLink :: BlogPosts.Id -> Links.Link
+blogIdGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Get.Route)
+
+blogIdEditGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
+blogIdEditGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Get.Route)
+
+blogIdEditPostLink :: BlogPosts.Id -> Links.Link
+blogIdEditPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Post.Route)
+
+blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
+blogIdPreviewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Preview.Get.Route)
+
+blogNewGetLink :: Links.Link
+blogNewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Get.Route)
+
+blogNewPostLink :: Links.Link
+blogNewPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Post.Route)
+
+blogNewEditGetLink :: Links.Link
+blogNewEditGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Edit.Get.Route)
+
+blogNewPreviewGetLink :: Maybe Text -> Links.Link
+blogNewPreviewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Preview.Get.Route)
+
+imagePostLink :: Links.Link
+imagePostLink = Links.safeLink (Proxy @API) (Proxy @Image.Post.Route)
+
+aboutGetLink :: Links.Link
+aboutGetLink = Links.safeLink (Proxy @API) (Proxy @About.Get.Route)
+
+userGetLink :: Links.Link
+userGetLink = Links.safeLink (Proxy @API) (Proxy @User.Get.Route)
+
+userIdGetLink :: User.Id -> Links.Link
+userIdGetLink = Links.safeLink (Proxy @API) (Proxy @User.Id.Get.Route)
+
+userRegisterGetLink :: Links.Link
+userRegisterGetLink = Links.safeLink (Proxy @API) (Proxy @User.Register.Get.Route)
+
+userRegisterPostLink :: Links.Link
+userRegisterPostLink = Links.safeLink (Proxy @API) (Proxy @User.Register.Post.Route)
+
+userLoginPostLink :: Maybe Text -> Links.Link
+userLoginPostLink = Links.safeLink (Proxy @API) (Proxy @User.Login.Post.Route)
+
+userLoginGetLink :: Maybe Text -> Links.Link
+userLoginGetLink = Links.safeLink (Proxy @API) (Proxy @User.Login.Get.Route)
+
+userCurrentGetLink :: Links.Link
+userCurrentGetLink = Links.safeLink (Proxy @API) (Proxy @User.Current.Get.Route)
+
+userLogoutGetLink :: Links.Link
+userLogoutGetLink = Links.safeLink (Proxy @API) (Proxy @User.Logout.Get.Route)
+
+userLogoutPostLink :: Links.Link
+userLogoutPostLink = Links.safeLink (Proxy @API) (Proxy @User.Logout.Post.Route)
+
+userDeleteLink :: User.Id -> Links.Link
+userDeleteLink = Links.safeLink (Proxy @API) (Proxy @User.Delete.Route)
+
+userPasswordResetPostLink :: User.Id -> Links.Link
+userPasswordResetPostLink = Links.safeLink (Proxy @API) (Proxy @User.PasswordReset.Post.Route)
+
+adminGetLink :: Links.Link
+adminGetLink = Links.safeLink (Proxy @API) (Proxy @Admin.Get.Route)

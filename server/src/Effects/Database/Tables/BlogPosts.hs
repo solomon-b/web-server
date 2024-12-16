@@ -33,6 +33,7 @@ newtype Id = Id Int64
       Ord,
       Num,
       Servant.FromHttpApiData,
+      Servant.ToHttpApiData,
       ToJSON,
       FromJSON,
       Display,

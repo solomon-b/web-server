@@ -4,6 +4,7 @@ module API.Get where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (mailingListPostLink)
 import App.Auth qualified as Auth
 import Component.Frame (loadFrameWithNav)
 import Control.Monad.Catch (MonadCatch)
@@ -20,6 +21,7 @@ import Log qualified
 import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
+import Servant.Links qualified as Link
 import Text.HTML (HTML, RawHtml (..), parseFragment, renderDocument)
 
 --------------------------------------------------------------------------------
@@ -27,6 +29,9 @@ import Text.HTML (HTML, RawHtml (..), parseFragment, renderDocument)
 type Route = Servant.Header "Cookie" Text :> Servant.Get '[HTML] RawHtml
 
 --------------------------------------------------------------------------------
+
+mailingListSignupUrl :: Link.URI
+mailingListSignupUrl = Link.linkURI mailingListPostLink
 
 template :: ByteString
 template =
@@ -41,7 +46,7 @@ template =
     </h3>
     <p class="mb-5 text-sm font-medium text-gray-500">Sign up for our mailing list hear about new features, components, versions, and tools.
     </p>
-    <form hx-post="mailing-list/signup" hx-swap="outerHTML">
+    <form hx-post="#{mailingListSignupUrl}" hx-swap="outerHTML">
       <div class="flex items-end mb-3">
         <div class="flex items-center w-full max-w-md mb-3">
           <div class="relative w-full mr-3">

@@ -4,6 +4,7 @@ module Component.NavBar where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (aboutGetLink, adminGetLink, blogGetLink, blogNewGetLink, rootGetLink, staticGetLink, userLoginGetLink, userLogoutPostLink, userRegisterGetLink)
 import App.Auth qualified as Auth
 import App.Errors (InternalServerError (InternalServerError), throwErr)
 import Control.Lens (preview, _Just)
@@ -15,15 +16,49 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Tables.User qualified as User
+import Servant.Links qualified as Link
 import Text.HTML (parseNode)
 import Text.XmlHtml.Optics (FocusedElement (..), _FocusedElement)
 
 --------------------------------------------------------------------------------
 -- Components
 
+rootGetUrl :: Link.URI
+rootGetUrl = Link.linkURI rootGetLink
+
+staticGetUrl :: Link.URI
+staticGetUrl = Link.linkURI staticGetLink
+
+adminGetUrl :: Link.URI
+adminGetUrl = Link.linkURI adminGetLink
+
+blogNewGetUrl :: Link.URI
+blogNewGetUrl = Link.linkURI blogNewGetLink
+
+userLoginGetUrl :: Maybe Text -> Link.URI
+userLoginGetUrl = Link.linkURI . userLoginGetLink
+
+userRegisterGetUrl :: Link.URI
+userRegisterGetUrl = Link.linkURI userRegisterGetLink
+
+userLogoutPostUrl :: Link.URI
+userLogoutPostUrl = Link.linkURI userLogoutPostLink
+
+blogGetUrl :: Link.URI
+blogGetUrl = Link.linkURI blogGetLink
+
+storeGetUrl :: Link.URI
+storeGetUrl = Link.linkURI rootGetLink
+
+aboutGetUrl :: Link.URI
+aboutGetUrl = Link.linkURI aboutGetLink
+
+contactGetUrl :: Link.URI
+contactGetUrl = Link.linkURI rootGetLink
+
 userDropdown :: User.Domain -> ByteString
 userDropdown User.Domain {dId, dDisplayName, dAvatarUrl} =
-  let avatar = fromMaybe "/static/avatar.png" dAvatarUrl
+  let avatar = fromMaybe "/#{staticGetUrl}/avatar.png" dAvatarUrl
    in [i|
                 <button id='adminUserButton' hx-get='/user/#{display dId}' hx-target='\#main' hx-push-url='true' data-dropdown-toggle='adminUserDropdown' data-dropdown-offset-distance='0' data-dropdown-trigger='hover' class='font-medium text-sm p-2.5 text-center inline-flex items-center' type='button'>
                   <img src='#{avatar}' class='size-4' />
@@ -40,7 +75,7 @@ userDropdown User.Domain {dId, dDisplayName, dAvatarUrl} =
                       </li>
                     </ul>
                     <div class='py-2 text-sm text-gray-700'>
-                        <button hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true" class='block px-4 py-2 hover:bg-gray-100'>Logout</button>
+                        <button hx-post="/#{userLogoutPostUrl}" hx-swap="innerHTML" hx-push-url="true" class='block px-4 py-2 hover:bg-gray-100'>Logout</button>
                     </div>
                 </div>
 |]
@@ -52,7 +87,7 @@ adminNavBar = \case
         [i|
 <div id='admin-nav' class='w-full flex flex-wrap justify-between items-center bg-red-400'>
   <div>
-    <button hx-get='/admin' hx-target='\#main' hx-push-url='true' class='font-medium text-sm p-2.5 text-center inline-flex items-center me-1'>
+    <button hx-get='/#{adminGetUrl}' hx-target='\#main' hx-push-url='true' class='font-medium text-sm p-2.5 text-center inline-flex items-center me-1'>
       <i class='fa-solid fa-gauge pe-2'></i>
       Dashboard
     </button>
@@ -64,7 +99,7 @@ adminNavBar = \case
     <div id='adminNewDropdown' class='z-10 hidden bg-white divide-y divide-gray-100'>
         <ul class='text-sm text-gray-700' aria-labelledby='adminNewButton'>
           <li>
-            <button hx-get='/blog/new' hx-target='\#main' hx-push-url='true' class='block px-4 py-2 hover:bg-gray-100'>Blog Post</button>
+            <button hx-get='/#{blogNewGetUrl}' hx-target='\#main' hx-push-url='true' class='block px-4 py-2 hover:bg-gray-100'>Blog Post</button>
           </li>
           <li>
             <button class='block px-4 py-2 hover:bg-gray-100'>Event</button>
@@ -82,13 +117,13 @@ adminNavBar = \case
 
 loginSignupButton :: ByteString
 loginSignupButton =
-  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-get="/user/login" hx-swap="innerHTML" hx-target="body" hx-push-url="true"> Login</button>
-<button class="text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center" hx-get="/user/register" hx-swap="innerHTML" hx-target="body" hx-push-url="true">Sign Up</button>
+  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-get="/#{userLoginGetUrl Nothing}" hx-swap="innerHTML" hx-target="body" hx-push-url="true"> Login</button>
+<button class="text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center" hx-get="/#{userRegisterGetUrl}" hx-swap="innerHTML" hx-target="body" hx-push-url="true">Sign Up</button>
 |]
 
 logoutButton :: ByteString
 logoutButton =
-  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-post="/user/logout" hx-swap="innerHTML" hx-push-url="true">Logout</button>
+  [i|<button class="py-2 text-gray-900 rounded hover:bg-transparent hover:text-green-700" hx-post="/#{userLogoutPostUrl}" hx-swap="innerHTML" hx-push-url="true">Logout</button>
 |]
 
 tabs :: Text -> ByteString
@@ -100,19 +135,19 @@ tabs tabId =
       unfocused = "text-gray-900 hover:text-green-700"
    in [i|<ul class='flex flex-row space-x-8 font-medium p-0 bg-white'>
        <li id='home-tab'>
-           <a href='/' class='#{bool unfocused focused (tabId == "home-tab")}'>Home</a>
+           <a href='/#{rootGetUrl}' class='#{bool unfocused focused (tabId == "home-tab")}'>Home</a>
        </li>
        <li id='blog-tab'>
-           <a href='/blog' class='#{bool unfocused focused (tabId == "blog-tab")}'>Blog</a>
+           <a href='/#{blogGetUrl}' class='#{bool unfocused focused (tabId == "blog-tab")}'>Blog</a>
        </li>
        <li id='store-tab'>
-           <a href='/store' class='#{bool unfocused focused (tabId == "store-tab")}'>Store</a>
+           <a href='/#{storeGetUrl}' class='#{bool unfocused focused (tabId == "store-tab")}'>Store</a>
        </li>
        <li id='about-tab'>
-           <a href='/about' class='#{bool unfocused focused (tabId == "about-tab")}'>About</a>
+           <a href='/#{aboutGetUrl}' class='#{bool unfocused focused (tabId == "about-tab")}'>About</a>
        </li>
        <li id='contact-tab'>
-           <a href='\#' class='#{bool unfocused focused (tabId == "contact-tab")}'>Contact</a>
+           <a href='/#{contactGetUrl}' class='#{bool unfocused focused (tabId == "contact-tab")}'>Contact</a>
        </li>
 </ul>
 |]
