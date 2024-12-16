@@ -24,7 +24,7 @@ library
     exposed-modules:  Config.Fetchers
     build-depends:    base ^>=4.18.2.1
                     , barbies
-                    , mtl
+                    , either
                     , text
                     , bytestring
     hs-source-dirs:   src

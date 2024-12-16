@@ -1,15 +1,22 @@
 {-# LANGUAGE TypeFamilies #-}
-
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 -- | Configuration fetching/parsing.
 module Config.Fetchers where
 
 --------------------------------------------------------------------------------
 
+import Barbies
+import Control.Applicative (Const (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
+import Data.Either.Validation
 import Data.Functor ((<&>))
-import Data.Functor.Barbie (TraversableB, bsequence)
 import Data.Functor.Compose (Compose (..))
+import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.String (IsString (..))
 import Data.Text (Text)
@@ -18,6 +25,7 @@ import System.Environment (lookupEnv)
 import Text.Read
 
 --------------------------------------------------------------------------------
+-- TODO: Case insensitive env lookup
 
 data Error = MissingEnvVar | ParseFailure
   deriving (Show, Eq)
@@ -118,11 +126,28 @@ class FetchHKD hkd where
   type Concrete hkd :: Type
 
   fromEnv :: hkd (IO `Compose` Either Error)
+  docs :: hkd (Const Text)
 
   -- fromArg :: hkd (IO `Compose` Either Error)
   -- fromFile :: hkd (IO `Compose` Either Error)
 
-  toConcrete :: hkd (IO `Compose` Either Error) -> IO (Either Error (Concrete hkd))
+  -- toConcrete :: hkd (IO `Compose` Either Error) -> IO (Either Error (Concrete hkd))
+
+  reify :: hkd Identity -> Concrete hkd
 
 fetchFromEnv :: (FetchHKD hkd, TraversableB hkd) => IO (hkd (Either Error))
 fetchFromEnv = bsequence fromEnv
+
+-- |
+--
+-- Thanks Chris: https://chrispenner.ca/posts/hkd-options#better-errors
+validateOptions ::
+  (TraversableB b, ApplicativeB b) =>
+  b (Const Text) ->
+  b (Either Error) ->
+  Validation [Text] (b Identity)
+validateOptions errMsgs mOpts = bsequence' $ bzipWith validate mOpts errMsgs
+  where
+    validate :: Either Error a -> Const Text a -> Validation [Text] a
+    validate (Right x) _ = Success x
+    validate (Left err) (Const doc) = Failure [Text.pack (show err) <> "\n" <> doc]
