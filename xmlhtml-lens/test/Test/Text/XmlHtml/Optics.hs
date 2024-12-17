@@ -5,17 +5,16 @@ module Test.Text.XmlHtml.Optics where
 --------------------------------------------------------------------------------
 
 import Control.Lens
-import Data.ByteString
-import Data.String.Interpolate (i)
 import Test.Hspec qualified as Hspec
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
+import Text.XmlHtml.QQ (html', node')
 
 --------------------------------------------------------------------------------
 
-template :: ByteString
+template :: Xml.Document
 template =
-  [i|<!DOCTYPE html>
+  [html'|<!DOCTYPE html>
   <html>
     <head>
     </head>
@@ -31,92 +30,70 @@ template =
             <li id='focused'>Two</li>
             <li>Three</li>
           </ul>
+          <ol class="ol-class">
+            <li>First</li>
+            <li>Second</li>
+            <li>Third</li>
+          </ol>
         </div>
       </div>
     </body>
-</html>|]
+</html>
+|]
 
 pageNode :: Xml.Node
 pageNode =
-  Xml.Element
-    { elementTag = "html",
-      elementAttrs = [],
-      elementChildren =
-        [ Xml.TextNode "\n    ",
-          Xml.Element
-            { elementTag = "head",
-              elementAttrs = [],
-              elementChildren = [Xml.TextNode "\n    "]
-            },
-          Xml.TextNode "\n    ",
-          bodyNode,
-          Xml.TextNode "\n"
-        ]
-    }
+  [node'|
+  <html>
+    <head>
+    </head>
+    <body>
+      <div id='main'>
+        <div class='foo'>hello</div>
+        <div class='bar'>
+          <div class='foo'>
+            world
+          </div>
+          <ul>
+            <li id='home-tab'>One</li>
+            <li id='focused'>Two</li>
+            <li>Three</li>
+          </ul>
+          <ol class="ol-class">
+            <li>First</li>
+            <li>Second</li>
+            <li>Third</li>
+          </ol>
+        </div>
+      </div>
+    </body>
+</html>
+|]
 
 bodyNode :: Xml.Node
 bodyNode =
-  Xml.Element
-    { elementTag = "body",
-      elementAttrs = [],
-      elementChildren =
-        [ Xml.TextNode "\n      ",
-          Xml.Element
-            { elementTag = "div",
-              elementAttrs = [("id", "main")],
-              elementChildren =
-                [ Xml.TextNode "\n        ",
-                  Xml.Element
-                    { elementTag = "div",
-                      elementAttrs = [("class", "foo")],
-                      elementChildren = [Xml.TextNode "hello"]
-                    },
-                  Xml.TextNode "\n        ",
-                  Xml.Element
-                    { elementTag = "div",
-                      elementAttrs = [("class", "bar")],
-                      elementChildren =
-                        [ Xml.TextNode "\n          ",
-                          Xml.Element
-                            { elementTag = "div",
-                              elementAttrs = [("class", "foo")],
-                              elementChildren = [Xml.TextNode "\n            world\n          "]
-                            },
-                          Xml.TextNode "\n          ",
-                          Xml.Element
-                            { elementTag = "ul",
-                              elementAttrs = [],
-                              elementChildren =
-                                [ Xml.TextNode "\n            ",
-                                  Xml.Element
-                                    { elementTag = "li",
-                                      elementAttrs = [("id", "home-tab")],
-                                      elementChildren = [Xml.TextNode "One"]
-                                    },
-                                  Xml.TextNode "\n            ",
-                                  Xml.Element
-                                    { elementTag = "li",
-                                      elementAttrs = [("id", "focused")],
-                                      elementChildren = [Xml.TextNode "Two"]
-                                    },
-                                  Xml.TextNode "\n            ",
-                                  Xml.Element
-                                    { elementTag = "li",
-                                      elementAttrs = [],
-                                      elementChildren = [Xml.TextNode "Three"]
-                                    },
-                                  Xml.TextNode "\n          "
-                                ]
-                            },
-                          Xml.TextNode "\n        "
-                        ]
-                    },
-                  Xml.TextNode "\n      "
-                ]
-            },
-          Xml.TextNode "\n    "
-        ]
-    }
+  [node'|
+    <body>
+      <div id='main'>
+        <div class='foo'>hello</div>
+        <div class='bar'>
+          <div class='foo'>
+            world
+          </div>
+          <ul>
+            <li id='home-tab'>One</li>
+            <li id='focused'>Two</li>
+            <li>Three</li>
+          </ul>
+          <ol class="ol-class">
+            <li>First</li>
+            <li>Second</li>
+            <li>Third</li>
+          </ol>
+        </div>
+      </div>
+    </body>
+|]
 
 --------------------------------------------------------------------------------
 
@@ -124,80 +101,83 @@ spec :: Hspec.Spec
 spec = do
   Hspec.describe "_docContent" $ do
     Hspec.it "preview" $ do
-      let page = eitherToMaybe $ Xml.parseHTML "index.html" template
-          page' = preview (_Just . _docContent) page
-      page' `Hspec.shouldBe` Just [pageNode]
+      let page = view _docContent template
+      page `Hspec.shouldBe` [pageNode]
 
   Hspec.describe "_docContent'" $ do
     Hspec.it "preview" $ do
-      let page = eitherToMaybe $ Xml.parseHTML "index.html" template
-          page' = preview (_Just . _docContent') page
-      page' `Hspec.shouldBe` Just pageNode
+      let page = preview _docContent' template
+      page `Hspec.shouldBe` Just pageNode
 
   Hspec.describe "_el" $ do
     Hspec.it "preview" $ do
-      let page = eitherToMaybe $ Xml.parseHTML "index.html" template
-          page' = preview (_Just . _docContent' . _el "body") page
-      page' `Hspec.shouldBe` preview _FocusedElement bodyNode
+      let page = preview (_docContent' . _el "body") template
+      page `Hspec.shouldBe` preview _FocusedElement bodyNode
 
+  Hspec.describe "_el" $ do
+    Hspec.it "preview" $ do
+      let page = preview (_docContent' . _el "ol") template
+          expected =
+            [node'|
+          <ol class="ol-class">
+            <li>First</li>
+            <li>Second</li>
+            <li>Third</li>
+          </ol>|]
+              & preview _FocusedElement
+      page `Hspec.shouldBe` expected
+
+  Hspec.describe "preview _elAttributes" $ do
+    Hspec.it "preview" $ do
+      let page = preview (_docContent' . _el "ol" . _elAttributes) template
+          expected = [("class", "ol-class")]
+      page `Hspec.shouldBe` Just expected
+
+  Hspec.describe "set _elAttributes" $ do
+    Hspec.it "preview" $ do
+      let page = template & set (_docContent' . _el "ol" . _elAttributes) [("class", "new-ol-class")]
+          expected = Just [("class", "new-ol-class")]
+      preview (_docContent' . _el "ol" . _elAttributes) page `Hspec.shouldBe` expected
+
+  Hspec.describe "over ol class" $ do
+    Hspec.it "preview" $ do
+      let page = template & over (_docContent' . _el "ol" . _elAttributes . traversed . filtered (\(k, _) -> k == "class") . _2) (<> " new-ol-class")
+          expected = Just [("class", "ol-class new-ol-class")]
+      preview (_docContent' . _el "ol" . _elAttributes) page `Hspec.shouldBe` expected
+
+  -- let pageFragment' = pageFragment & over (traversed . _el "ol" . _elAttributes . traversed . filtered (\(k, _) -> k == "class") . _2) (<> "max-w-md space-y-1 text-gray-500 list-decimal list-inside ")
   Hspec.describe "_attr" $ do
     Hspec.it "preview" $ do
-      let page = eitherToMaybe $ Xml.parseHTML "index.html" template
-          page' = preview (_Just . _docContent' . _attr ("id", "home-tab")) page
+      let page = preview (_docContent' . _attr ("id", "home-tab")) template
           expected = FocusedElement {elTag = "li", elAttributes = [("id", "home-tab")], elChildren = [Xml.TextNode "One"]}
-      page' `Hspec.shouldBe` Just expected
+      page `Hspec.shouldBe` Just expected
 
   Hspec.describe "_attr'" $ do
     Hspec.it "preview" $ do
-      let page = eitherToMaybe $ Xml.parseHTML "index.html" template
-          page' = preview (_Just . _docContent' . _FocusedElement . _attr' ("id", "home-tab")) page
+      let page = preview (_docContent' . _FocusedElement . _attr' ("id", "home-tab")) template
           expected = FocusedElement {elTag = "li", elAttributes = [("id", "home-tab")], elChildren = [Xml.TextNode "One"]}
-      page' `Hspec.shouldBe` Just expected
+      page `Hspec.shouldBe` Just expected
 
   Hspec.describe "path'" $ do
     Hspec.it "preview" $ do
-      let page = eitherToMaybe $ Xml.parseHTML "index.html" template
-          page' = preview (_Just . _docContent' . path ["html", "body", "div"]) page
+      let page = preview (_docContent' . path ["html", "body", "div"]) template
           expected = FocusedElement {elTag = "div", elAttributes = [("class", "foo")], elChildren = [Xml.TextNode "hello"]}
-      page' `Hspec.shouldBe` Just expected
+      page `Hspec.shouldBe` Just expected
 
   Hspec.describe "swapInner" $ do
     Hspec.it "preview" $ do
-      let page = eitherToMaybe $ Xml.parseHTML "index.html" template
-          page' = swapInner (_id "main") [Xml.TextNode "hello"] <$> page
+      let page = swapInner (_id "main") [Xml.TextNode "hello"] template
           expected =
-            Xml.HtmlDocument
-              Xml.UTF8
-              (Just (Xml.DocType "html" Xml.NoExternalID Xml.NoInternalSubset))
-              [ Xml.Element
-                  { elementTag = "html",
-                    elementAttrs = [],
-                    elementChildren =
-                      [ Xml.TextNode "\n    ",
-                        Xml.Element
-                          { elementTag = "head",
-                            elementAttrs = [],
-                            elementChildren = [Xml.TextNode "\n    "]
-                          },
-                        Xml.TextNode "\n    ",
-                        Xml.Element
-                          { elementTag = "body",
-                            elementAttrs = [],
-                            elementChildren =
-                              [ Xml.TextNode "\n      ",
-                                Xml.Element
-                                  { elementTag = "div",
-                                    elementAttrs = [("id", "main")],
-                                    elementChildren = [Xml.TextNode "hello"]
-                                  },
-                                Xml.TextNode "\n    "
-                              ]
-                          },
-                        Xml.TextNode "\n"
-                      ]
-                  }
-              ]
-      page' `Hspec.shouldBe` Just expected
+            [html'|<!DOCTYPE html>
+<html>
+    <head>
+    </head>
+    <body>
+      <div id='main'>hello</div>
+    </body>
+</html>
+|]
+      page `Hspec.shouldBe` expected
 
 eitherToMaybe :: Either a b -> Maybe b
 eitherToMaybe = either (const Nothing) Just

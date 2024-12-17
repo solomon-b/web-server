@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -66,10 +68,11 @@ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 -}
-module Text.XmlHtml.QQ (html, html') where
+module Text.XmlHtml.QQ (html, html', node') where
 
 --------------------------------------------------------------------------------
 
+import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as Char8
 import Instances.TH.Lift ()
 import Language.Haskell.Meta.Parse
@@ -78,7 +81,7 @@ import Language.Haskell.TH qualified as TH
 import Language.Haskell.TH.Lift (deriveLiftMany)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax qualified as TH.Syntax
-import Text.XmlHtml (AttrResolveInternalQuotes, AttrSurround, DocType, Document, Encoding, ExternalID, InternalSubset, Node, RenderOptions)
+import Text.XmlHtml (AttrResolveInternalQuotes, AttrSurround, DocType, Document (..), Encoding, ExternalID, InternalSubset, Node, RenderOptions)
 import Text.XmlHtml qualified as Xml
 
 --------------------------------------------------------------------------------
@@ -180,14 +183,32 @@ rstrExp s = makeExpr $ parseStr [] $ filter (/= '\r') s
 html :: QuasiQuoter
 html =
   createExpQuasiQuoter $ \string ->
-    TH.appE [|Xml.parseHTML "index.html" . Char8.pack|] $ rstrExp string
+    TH.appE [|Xml.parseHTML "index.html" . Char8.strip . Char8.pack|] $ rstrExp string
 
 -- | Parses HTML 'Document' terms. Does not allow for interpolation.
 html' :: QuasiQuoter
 html' =
   createExpQuasiQuoter $ \string ->
-    let eitherDoc = Xml.parseHTML "index.html" $ Char8.pack string
+    let eitherDoc = Xml.parseHTML "index.html" $ Char8.strip $ Char8.pack string
      in either
           (handleParseDocErr "XML" "Text.XML.parseText" string)
           TH.Syntax.lift
           eitherDoc
+
+-- | Parses a single 'Xml.Node' from a 'BS.ByteString'.
+parseNode :: BS.ByteString -> Either String Xml.Node
+parseNode bs =
+  Xml.parseHTML "index.html" (Char8.strip bs) >>= \case
+    Xml.XmlDocument {} -> Left "Didn't parse as HTML"
+    Xml.HtmlDocument {docContent} | length docContent == 1 -> Right $ head docContent
+    Xml.HtmlDocument {docContent} -> Left $ "Too many nodes in: " <> show docContent
+
+-- | Parses an HTML 'Node'. Does not allow for interpolation.
+node' :: QuasiQuoter
+node' =
+  createExpQuasiQuoter $ \string ->
+    let eitherNode = parseNode $ Char8.pack string
+     in either
+          error -- (handleParseDocErr "XML" "Text.XML.parseText" string)
+          TH.Syntax.lift
+          eitherNode
