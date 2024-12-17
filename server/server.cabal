@@ -88,6 +88,8 @@ library
                   , mime-mail
                   , network
                   , network-ip
+                  , pandoc
+                  , pandoc-types
                   , password
                   , servant
                   , servant-multipart
