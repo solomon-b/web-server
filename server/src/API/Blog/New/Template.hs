@@ -8,6 +8,7 @@ import Data.ByteString (ByteString)
 import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Utils (escapeString)
 
 --------------------------------------------------------------------------------
 
@@ -324,7 +325,7 @@ contentFieldPreview content =
         </div>
 
         <div class='p-2 border-x rounded-t-lg border-gray-300 text-gray-900 bg-white'>
-          <button role='tab' hx-get="/blog/new/preview" hx-swap="innerHTML" hx-target="\#content-field" hx-include='{"content": "#{fromMaybe emptyPreview content}"}'>
+          <button role='tab' hx-get="/blog/new/preview" hx-swap="innerHTML" hx-target="\#content-field" hx-include='{"content": "#{escapeString $ fromMaybe emptyPreview content}"}'>
             Preview
           </button>
         </div>
