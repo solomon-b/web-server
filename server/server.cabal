@@ -88,6 +88,7 @@ library
                   , mime-mail
                   , network
                   , network-ip
+                  , network-uri
                   , pandoc
                   , pandoc-types
                   , password
