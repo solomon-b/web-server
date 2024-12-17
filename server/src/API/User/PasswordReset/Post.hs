@@ -44,6 +44,7 @@ data PasswordResetError = PasswordResetFailed
 
 instance ToServerError PasswordResetError where
   toServerError PasswordResetFailed = Servant.err400 {Servant.errBody = toErrorBody "Password Reset Failed" 400}
+  toServerLog PasswordResetFailed = ("Password Reset Failed", Nothing)
 
 --------------------------------------------------------------------------------
 

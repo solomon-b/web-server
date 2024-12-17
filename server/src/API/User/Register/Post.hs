@@ -77,6 +77,8 @@ instance ToServerError RegisterError where
   toServerError :: RegisterError -> Servant.ServerError
   toServerError AlreadyRegistered = Servant.err401 {Servant.errBody = "Email address is already registered"}
 
+  toServerLog AlreadyRegistered = ("Already Registered", Nothing)
+
 --------------------------------------------------------------------------------
 
 handler ::

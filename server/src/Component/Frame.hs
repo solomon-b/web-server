@@ -12,6 +12,7 @@ import Data.ByteString (ByteString)
 import Data.Functor ((<&>))
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Log qualified
 import Text.HTML (parseDocument')
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
@@ -50,10 +51,10 @@ template =
 
 --------------------------------------------------------------------------------
 
-loadFrame :: (MonadThrow m) => [Xml.Node] -> m Xml.Document
+loadFrame :: (Log.MonadLog m, MonadThrow m) => [Xml.Node] -> m Xml.Document
 loadFrame tab = parseDocument' template <&> swapInner _main tab
 
-loadFrameWithNav :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> Text -> [Xml.Node] -> m Xml.Document
+loadFrameWithNav :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Auth.LoggedIn -> Text -> [Xml.Node] -> m Xml.Document
 loadFrameWithNav loginState tabId tab = do
   frame' <- parseDocument' template <&> swapInner _main tab
   navBar' <- loadNavBar loginState tabId

@@ -159,7 +159,7 @@ handler (Auth.Authz user@User.Domain {..} _) hxTrigger = do
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "db-tables" . _elChildren) x)
 
-renderUnauthorized :: (MonadIO m, MonadThrow m) => Auth.LoggedIn -> m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+renderUnauthorized :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Auth.LoggedIn -> m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 renderUnauthorized loginState = do
   pageFragment <- parseFragment unauthorized
   page <- loadFrameWithNav loginState "about-tab" pageFragment

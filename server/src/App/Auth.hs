@@ -9,6 +9,7 @@ import App.Errors (InternalServerError (..), ToServerError (..), throwErr, toErr
 import Control.Error (note)
 import Control.Monad ((>=>))
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.Aeson qualified as Aeson
 import Data.Foldable (fold)
 import Data.Functor ((<&>))
 import Data.IP (IP (..), IPRange (..), fromSockAddr, makeAddrRange)
@@ -25,6 +26,7 @@ import Hasql.Interpolate (getOneRow)
 import Hasql.Pool qualified as HSQL
 import Hasql.Session qualified as HSQL
 import Log qualified
+import Log.Backend.StandardOutput qualified as Log
 import Network.Socket (SockAddr)
 import Network.Wai (Request (..))
 import Servant qualified
@@ -52,6 +54,10 @@ instance ToServerError AuthErr where
     MissingCookieHeader -> Servant.err307 {Servant.errBody = toErrorBody "No cookie sent in request" 307, Servant.errHeaders = [("Location", "/user/login")]}
     MissingCookieValue -> Servant.err307 {Servant.errBody = toErrorBody "Invalid cookie" 307, Servant.errHeaders = [("Location", "/user/login")]}
     MalformedSessionId -> Servant.err307 {Servant.errBody = toErrorBody "Bad session data" 307, Servant.errHeaders = [("Location", "/user/login")]}
+  toServerLog = \case
+    MissingCookieHeader -> ("Missing Cookie Header", Just (Aeson.object [("details", "No cookie sent in request")]))
+    MissingCookieValue -> ("Missing Cookie Value", Just (Aeson.object [("details", "Invalid cookie")]))
+    MalformedSessionId -> ("Malformed Session Id", Just (Aeson.object [("details", "Bad session data")]))
 
 authHandler :: HSQL.Pool -> Servant.AuthHandler Request Authz
 authHandler pool = mkAuthHandler $ \req ->
@@ -68,8 +74,8 @@ authHandler pool = mkAuthHandler $ \req ->
           Right sessionId ->
             liftIO (HSQL.use pool (HSQL.statement () $ Session.getSessionUser sessionId)) >>= \case
               Left err -> do
-                -- TODO: Log censored error here?
-                throwErr $ InternalServerError $ Text.pack $ show err
+                -- TODO: This is awful:
+                liftIO $ Log.withJsonStdOutLogger $ \stdOutLogger -> Log.runLogT "webserver-backend" stdOutLogger Log.LogAttention $ throwErr $ InternalServerError $ Text.pack $ show err
               Right Nothing ->
                 Servant.throwError $ Servant.err307 {Servant.errHeaders = [("Location", redirect)]}
               Right (Just (userModel, sessionModel)) ->

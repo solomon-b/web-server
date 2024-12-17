@@ -16,6 +16,7 @@ import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Tables.User qualified as User
+import Log qualified
 import Servant.Links qualified as Link
 import Text.HTML (parseNode)
 import Text.XmlHtml.Optics (FocusedElement (..), _FocusedElement)
@@ -187,7 +188,7 @@ navbar loginState tabId =
 --------------------------------------------------------------------------------
 
 loadNavBar ::
-  (MonadThrow m) =>
+  (Log.MonadLog m, MonadThrow m) =>
   Auth.LoggedIn ->
   Text ->
   m FocusedElement

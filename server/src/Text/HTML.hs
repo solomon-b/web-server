@@ -12,6 +12,7 @@ import Data.ByteString.Lazy as Lazy hiding (foldr)
 import Data.Text qualified as Text
 import Data.Text.Display (Display (..))
 import Data.Text.Lazy.Encoding qualified as TE
+import Log qualified
 import Network.HTTP.Media ((//), (/:))
 import Servant
 import Text.XmlHtml qualified as Xml
@@ -62,7 +63,7 @@ renderNode =
 
 -- | Parses an HTML 'Xml.Document' from a 'BS.ByteString' or throws an
 -- @InternalServerError@ in some Monadic context.
-parseDocument' :: (MonadThrow m) => BS.ByteString -> m Xml.Document
+parseDocument' :: (Log.MonadLog m, MonadThrow m) => BS.ByteString -> m Xml.Document
 parseDocument' = either (throwErr . InternalServerError . Text.pack) pure . Xml.parseHTML "index.html"
 
 -- | Parses an HTML 'Xml.Document' from a 'BS.ByteString' or returns a
@@ -75,16 +76,16 @@ parseNode :: BS.ByteString -> Maybe Xml.Node
 parseNode bs = parseDocument bs >>= preview Xml.Optics._docContent'
 
 -- | Parses a list of 'Xml.Node' from a 'BS.ByteString'.
-parseFragment :: (MonadThrow m) => BS.ByteString -> m [Xml.Node]
+parseFragment :: (Log.MonadLog m, MonadThrow m) => BS.ByteString -> m [Xml.Node]
 parseFragment bs = view Xml.Optics._docContent <$> parseDocument' bs
 
 --------------------------------------------------------------------------------
 
 -- | Parse an HTML5 document
-readDocument :: (MonadIO m, MonadThrow m) => FilePath -> m Xml.Document
+readDocument :: (MonadIO m, Log.MonadLog m, MonadThrow m) => FilePath -> m Xml.Document
 readDocument fp =
   liftIO (BS.readFile fp) >>= parseDocument'
 
 -- | Parse an HTML5 document from disk
-readNodes :: (MonadIO m, MonadThrow m) => FilePath -> m [Xml.Node]
+readNodes :: (MonadIO m, Log.MonadLog m, MonadThrow m) => FilePath -> m [Xml.Node]
 readNodes path = view Xml.Optics._docContent <$> readDocument path
