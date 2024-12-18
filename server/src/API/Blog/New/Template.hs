@@ -90,31 +90,19 @@ headingButton =
 boldButton :: ByteString
 boldButton =
   let onClick :: Text
-      onClick =
-        [i|x-on:click="contentModel += '****';
-$nextTick(() => {
-  $refs.contentRef.focus();
-  const pos = $refs.contentRef.value.length - 2;
-  $refs.contentRef.setSelectionRange(pos, pos);
-})"|]
+      onClick = [i|x-on:click="surroundFocus($refs.contentRef, '**')"|]
    in [i|<i #{onClick} title='Bold' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-bold'></i>|]
 
 italicButton :: ByteString
 italicButton =
   let onClick :: Text
-      onClick =
-        [i|x-on:click="contentModel += '__';
-$nextTick(() => {
-  $refs.contentRef.focus();
-  const pos = $refs.contentRef.value.length - 1;
-  $refs.contentRef.setSelectionRange(pos, pos);
-})"|]
+      onClick = [i|x-on:click="surroundFocus($refs.contentRef, '_')"|]
    in [i|<i #{onClick} title='Italic' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-italic'></i>|]
 
 quoteButton :: ByteString
 quoteButton =
   let onClick :: Text
-      onClick = [i|x-on:click="contentModel += '> '; $refs.contentRef.focus(); const pos = $refs.contentRef.value.length - 2; $refs.contentRef.setSelectionRange(pos, pos);"|]
+      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '> ')"|]
    in [i|<i #{onClick} title='Quote' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-quote-left'></i>|]
 
 codeButton :: ByteString
@@ -160,33 +148,13 @@ contentModel =
 unorderedListButton :: ByteString
 unorderedListButton =
   let onClick :: Text
-      onClick =
-        [i|x-on:click="
-$refs.contentRef.focus();
-const currentPos = $refs.contentRef.selectionStart;
-const contentBeforeCursor = $refs.contentRef.value.substring(0, currentPos);
-const rowStart = contentBeforeCursor.lastIndexOf('\\n') + 1;
-contentModel = 
-    $refs.contentRef.value.substring(0, rowStart) +
-    '- ' +
-    $refs.contentRef.value.substring(rowStart);
-"|]
+      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '- ')"|]
    in [i|<i #{onClick} title='Unordered List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list'></i>|]
 
 taskListButton :: ByteString
 taskListButton =
   let onClick :: Text
-      onClick =
-        [i|x-on:click="
-$refs.contentRef.focus();
-const currentPos = $refs.contentRef.selectionStart;
-const contentBeforeCursor = $refs.contentRef.value.substring(0, currentPos);
-const rowStart = contentBeforeCursor.lastIndexOf('\\n') + 1;
-contentModel = 
-    $refs.contentRef.value.substring(0, rowStart) +
-    '- [ ] ' +
-    $refs.contentRef.value.substring(rowStart);
-"|]
+      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '- [ ] ')"|]
    in [i|<i #{onClick} title='Task List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-check'></i>|]
 
 --------------------------------------------------------------------------------
@@ -208,7 +176,7 @@ contentFieldFooter =
     </a>
   </div>
   <i class='border-l border-t-0 border-gray-300 my-2'></i>
-  <div class="p-1" x-data="fileUpload">
+  <div class="p-1">
     <button type='button' @click="selectAndUpload">
       <span class="flex p-2 rounded-lg hover:bg-gray-200">
         <span class="px-1">
@@ -222,9 +190,50 @@ contentFieldFooter =
     <input type="file" x-ref="fileInput" @change="uploadFile" style="display: none;">
   </div>
 </div>
+|]
+
+--------------------------------------------------------------------------------
+
+contentFieldEdit :: ByteString
+contentFieldEdit =
+  [i|
+<label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
+<div class='flex flex-col border border-gray-300 rounded-lg' x-data="handler">
+    <div class='flex mb-2'>
+        <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
+          <button href='\#' role='tab' hx-get='/blog/new/edit' hx-swap='innerHTML' hx-target='\#content-field' @click="console.log(contentModel)">
+            Write
+          </button>
+        </div>
+
+        <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
+          <button href='\#' role='tab' hx-get='/blog/new/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
+            Preview
+          </button>
+        </div>
+
+        <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500 grow flex justify-end'>
+            #{headingButton}
+            #{boldButton}
+            #{italicButton}
+            <i class='border-l border-t-0 border-gray-300'></i>
+            #{quoteButton}
+            #{codeButton}
+            #{urlButton}
+            <i class='border-l border-t-0 border-gray-300'></i>
+            #{numberedListButton}
+            #{unorderedListButton}
+            #{taskListButton}
+        </div>
+    </div>
+    <div class='m-2 min-h-60'>
+        <textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500'></textarea>
+    </div>
+    #{contentFieldFooter}
+</div>
 
 <script>
-  function fileUpload() {
+  function handler() {
     return {
       file: null,
       fileName: '',
@@ -263,50 +272,133 @@ contentFieldFooter =
           console.log(`Error: ${error.message}`);
         }
       },
+      togglePrefix(textarea, prefix) {
+        textarea.focus();
+
+        if (!prefix) {
+          throw new Error('The "prefix" parameter is required.');
+        }
+
+        const expandSelectionToFullLines = (content, startPos, endPos) => {
+          while (startPos > 0 && content[startPos - 1] !== '\\n') {
+            startPos--;
+          }
+          while (endPos < content.length && content[endPos] !== '\\n') {
+            endPos++;
+          }
+          return [startPos, endPos];
+        };
+
+        const processLines = (lines, prefix) => {
+          const allLinesPrefixed = lines.every(line => line.startsWith(prefix));
+          return allLinesPrefixed
+            ? lines.map(line => line.startsWith(prefix) ? line.substring(prefix.length) : line) // Remove prefix
+            : lines.map(line => (line.startsWith(prefix) ? line : prefix + line)); // Add prefix
+        };
+
+        const reassembleContent = (content, startPos, endPos, updatedLines) => {
+          const beforeSelection = content.substring(0, startPos);
+          const afterSelection = content.substring(endPos);
+          return beforeSelection + updatedLines.join('\\n') + afterSelection;
+        };
+
+        const updateTextarea = (textarea, newContent, selectionStart, selectionEnd) => {
+          textarea.setSelectionRange(0, textarea.value.length); // Select all
+          document.execCommand('insertText', false, newContent); // Update with undo support
+          textarea.setSelectionRange(selectionStart, selectionEnd); // Restore selection
+        };
+
+        const content = textarea.value;
+        let [startPos, endPos] = expandSelectionToFullLines(content, textarea.selectionStart, textarea.selectionEnd);
+        const selection = content.substring(startPos, endPos);
+
+        const lines = selection.split('\\n');
+        const updatedLines = processLines(lines, prefix);
+        const updatedContent = reassembleContent(content, startPos, endPos, updatedLines);
+
+        const adjustedStartPos = startPos;
+        const adjustedEndPos = startPos + updatedLines.join('\\n').length;
+
+        updateTextarea(textarea, updatedContent, adjustedStartPos, adjustedEndPos);
+      },
+      surroundFocus(textarea, wrapper) {
+        textarea.focus();
+      
+        // Split text into a Zipper.
+        const splitText = (text, start, end) => ({
+          before: text.slice(0, start),
+          selection: text.slice(start, end),
+          after: text.slice(end),
+        });
+      
+        const isWrapped = (text, wrapper) =>
+          text.startsWith(wrapper) && text.endsWith(wrapper);
+      
+        const escapeRegex = (text) => text.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&');
+      
+        // Remove any `**` inside the selection but keep the inner content
+        const cleanInnerWrappers = (text, wrapper) => {
+          const escapedWrapper = escapeRegex(wrapper);
+          const regex = new RegExp(`${escapedWrapper}(.*?)${escapedWrapper}`, 'g');
+          return text.replace(regex, '$1'); 
+        };
+      
+        // Replace the content of a textarea respecting undo history.
+        const insertText = (textarea, newValue) => {
+          textarea.setSelectionRange(0, textarea.value.length);
+          document.execCommand('insertText', false, newValue);
+        };
+      
+        // Constants
+        const { selectionStart: start, selectionEnd: end } = textarea;
+        const { before, selection, after } = splitText(
+          textarea.value,
+          start,
+          end
+        );
+      
+        const isSelected = start !== end;
+      
+        // Determine the updated text and cursor/selection range
+        let updatedValue, newStart, newEnd;
+      
+        if (isSelected) {
+          if (isWrapped(selection, wrapper)) {
+            // Remove wrapping if fully wrapped
+            const unwrapped = selection.slice(wrapper.length, -wrapper.length);
+            updatedValue = before + unwrapped + after;
+            newStart = start;
+            newEnd = start + unwrapped.length;
+          } else {
+            // Clean inner wrappers and wrap the selection
+            const cleaned = cleanInnerWrappers(selection, wrapper);
+            const wrapped = `${wrapper}${cleaned}${wrapper}`;
+            updatedValue = before + wrapped + after;
+            newStart = start;
+            newEnd = start + wrapped.length;
+          }
+        } else {
+          const hasOuterWrappers =
+            isWrapped(before.slice(-wrapper.length) + after.slice(0, wrapper.length), wrapper);
+      
+          if (hasOuterWrappers) {
+            // Remove outer wrappers
+            updatedValue = before.slice(0, -wrapper.length) + after.slice(wrapper.length);
+            newStart = newEnd = start - wrapper.length;
+          } else {
+            // Insert `${wrapper}${wrapper}` at the cursor and position the cursor between them
+            updatedValue = before + wrapper + wrapper + after;
+            newStart = newEnd = start + wrapper.length;
+          }
+        }
+      
+        // Update the textarea and adjust the selection
+        insertText(textarea, updatedValue);
+        textarea.setSelectionRange(newStart, newEnd);
+      }
     };
-  } 
+  }
 </script>
-|]
-
---------------------------------------------------------------------------------
-
-contentFieldEdit :: ByteString
-contentFieldEdit =
-  [i|
-<label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
-<div class='flex flex-col border border-gray-300 rounded-lg'>
-    <div class='flex mb-2'>
-        <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
-          <button href='\#' role='tab' hx-get='/blog/new/edit' hx-swap='innerHTML' hx-target='\#content-field' @click="console.log(contentModel)">
-            Write
-          </button>
-        </div>
-
-        <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-          <button href='\#' role='tab' hx-get='/blog/new/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
-            Preview
-          </button>
-        </div>
-
-        <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500 grow flex justify-end'>
-            #{headingButton}
-            #{boldButton}
-            #{italicButton}
-            <i class='border-l border-t-0 border-gray-300'></i>
-            #{quoteButton}
-            #{codeButton}
-            #{urlButton}
-            <i class='border-l border-t-0 border-gray-300'></i>
-            #{numberedListButton}
-            #{unorderedListButton}
-            #{taskListButton}
-        </div>
-    </div>
-    <div class='m-2 min-h-60'>
-        <textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500'></textarea>
-    </div>
-    #{contentFieldFooter}
-</div>
 |]
 
 emptyPreview :: Text
