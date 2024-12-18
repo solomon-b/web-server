@@ -61,20 +61,28 @@ handler (Auth.Authz User.Domain {..} _) content = do
 parseMarkdown :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Text -> m Text
 parseMarkdown md = do
   Log.logTrace "Pandoc Markdown Input" md
-  html <- handleMarkdownError =<< (liftIO . runIO $ (readMarkdown def md >>= writeHtml5String def))
+  pandocResult <- liftIO . runIO $ do
+    let readerConfig = def { readerExtensions = extensionsFromList [Ext_fenced_code_blocks, Ext_hard_line_breaks] }
+        writerConfig = def { writerExtensions =  extensionsFromList [Ext_fenced_code_blocks, Ext_hard_line_breaks] }
+    pandocAst <- readMarkdown readerConfig md
+    result <- writeHtml5String writerConfig pandocAst
+    pure (pandocAst, result)
+  (ast, html) <- handleMarkdownError pandocResult
+  Log.logTrace "Pandoc AST" ast
   Log.logTrace "Pandoc HTML Output" html
   pure html
 
-handleMarkdownError :: (Log.MonadLog m, MonadThrow m) => Either PandocError Text -> m Text
+handleMarkdownError :: (Log.MonadLog m, MonadThrow m) => Either PandocError (Pandoc, Text) -> m (Pandoc, Text)
 handleMarkdownError = \case
   Left err -> do
     let err' = Text.pack $ show err
     throwErr $ InternalServerError err'
-  Right html -> pure html
+  Right (ast, html) -> pure (ast, html)
 
 applyStyle :: [Xml.Node] -> [Xml.Node]
 applyStyle nodes =
   nodes
+    & set (traversed . _el "p" . _elAttributes) [("class", "my-3")]
     & set (traversed . _el "ol" . _elAttributes) [("class", "max-w-md space-y-1 text-gray-900 list-decimal list-inside")]
     & set (traversed . _el "ul" . _elAttributes) [("class", "max-w-md space-y-1 text-gray-900 list-disc list-inside")]
     & set (traversed . _el "h1" . _elAttributes) [("class", "text-5xl font-extrabold")]
@@ -85,4 +93,3 @@ applyStyle nodes =
     & set (traversed . _el "h6" . _elAttributes) [("class", "text-lg font-extrabold")]
     & set (traversed . _el "blockquote" . _elAttributes) [("class", "text-xl italic font-semibold text-gray-900")]
     & set (traversed . _el "code" . _elAttributes) [("class", "font-mono rounded-md p-0.5 bg-gray-200")]
-    & set (traversed . _el "p" . _elAttributes) [("class", "my-2")]
