@@ -88,6 +88,14 @@ _elChildren = lens get setter
 _elChildren' :: Traversal' FocusedElement Node
 _elChildren' = _elChildren . traversed
 
+_Node :: Lens' FocusedElement Node
+_Node = lens getter setter
+  where
+    getter FocusedElement {..} = Element elTag elAttributes elChildren
+    setter focusedElement = \case
+      Element elTag elAttrs elChildren -> FocusedElement elTag elAttrs elChildren
+      _ -> focusedElement
+
 --------------------------------------------------------------------------------
 -- DocType
 

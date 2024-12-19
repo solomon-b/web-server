@@ -259,8 +259,10 @@ contentFieldEdit =
 
           if (response.ok) {
             const {url} = await response.json();
-
-            this.contentModel += `![${this.fileName}](${url})\n`
+            const urlWithScheme = url.startsWith("http") ? url : "http://" + url
+            const {pathname} = new URL(urlWithScheme);
+            
+            this.contentModel += `![${this.fileName}](${pathname})\n`
             this.$refs.contentRef.focus();
             this.$nextTick(() => {
               this.$refs.contentRef.focus();
@@ -279,26 +281,30 @@ contentFieldEdit =
           throw new Error('The "prefix" parameter is required.');
         }
 
-        const expandSelectionToFullLines = (content, startPos, endPos) => {
-          while (startPos > 0 && content[startPos - 1] !== '\\n') {
-            startPos--;
+        const expandSelectionToFullLines = (content, selectionStart, selectionEnd) => {
+          while (selectionStart > 0 && content[selectionStart - 1] !== '\\n') {
+            selectionStart--;
           }
-          while (endPos < content.length && content[endPos] !== '\\n') {
+          while (selectionEnd < content.length && content[selectionEnd] !== '\\n') {
             endPos++;
           }
-          return [startPos, endPos];
+          return {selectionStart, selectionEnd};
         };
 
         const processLines = (lines, prefix) => {
           const allLinesPrefixed = lines.every(line => line.startsWith(prefix));
-          return allLinesPrefixed
-            ? lines.map(line => line.startsWith(prefix) ? line.substring(prefix.length) : line) // Remove prefix
-            : lines.map(line => (line.startsWith(prefix) ? line : prefix + line)); // Add prefix
+          if (allLinesPrefixed) {
+            const removePrefix = (xs) => xs.map(line => line.startsWith(prefix) ? line.substring(prefix.length) : line);
+            return  removePrefix(lines);
+          } else {
+            const addPrefix = (xs) => xs.map(line => (line.startsWith(prefix) ? line : prefix + line)); 
+            return addPrefix(lines)
+          }
         };
 
-        const reassembleContent = (content, startPos, endPos, updatedLines) => {
-          const beforeSelection = content.substring(0, startPos);
-          const afterSelection = content.substring(endPos);
+        const reassembleContent = (content, selectionStart, selectionEnd, updatedLines) => {
+          const beforeSelection = content.substring(0, selectionStart);
+          const afterSelection = content.substring(selectionEnd);
           return beforeSelection + updatedLines.join('\\n') + afterSelection;
         };
 
@@ -309,17 +315,15 @@ contentFieldEdit =
         };
 
         const content = textarea.value;
-        let [startPos, endPos] = expandSelectionToFullLines(content, textarea.selectionStart, textarea.selectionEnd);
-        const selection = content.substring(startPos, endPos);
+        let {selectionStart, selectionEnd} = expandSelectionToFullLines(content, textarea.selectionStart, textarea.selectionEnd);
 
+        const selection = content.substring(selectionStart, selectionEnd);
         const lines = selection.split('\\n');
         const updatedLines = processLines(lines, prefix);
-        const updatedContent = reassembleContent(content, startPos, endPos, updatedLines);
+        const updatedContent = reassembleContent(content, selectionStart, selectionEnd, updatedLines);
+        const adjustedEndPos = selectionStart + updatedLines.join('\\n').length;
 
-        const adjustedStartPos = startPos;
-        const adjustedEndPos = startPos + updatedLines.join('\\n').length;
-
-        updateTextarea(textarea, updatedContent, adjustedStartPos, adjustedEndPos);
+        updateTextarea(textarea, updatedContent, selectionStart, adjustedEndPos);
       },
       surroundFocus(textarea, wrapper) {
         textarea.focus();
@@ -343,7 +347,7 @@ contentFieldEdit =
           return text.replace(regex, '$1'); 
         };
       
-        // Replace the content of a textarea respecting undo history.
+        // Replace the content of the textarea respecting undo history.
         const insertText = (textarea, newValue) => {
           textarea.setSelectionRange(0, textarea.value.length);
           document.execCommand('insertText', false, newValue);
@@ -425,7 +429,7 @@ contentFieldPreview content =
         <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end'>
         </div>
     </div>
-    <div class='m-2 min-h-60'>#{fromMaybe emptyPreview content}</div>
+    <div class='m-3 min-h-60'>#{fromMaybe emptyPreview content}</div>
 </div>
 |]
 

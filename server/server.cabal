@@ -89,7 +89,7 @@ library
                   , network
                   , network-ip
                   , network-uri
-                  , pandoc
+                  , pandoc == 3.6
                   , pandoc-types
                   , password
                   , servant
