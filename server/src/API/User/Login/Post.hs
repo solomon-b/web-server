@@ -2,14 +2,15 @@ module API.User.Login.Post where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (rootGetLink, userLoginGetLink)
 import App.Auth qualified as Auth
-import App.Errors (InternalServerError (..), Unauthorized (..), throwErr)
-import Control.Monad (unless)
+import App.Errors (InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, (.=))
+import Data.Aeson qualified as Aeson
 import Data.Has (Has)
 import Data.Maybe (fromMaybe)
 import Data.Password.Argon2 (Password, PasswordCheck (..), checkPassword, mkPassword)
@@ -34,8 +35,7 @@ import Servant qualified
 import Text.HTML (HTML)
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
-import {-# SOURCE #-} API (rootGetLink)
-import qualified Web.HttpApiData as Http
+import Web.HttpApiData qualified as Http
 
 --------------------------------------------------------------------------------
 
@@ -90,23 +90,64 @@ handler ::
          ]
         Servant.NoContent
     )
-handler sockAddr mUserAgent req@Login {..} redirect = do
-  let redirectLink = fromMaybe (Http.toUrlPiece rootGetLink) redirect
+handler sockAddr mUserAgent req@Login {..} redirectQueryParam = do
   Observability.handlerSpan "POST /user/login" req display $ do
     execQuerySpanThrow (User.getUserByEmail ulEmail) >>= \case
       Just user -> do
         Log.logInfo "Login Attempt" ulEmail
-        unless (checkPassword ulPassword (User.mPassword user) == PasswordCheckSuccess) (throwErr Unauthorized)
-        execQuerySpanThrow (Session.getServerSessionByUser (User.mId user)) >>= \case
-          Nothing -> do
-            Auth.login (User.mId user) sockAddr mUserAgent >>= \case
-              Left err ->
-                throwErr $ InternalServerError $ Text.pack $ show err
-              Right sessionId -> do
-                pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader redirectLink Servant.NoContent
-          Just session ->
-            let sessionId = Session.mSessionId session
-             in pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader redirectLink Servant.NoContent
-      Nothing -> do
-        Log.logInfo "Invalid Credentials" ulEmail
-        throwErr Unauthorized
+        if checkPassword ulPassword (User.mPassword user) == PasswordCheckSuccess
+          then
+            let redirectLink = fromMaybe (Http.toUrlPiece rootGetLink) redirectQueryParam
+             in attemptLogin sockAddr mUserAgent redirectLink user
+          else invalidCredentialResponse ulEmail (Aeson.object [("field", "password"), "value" .= ulPassword])
+      Nothing ->
+        invalidCredentialResponse ulEmail (Aeson.object [("field", "email"), "value" .= ulEmail])
+
+attemptLogin ::
+  ( MonadClock m,
+    MonadUnliftIO m,
+    Has OTEL.Tracer env,
+    MonadReader env m,
+    MonadThrow m,
+    MonadDB m,
+    Log.MonadLog m
+  ) =>
+  SockAddr ->
+  Maybe Text ->
+  Text ->
+  User.Model ->
+  m
+    ( Servant.Headers
+        '[ Servant.Header "Set-Cookie" Text,
+           Servant.Header "HX-Redirect" Text
+         ]
+        Servant.NoContent
+    )
+attemptLogin sockAddr mUserAgent redirectLink user = do
+  execQuerySpanThrow (Session.getServerSessionByUser (User.mId user)) >>= \case
+    Nothing -> do
+      Auth.login (User.mId user) sockAddr mUserAgent >>= \case
+        Left err ->
+          throwErr $ InternalServerError $ Text.pack $ show err
+        Right sessionId -> do
+          pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader redirectLink Servant.NoContent
+    Just session ->
+      let sessionId = Session.mSessionId session
+       in pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader redirectLink Servant.NoContent
+
+invalidCredentialResponse ::
+  ( Log.MonadLog m,
+    ToJSON details
+  ) =>
+  EmailAddress ->
+  details ->
+  m
+    ( Servant.Headers
+        '[ Servant.Header "Set-Cookie" Text,
+           Servant.Header "HX-Redirect" Text
+         ]
+        Servant.NoContent
+    )
+invalidCredentialResponse emailAddress details = do
+  Log.logInfo "Invalid Credentials" details
+  pure $ Servant.noHeader $ Servant.addHeader ("/" <> Http.toUrlPiece (userLoginGetLink Nothing $ Just emailAddress)) Servant.NoContent

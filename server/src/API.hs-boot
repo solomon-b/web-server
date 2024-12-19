@@ -3,6 +3,7 @@ module API where
 --------------------------------------------------------------------------------
 
 import Data.Text (Text)
+import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
 import Effects.Database.Tables.User qualified as User
 import Servant.Links qualified as Links
@@ -28,7 +29,7 @@ userIdGetLink :: User.Id -> Links.Link
 userRegisterGetLink :: Links.Link
 userRegisterPostLink :: Links.Link
 userLoginPostLink :: Maybe Text -> Links.Link
-userLoginGetLink :: Maybe Text -> Links.Link
+userLoginGetLink :: Maybe Text -> Maybe EmailAddress -> Links.Link
 userCurrentGetLink :: Links.Link
 userLogoutGetLink :: Links.Link
 userLogoutPostLink :: Links.Link

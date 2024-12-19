@@ -36,6 +36,9 @@ instance ToJSON EmailAddress where
 instance Display EmailAddress where
   displayBuilder EmailAddress {..} = Text.fromText (CI.original emailAddress)
 
+instance Servant.ToHttpApiData EmailAddress where
+  toUrlPiece = CI.original . emailAddress
+
 instance Servant.FromHttpApiData EmailAddress where
   parseUrlPiece = Right . EmailAddress . CI.mk
   parseQueryParam = Right . EmailAddress . CI.mk
