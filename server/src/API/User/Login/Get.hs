@@ -17,6 +17,7 @@ import Data.Has (Has)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
+import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Observability qualified as Observability
 import Log qualified
 import OpenTelemetry.Trace qualified as Trace
@@ -35,6 +36,7 @@ type Route =
     :> Servant.Header "HX-Current-Url" Text
     :> Servant.Header "HX-Request" Bool
     :> Servant.QueryParam "redirect" Text
+    :> Servant.QueryParam "email" EmailAddress
     :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
@@ -45,13 +47,14 @@ userLoginPostUrl = Link.linkURI . userLoginPostLink
 userRegisterGetUrl :: Link.URI
 userRegisterGetUrl = Link.linkURI userRegisterGetLink
 
-emailField :: ByteString
-emailField =
-  [i|
+emailField :: Maybe EmailAddress -> ByteString
+emailField emailAddress =
+  let inputValue = maybe mempty display emailAddress
+   in [i|
 <div>
   <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
   </label>
-  <input type="email" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="name@company.com">
+  <input type="email" name="email" id="email" value="#{inputValue}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="name@company.com">
 </div>
 |]
 
@@ -65,9 +68,18 @@ passwordField =
 </div>
 |]
 
-template :: Maybe Text -> ByteString
-template redirectLink =
+alert :: Text -> ByteString
+alert msg =
   [i|
+<div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+  #{msg}
+</div>
+|]
+
+template :: Maybe EmailAddress -> Maybe Text -> ByteString
+template emailAddress redirectLink =
+  let validationNotice = maybe "" (const $ alert "Your email address or password is invalid.") emailAddress
+   in [i|
 <div class="relative p-4 w-full max-w-md max-h-full mx-auto">
   <div class="relative bg-white rounded-lg shadow">
     <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
@@ -76,7 +88,8 @@ template redirectLink =
     </div>
     <div class="p-4 md:p-5">
       <form hx-post="/#{userLoginPostUrl redirectLink}" class="space-y-4" data-bitwarden-watching="1">
-        #{emailField}
+        #{validationNotice}
+        #{emailField emailAddress}
         #{passwordField}
 	<div class="flex justify-between">
 	  <div class="flex items-start">
@@ -115,10 +128,11 @@ handler ::
   Maybe Text ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe EmailAddress ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler hxCurrentUrl hxTrigger redirectQueryParam =
+handler hxCurrentUrl hxTrigger redirectQueryParam emailQueryParam =
   Observability.handlerSpan "GET /user/login" () (display . Servant.getResponse) $ do
-    pageFragment <- parseFragment $ template $ hxCurrentUrl <|> redirectQueryParam
+    pageFragment <- parseFragment $ template emailQueryParam $ hxCurrentUrl <|> redirectQueryParam
     page <- loadFrame pageFragment
 
     case hxTrigger of
