@@ -45,6 +45,26 @@ userLoginPostUrl = Link.linkURI . userLoginPostLink
 userRegisterGetUrl :: Link.URI
 userRegisterGetUrl = Link.linkURI userRegisterGetLink
 
+emailField :: ByteString
+emailField =
+  [i|
+<div>
+  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
+  </label>
+  <input type="email" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="name@company.com">
+</div>
+|]
+
+passwordField :: ByteString
+passwordField =
+  [i|
+<div>
+  <label for="password" class="block mb-2 text-sm font-medium text-gray-900">Your password
+  </label>
+  <input type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5">
+</div>
+|]
+
 template :: Maybe Text -> ByteString
 template redirectLink =
   [i|
@@ -56,16 +76,8 @@ template redirectLink =
     </div>
     <div class="p-4 md:p-5">
       <form hx-post="/#{userLoginPostUrl redirectLink}" class="space-y-4" data-bitwarden-watching="1">
-	<div>
-	  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
-	  </label>
-	  <input type="email" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="name@company.com">
-	</div>
-	<div>
-	  <label for="password" class="block mb-2 text-sm font-medium text-gray-900">Your password
-	  </label>
-	  <input type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5">
-	</div>
+        #{emailField}
+        #{passwordField}
 	<div class="flex justify-between">
 	  <div class="flex items-start">
 	    <div class="flex items-center h-5">
