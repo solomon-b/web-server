@@ -231,7 +231,49 @@ contentFieldEdit =
     </div>
     #{contentFieldFooter}
 </div>
+#{javascript}
+|]
 
+emptyPreview :: Text
+emptyPreview = "<p name='content' rows='8' class='p-2 w-full text-sm text-gray-900'>Nothing to preview</p>"
+
+contentFieldPreview :: Maybe Text -> ByteString
+contentFieldPreview content =
+  [i|
+<label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
+<div class='flex flex-col border rounded-lg border-gray-300'>
+    <div class='flex mb-2'>
+        <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50'>
+          <button role='tab' hx-get="/blog/new/edit" hx-swap="innerHTML" hx-target="\#content-field">
+            Write
+          </button>
+        </div>
+
+        <div class='p-2 border-x rounded-t-lg border-gray-300 text-gray-900 bg-white'>
+          <button role='tab' hx-get="/blog/new/preview" hx-swap="innerHTML" hx-target="\#content-field" hx-include='{"content": "#{escapeString $ fromMaybe emptyPreview content}"}'>
+            Preview
+          </button>
+        </div>
+
+        <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end'>
+        </div>
+    </div>
+    <div class='m-3 min-h-60'>#{fromMaybe emptyPreview content}</div>
+</div>
+|]
+
+contentField :: ByteString
+contentField =
+  [i|
+<div id='content-field' x-data="{ contentModel: '' }">
+  #{contentFieldEdit}
+</div>
+|]
+
+-- TODO: Move this into a js file:
+javascript :: ByteString
+javascript =
+  [i|
 <script>
   function handler() {
     return {
@@ -403,40 +445,4 @@ contentFieldEdit =
     };
   }
 </script>
-|]
-
-emptyPreview :: Text
-emptyPreview = "<p name='content' rows='8' class='p-2 w-full text-sm text-gray-900'>Nothing to preview</p>"
-
-contentFieldPreview :: Maybe Text -> ByteString
-contentFieldPreview content =
-  [i|
-<label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
-<div class='flex flex-col border rounded-lg border-gray-300'>
-    <div class='flex mb-2'>
-        <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50'>
-          <button role='tab' hx-get="/blog/new/edit" hx-swap="innerHTML" hx-target="\#content-field">
-            Write
-          </button>
-        </div>
-
-        <div class='p-2 border-x rounded-t-lg border-gray-300 text-gray-900 bg-white'>
-          <button role='tab' hx-get="/blog/new/preview" hx-swap="innerHTML" hx-target="\#content-field" hx-include='{"content": "#{escapeString $ fromMaybe emptyPreview content}"}'>
-            Preview
-          </button>
-        </div>
-
-        <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end'>
-        </div>
-    </div>
-    <div class='m-3 min-h-60'>#{fromMaybe emptyPreview content}</div>
-</div>
-|]
-
-contentField :: ByteString
-contentField =
-  [i|
-<div id='content-field' x-data="{ contentModel: '' }">
-  #{contentFieldEdit}
-</div>
 |]
