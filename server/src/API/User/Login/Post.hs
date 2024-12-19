@@ -34,6 +34,8 @@ import Servant qualified
 import Text.HTML (HTML)
 import Web.FormUrlEncoded (FromForm (..))
 import Web.FormUrlEncoded qualified as FormUrlEncoded
+import {-# SOURCE #-} API (rootGetLink)
+import qualified Web.HttpApiData as Http
 
 --------------------------------------------------------------------------------
 
@@ -89,7 +91,7 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent req@Login {..} redirect = do
-  let redirectLink = fromMaybe "/" redirect
+  let redirectLink = fromMaybe (Http.toUrlPiece rootGetLink) redirect
   Observability.handlerSpan "POST /user/login" req display $ do
     execQuerySpanThrow (User.getUserByEmail ulEmail) >>= \case
       Just user -> do
