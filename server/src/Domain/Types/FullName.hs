@@ -20,7 +20,7 @@ import Servant qualified
 
 newtype FullName = FullName {displayName :: Text}
   deriving stock (Show, Generic, Eq)
-  deriving newtype (Servant.FromHttpApiData, FromJSON, ToJSON, Display, DecodeValue, EncodeValue)
+  deriving newtype (Servant.ToHttpApiData, Servant.FromHttpApiData, FromJSON, ToJSON, Display, DecodeValue, EncodeValue)
 
 mkFullName :: Text -> Maybe FullName
 mkFullName nm
