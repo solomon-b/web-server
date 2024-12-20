@@ -35,6 +35,61 @@ type Route = "user" :> "register" :> Servant.Header "HX-Request" Bool :> Servant
 userRegisterPostUrl :: Link.URI
 userRegisterPostUrl = Link.linkURI userRegisterPostLink
 
+displayNameField :: ByteString
+displayNameField = [i|
+<div>
+  <label for="displayName" class="block mb-2 text-sm font-medium text-gray-900">What should we call you?
+  </label>
+  <input type="displayName" name="displayName" id="displayName" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="Tim">
+</div>
+|]
+
+fullNameField :: ByteString
+fullNameField = [i|
+<div>
+  <label for="fullName" class="block mb-2 text-sm font-medium text-gray-900">What is your full name?
+  </label>
+  <input type="displayName" name="fullName" id="fullName" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="Tim Berners-Lee">
+</div>
+|]
+
+emailField :: ByteString
+emailField = [i|
+<div>
+  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
+  </label>
+  <input type="email" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="name@company.com">
+</div>
+|]
+
+passwordField :: ByteString
+passwordField = [i|
+<div>
+  <label for="password" class="block mb-2 text-sm font-medium text-gray-900">Your password
+  </label>
+  <input type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5">
+</div>
+|]
+
+rememberMeToggle :: ByteString
+rememberMeToggle = [i|
+<div class="flex justify-between">
+  <div class="flex items-start">
+    <div class="flex items-center h-5">
+      <input id="remember" type="checkbox" value="" class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-green-300">
+    </div>
+    <label for="remember" class="ms-2 text-sm font-medium text-gray-900">Remember me
+    </label>
+  </div>
+</div>
+|]
+
+submitButton :: ByteString
+submitButton = [i|
+<button type="submit" class="w-full text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Create your account
+</button>
+|]
+
 template :: ByteString
 template =
   [i|<div class="relative p-4 w-full max-w-md max-h-full mx-auto">
@@ -45,37 +100,12 @@ template =
     </div>
     <div class="p-4 md:p-5">
       <form hx-post="/#{userRegisterPostUrl}" class="space-y-4" data-bitwarden-watching="1">
-	<div>
-	  <label for="displayName" class="block mb-2 text-sm font-medium text-gray-900">What should we call you?
-	  </label>
-	  <input type="displayName" name="displayName" id="displayName" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="Tim">
-	</div>
-	<div>
-	  <label for="fullName" class="block mb-2 text-sm font-medium text-gray-900">What is your full name?
-	  </label>
-	  <input type="displayName" name="fullName" id="fullName" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="Tim Berners-Lee">
-	</div>
-	<div>
-	  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
-	  </label>
-	  <input type="email" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5" placeholder="name@company.com">
-	</div>
-	<div>
-	  <label for="password" class="block mb-2 text-sm font-medium text-gray-900">Your password
-	  </label>
-	  <input type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5">
-	</div>
-	<div class="flex justify-between">
-	  <div class="flex items-start">
-	    <div class="flex items-center h-5">
-	      <input id="remember" type="checkbox" value="" class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-green-300">
-	    </div>
-	    <label for="remember" class="ms-2 text-sm font-medium text-gray-900">Remember me
-	    </label>
-	  </div>
-	</div>
-	<button type="submit" class="w-full text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Create your account
-	</button>
+        #{displayNameField}
+        #{fullNameField}
+        #{emailField}
+        #{passwordField}
+        #{rememberMeToggle}
+        #{submitButton}
       </form>
     </div>
   </div>
