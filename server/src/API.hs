@@ -189,7 +189,7 @@ userGetLink = Links.safeLink (Proxy @API) (Proxy @User.Get.Route)
 userIdGetLink :: User.Id -> Links.Link
 userIdGetLink = Links.safeLink (Proxy @API) (Proxy @User.Id.Get.Route)
 
-userRegisterGetLink :: Links.Link
+userRegisterGetLink :: Maybe EmailAddress -> Links.Link
 userRegisterGetLink = Links.safeLink (Proxy @API) (Proxy @User.Register.Get.Route)
 
 userRegisterPostLink :: Links.Link

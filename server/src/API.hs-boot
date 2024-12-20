@@ -26,7 +26,7 @@ imagePostLink :: Links.Link
 aboutGetLink :: Links.Link
 userGetLink :: Links.Link
 userIdGetLink :: User.Id -> Links.Link
-userRegisterGetLink :: Links.Link
+userRegisterGetLink :: Maybe EmailAddress -> Links.Link
 userRegisterPostLink :: Links.Link
 userLoginPostLink :: Maybe Text -> Links.Link
 userLoginGetLink :: Maybe Text -> Maybe EmailAddress -> Links.Link
