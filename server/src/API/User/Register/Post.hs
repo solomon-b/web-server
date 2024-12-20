@@ -2,24 +2,34 @@ module API.User.Register.Post where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (userRegisterGetLink)
 import App.Auth qualified as Auth
-import App.Errors (Forbidden (..), InternalServerError (..), ToServerError (..), Unauthorized (..), throwErr)
-import Control.Monad (unless)
+import App.Errors (Forbidden (..), InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Catch.Pure (MonadCatch)
+import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Bifunctor (first)
+import Data.Foldable (foldl')
 import Data.Has (Has)
-import Data.Password.Argon2 (Password, hashPassword, mkPassword)
+import Data.Password.Argon2 (Argon2, Password, PasswordHash, hashPassword, mkPassword)
+import Data.Password.Validate qualified as PW.Validate
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display, display)
+import Data.Text.Display.Core (Display (..))
 import Data.Text.Display.Generic (RecordInstance (..))
+import Data.Validation
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.DisplayName (DisplayName)
-import Domain.Types.EmailAddress (EmailAddress, isValid)
+import Domain.Types.DisplayName qualified as DisplayName
+import Domain.Types.EmailAddress (EmailAddress)
+import Domain.Types.EmailAddress qualified as EmailAddress
 import Domain.Types.FullName (FullName)
+import Domain.Types.FullName qualified as FullName
+import Domain.Types.InvalidField (InvalidField)
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -36,6 +46,7 @@ import Servant ((:>))
 import Servant qualified
 import Text.HTML (HTML)
 import Web.FormUrlEncoded qualified as FormUrlEncoded
+import Web.HttpApiData qualified as Http
 
 --------------------------------------------------------------------------------
 
@@ -69,15 +80,34 @@ instance FormUrlEncoded.FromForm Register where
       <*> FormUrlEncoded.parseUnique "displayName" f
       <*> FormUrlEncoded.parseUnique "fullName" f
 
+data RegisterParsed = RegisterParsed
+  { urpEmail :: EmailAddress,
+    urpPassword :: PasswordHash Argon2,
+    urpDisplayName :: DisplayName,
+    urpFullName :: FullName
+  }
+
 --------------------------------------------------------------------------------
 
-data RegisterError = AlreadyRegistered
+data ValidationError
+  = InvalidEmailAddress
+  | InvalidPassword [PW.Validate.InvalidReason]
+  | EmptyDisplayName
+  | EmptyFullName
 
-instance ToServerError RegisterError where
-  toServerError :: RegisterError -> Servant.ServerError
-  toServerError AlreadyRegistered = Servant.err401 {Servant.errBody = "Email address is already registered"}
+toInvalidField :: ValidationError -> InvalidField
+toInvalidField = \case
+  InvalidEmailAddress -> "EmailAddress"
+  InvalidPassword _ -> "Password"
+  EmptyDisplayName -> "DisplayName"
+  EmptyFullName -> "FullName"
 
-  toServerLog AlreadyRegistered = ("Already Registered", Nothing)
+instance Display ValidationError where
+  displayBuilder = \case
+    InvalidEmailAddress -> "Email address is invalid."
+    InvalidPassword reasons -> "Password is invalid: " <> foldl' (\acc x -> acc <> ", " <> displayBuilder x) "" reasons
+    EmptyDisplayName -> "Display name is missing."
+    EmptyFullName -> "Full name is missing."
 
 --------------------------------------------------------------------------------
 
@@ -103,21 +133,83 @@ handler ::
     )
 handler sockAddr mUserAgent req@Register {..} = do
   Observability.handlerSpan "POST /user/register" req display $ do
-    unless (isValid urEmail) $ throwErr Unauthorized
-    execQuerySpanThrow (User.getUserByEmail urEmail) >>= \case
-      Just _ -> do
-        Log.logInfo "Email address is already registered" urEmail
-        throwErr AlreadyRegistered
-      Nothing -> do
-        Log.logInfo "Registering New User" urEmail
-        hashedPassword <- hashPassword urPassword
-        OneRow uid <- execQuerySpanThrow $ User.insertUser $ User.ModelInsert urEmail hashedPassword urDisplayName urFullName Nothing False
-        execQuerySpanThrow (User.getUser uid) >>= \case
+    validateRequest req >>= \case
+      Failure errors ->
+        logValidationFailure (display errors) req errors
+      Success parsedRequest -> do
+        execQuerySpanThrow (User.getUserByEmail urEmail) >>= \case
+          Just _ ->
+            logValidationFailure "Email address is already registered." req [InvalidEmailAddress]
           Nothing ->
-            throwErr Forbidden
-          Just _user -> do
-            Auth.login uid sockAddr mUserAgent >>= \case
-              Left err ->
-                throwErr $ InternalServerError $ Text.pack $ show err
-              Right sessionId -> do
-                pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
+            registerUser sockAddr mUserAgent parsedRequest
+
+registerUser ::
+  ( MonadClock m,
+    MonadReader env m,
+    Has OTEL.Tracer env,
+    Log.MonadLog m,
+    MonadDB m,
+    MonadThrow m,
+    MonadUnliftIO m,
+    MonadCatch m
+  ) =>
+  SockAddr ->
+  Maybe Text ->
+  RegisterParsed ->
+  m
+    ( Servant.Headers
+        '[ Servant.Header "Set-Cookie" Text,
+           Servant.Header "HX-Redirect" Text
+         ]
+        Servant.NoContent
+    )
+registerUser sockAddr mUserAgent RegisterParsed {..} = do
+  Log.logInfo "Registering New User" urpEmail
+  OneRow uid <- execQuerySpanThrow $ User.insertUser $ User.ModelInsert urpEmail urpPassword urpDisplayName urpFullName Nothing False
+  execQuerySpanThrow (User.getUser uid) >>= \case
+    Nothing ->
+      throwErr Forbidden
+    Just _user -> do
+      Auth.login uid sockAddr mUserAgent >>= \case
+        Left err ->
+          throwErr $ InternalServerError $ Text.pack $ show err
+        Right sessionId -> do
+          pure $ Servant.addHeader (Auth.mkCookieSession sessionId) $ Servant.addHeader "/" Servant.NoContent
+
+parsePassword ::
+  ( Monad m,
+    MonadIO m
+  ) =>
+  Password ->
+  m (Validation [ValidationError] (PasswordHash Argon2))
+parsePassword password =
+  case PW.Validate.validatePassword PW.Validate.defaultPasswordPolicy_ password of
+    PW.Validate.ValidPassword ->
+      Success <$> hashPassword password
+    PW.Validate.InvalidPassword reasons ->
+      pure $ Failure [InvalidPassword reasons]
+
+validateRequest :: (MonadIO m) => Register -> m (Validation [ValidationError] RegisterParsed)
+validateRequest Register {..} = do
+  let emailValidation = fromEither $ first (const [InvalidEmailAddress]) $ EmailAddress.validate urEmail
+  passwordValidation <- parsePassword urPassword
+  let displayName = if DisplayName.null urDisplayName then Failure [EmptyDisplayName] else Success urDisplayName
+      fullName = if FullName.null urFullName then Failure [EmptyFullName] else Success urFullName
+  pure $ RegisterParsed <$> emailValidation <*> passwordValidation <*> displayName <*> fullName
+
+logValidationFailure ::
+  ( Log.MonadLog m
+  ) =>
+  Text ->
+  Register ->
+  [ValidationError] ->
+  m
+    ( Servant.Headers
+        '[ Servant.Header "Set-Cookie" Text,
+           Servant.Header "HX-Redirect" Text
+         ]
+        Servant.NoContent
+    )
+logValidationFailure message req@Register {..} validationErrors = do
+  Log.logInfo message req
+  pure $ Servant.noHeader $ Servant.addHeader ("/" <> Http.toUrlPiece (userRegisterGetLink (Just urEmail) (Just urDisplayName) (Just urFullName) (fmap toInvalidField validationErrors))) Servant.NoContent

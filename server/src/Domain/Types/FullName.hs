@@ -2,6 +2,7 @@ module Domain.Types.FullName
   ( FullName,
     mkFullName,
     mkFullNameUnsafe,
+    Domain.Types.FullName.null,
   )
 where
 
@@ -18,9 +19,9 @@ import Servant qualified
 
 --------------------------------------------------------------------------------
 
-newtype FullName = FullName {displayName :: Text}
+newtype FullName = FullName {fullName :: Text}
   deriving stock (Show, Generic, Eq)
-  deriving newtype (Servant.FromHttpApiData, FromJSON, ToJSON, Display, DecodeValue, EncodeValue)
+  deriving newtype (Servant.ToHttpApiData, Servant.FromHttpApiData, FromJSON, ToJSON, Display, DecodeValue, EncodeValue)
 
 mkFullName :: Text -> Maybe FullName
 mkFullName nm
@@ -31,3 +32,6 @@ mkFullName nm
 
 mkFullNameUnsafe :: Text -> FullName
 mkFullNameUnsafe = FullName
+
+null :: FullName -> Bool
+null FullName {..} = Text.null fullName

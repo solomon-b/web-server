@@ -1,7 +1,10 @@
+-- TODO: Switch to Text.Email.Validate.EmailAddress datatype.
 module Domain.Types.EmailAddress
   ( EmailAddress,
     mkEmailAddress,
     isValid,
+    ValidationFailure (..),
+    validate,
   )
 where
 
@@ -48,3 +51,15 @@ mkEmailAddress = EmailAddress . CI.mk
 
 isValid :: EmailAddress -> Bool
 isValid = Validate.isValid . Text.Encoding.encodeUtf8 . CI.original . emailAddress
+
+data ValidationFailure = ValidationFailure
+
+instance Display ValidationFailure where
+  displayBuilder _ = "Email ValidationFailure"
+
+-- TODO: Parse Dont Validate.
+validate :: EmailAddress -> Either ValidationFailure EmailAddress
+validate em =
+  if isValid em
+    then Right em
+    else Left ValidationFailure

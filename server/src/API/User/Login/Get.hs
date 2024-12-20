@@ -45,7 +45,7 @@ userLoginPostUrl :: Maybe Text -> Link.URI
 userLoginPostUrl = Link.linkURI . userLoginPostLink
 
 userRegisterGetUrl :: Link.URI
-userRegisterGetUrl = Link.linkURI userRegisterGetLink
+userRegisterGetUrl = Link.linkURI (userRegisterGetLink Nothing Nothing Nothing [])
 
 emailField :: Maybe EmailAddress -> ByteString
 emailField emailAddress =

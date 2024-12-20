@@ -38,7 +38,10 @@ import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
+import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
+import Domain.Types.FullName (FullName)
+import Domain.Types.InvalidField (InvalidField)
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
@@ -189,7 +192,7 @@ userGetLink = Links.safeLink (Proxy @API) (Proxy @User.Get.Route)
 userIdGetLink :: User.Id -> Links.Link
 userIdGetLink = Links.safeLink (Proxy @API) (Proxy @User.Id.Get.Route)
 
-userRegisterGetLink :: Links.Link
+userRegisterGetLink :: Maybe EmailAddress -> Maybe DisplayName -> Maybe FullName -> [InvalidField] -> Links.Link
 userRegisterGetLink = Links.safeLink (Proxy @API) (Proxy @User.Register.Get.Route)
 
 userRegisterPostLink :: Links.Link

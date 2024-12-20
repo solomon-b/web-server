@@ -106,6 +106,7 @@ library
                   , unix
                   , unliftio-core
                   , unordered-containers
+                  , validation
                   , wai
                   , warp
                   , xmlhtml
@@ -156,6 +157,7 @@ library
     Domain.Types.DisplayName
     Domain.Types.EmailAddress
     Domain.Types.FullName
+    Domain.Types.InvalidField
     Effects.Clock
     Effects.Database.Class
     Effects.Database.Execute

@@ -2,6 +2,7 @@ module Domain.Types.DisplayName
   ( DisplayName,
     mkDisplayName,
     mkDisplayNameUnsafe,
+    Domain.Types.DisplayName.null,
   )
 where
 
@@ -20,7 +21,7 @@ import Servant qualified
 
 newtype DisplayName = DisplayName {displayName :: Text}
   deriving stock (Show, Generic, Eq)
-  deriving newtype (Servant.FromHttpApiData, FromJSON, ToJSON, Display, DecodeValue, EncodeValue)
+  deriving newtype (Servant.ToHttpApiData, Servant.FromHttpApiData, FromJSON, ToJSON, Display, DecodeValue, EncodeValue)
 
 mkDisplayName :: Text -> Maybe DisplayName
 mkDisplayName nm
@@ -31,3 +32,6 @@ mkDisplayName nm
 
 mkDisplayNameUnsafe :: Text -> DisplayName
 mkDisplayNameUnsafe = DisplayName
+
+null :: DisplayName -> Bool
+null DisplayName {..} = Text.null displayName

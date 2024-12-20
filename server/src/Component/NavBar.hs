@@ -40,7 +40,7 @@ userLoginGetUrl :: Maybe Text -> Link.URI
 userLoginGetUrl = Link.linkURI . flip userLoginGetLink Nothing
 
 userRegisterGetUrl :: Link.URI
-userRegisterGetUrl = Link.linkURI userRegisterGetLink
+userRegisterGetUrl = Link.linkURI (userRegisterGetLink Nothing Nothing Nothing [])
 
 userLogoutPostUrl :: Link.URI
 userLogoutPostUrl = Link.linkURI userLogoutPostLink
