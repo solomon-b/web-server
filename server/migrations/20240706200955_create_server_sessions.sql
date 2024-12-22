@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE server_sessions
   ( id UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v1mc ()
-  , user_id SERIAL8 NOT NULL REFERENCES users (id)
+  , user_id SERIAL8 NOT NULL REFERENCES users (id) ON DELETE CASCADE
   , ip_address inet
   , user_agent text
   , expires_at timestamptz NOT NULL
