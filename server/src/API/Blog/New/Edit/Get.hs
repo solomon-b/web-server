@@ -43,5 +43,5 @@ handler ::
 handler (Auth.Authz User.Domain {..} _) =
   Observability.handlerSpan "GET /blog/new/edit" () display $ do
     unless dIsAdmin $ throwErr Unauthorized
-    pageFragment <- parseFragment (contentFieldEdit True Nothing)
+    pageFragment <- parseFragment (contentFieldEdit False)
     pure $ renderNodes pageFragment

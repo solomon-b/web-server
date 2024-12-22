@@ -2,6 +2,7 @@ module API.Blog.New.Post where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (blogNewGetLink)
 import App.Auth qualified as Auth
 import App.Errors (Unauthorized (..), throwErr)
 import Control.Monad (unless)
@@ -10,7 +11,8 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Crypto.Hash.SHA256 qualified as SHA256
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, (.=))
+import Data.Aeson qualified as Aeson
 import Data.Base64.Types qualified as Base64
 import Data.ByteString.Base64.URL qualified as Base64.Url
 import Data.ByteString.Char8 qualified as Char8
@@ -20,7 +22,9 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display (..), RecordInstance (..), display)
 import Data.Text.Encoding qualified as TE
+import Data.Validation (Validation (..))
 import Deriving.Aeson qualified as Deriving
+import Domain.Types.InvalidField (InvalidField)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
@@ -40,6 +44,7 @@ import Servant.Multipart (FromMultipart, MultipartForm, Tmp)
 import Servant.Multipart qualified as Multipart
 import System.Directory qualified as Dir
 import Text.HTML (HTML)
+import Web.HttpApiData qualified as Http
 
 --------------------------------------------------------------------------------
 
@@ -73,6 +78,18 @@ instance FromMultipart Tmp CreatePost where
 
     pure CreatePost {..}
 
+data ValidationError = MissingSubject | MissingBody
+
+toInvalidField :: ValidationError -> InvalidField
+toInvalidField = \case
+  MissingSubject -> "Subject"
+  MissingBody -> "Body"
+
+instance Display ValidationError where
+  displayBuilder = \case
+    MissingSubject -> "Subject is missing."
+    MissingBody -> "Body is missing."
+
 --------------------------------------------------------------------------------
 
 handler ::
@@ -95,9 +112,30 @@ handler ::
 handler (Auth.Authz User.Domain {dId = userId, dIsAdmin} _) req@CreatePost {..} = do
   Observability.handlerSpan "POST /blog/new" req display $ do
     unless dIsAdmin $ throwErr Unauthorized
-    heroImageId <- traverse (insertImage userId) heroImagePath
-    bid <- execQuerySpanThrow $ BlogPosts.insertBlogPost $ BlogPosts.Insert userId title content published heroImageId
-    pure $ Servant.addHeader ("/blog/" <> display bid) Servant.NoContent
+    case validateRequest req of
+      Failure err -> do
+        Log.logInfo "POST /blog/new Request validation failure" (Aeson.object ["request" .= req, "validationErrors" .= display err])
+        pure $ Servant.addHeader ("/" <> Http.toUrlPiece (blogNewGetLink (Just title) (Just content) (fmap toInvalidField err))) Servant.NoContent
+      Success () -> do
+        heroImageId <- traverse (insertImage userId) heroImagePath
+        bid <- execQuerySpanThrow $ BlogPosts.insertBlogPost $ BlogPosts.Insert userId title content published heroImageId
+        pure $ Servant.addHeader ("/blog/" <> display bid) Servant.NoContent
+
+--------------------------------------------------------------------------------
+
+validateTitle :: BlogPosts.Subject -> Validation [ValidationError] ()
+validateTitle BlogPosts.Subject {..} =
+  if Text.null getSubject then Failure [MissingSubject] else Success ()
+
+validateBody :: BlogPosts.Body -> Validation [ValidationError] ()
+validateBody BlogPosts.Body {..} =
+  if Text.null getBody then Failure [MissingBody] else Success ()
+
+validateRequest :: CreatePost -> Validation [ValidationError] ()
+validateRequest CreatePost {..} =
+  validateTitle title *> validateBody content
+
+--------------------------------------------------------------------------------
 
 insertImage ::
   ( MonadIO m,

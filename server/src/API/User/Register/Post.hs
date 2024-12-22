@@ -10,7 +10,8 @@ import Control.Monad.Catch.Pure (MonadCatch)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON, (.=))
+import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.Foldable (foldl')
 import Data.Has (Has)
@@ -135,7 +136,7 @@ handler sockAddr mUserAgent req@Register {..} = do
   Observability.handlerSpan "POST /user/register" req display $ do
     validateRequest req >>= \case
       Failure errors ->
-        logValidationFailure (display errors) req errors
+        logValidationFailure "POST /user/register Request validation failure" req errors
       Success parsedRequest -> do
         execQuerySpanThrow (User.getUserByEmail urEmail) >>= \case
           Just _ ->
@@ -211,5 +212,5 @@ logValidationFailure ::
         Servant.NoContent
     )
 logValidationFailure message req@Register {..} validationErrors = do
-  Log.logInfo message req
+  Log.logInfo message (Aeson.object ["request" .= req, "validationErrors" .= display validationErrors])
   pure $ Servant.noHeader $ Servant.addHeader ("/" <> Http.toUrlPiece (userRegisterGetLink (Just urEmail) (Just urDisplayName) (Just urFullName) (fmap toInvalidField validationErrors))) Servant.NoContent

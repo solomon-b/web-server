@@ -31,7 +31,7 @@ template subject body invalidFields =
       <form hx-post='/blog/new' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
           #{titleField ("Subject" `elem` invalidFields) subject}
           #{fileUploadField}
-          #{contentField ("body" `elem` invalidFields) body}
+          #{contentField ("Body" `elem` invalidFields) body}
           #{submitButton}
       </form>
   </div>
@@ -207,10 +207,12 @@ contentFieldFooter =
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: Bool -> Maybe BlogPost.Body -> ByteString
-contentFieldEdit _isInvalid body =
-  let inputValue = foldMap display body
-   in [i|
+contentFieldEdit :: Bool -> ByteString
+contentFieldEdit isInvalid =
+  let textAreaInvalid :: Text
+      textAreaInvalid = [i|<textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-red-900 bg-red-50 rounded-lg border border-red-900 focus:ring-red-500 focus:border-red-500'></textarea>|]
+      textAreaValid :: Text
+      textAreaValid = [i|<textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500'></textarea>|]
   in [i|
 <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
 <div class='flex flex-col border border-gray-300 rounded-lg' x-data="handler">
@@ -242,7 +244,7 @@ contentFieldEdit _isInvalid body =
         </div>
     </div>
     <div class='m-2 min-h-60'>
-        <textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500'>#{inputValue}</textarea>
+        #{bool textAreaValid textAreaInvalid isInvalid}
     </div>
     #{contentFieldFooter}
 </div>
@@ -279,9 +281,10 @@ contentFieldPreview content =
 
 contentField :: Bool -> Maybe BlogPost.Body -> ByteString
 contentField isInvalid body =
-  [i|
-<div id='content-field' x-data="{ contentModel: '' }">
-  #{contentFieldEdit isInvalid body}
+  let inputValue = foldMap display body
+  in [i|
+<div id='content-field' x-data="{ contentModel: '#{inputValue}' }">
+  #{contentFieldEdit isInvalid}
 </div>
 |]
 
