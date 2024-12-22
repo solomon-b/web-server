@@ -8,6 +8,7 @@ module Effects.Database.Tables.BlogPosts where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
 import Data.Password.Argon2 (Argon2, PasswordHash)
+import Data.String (IsString)
 import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
 import Domain.Types.DisplayName (DisplayName)
@@ -45,8 +46,8 @@ newtype Id = Id Int64
 data Model = Model
   { mId :: Id,
     mAuthorId :: User.Id,
-    mTitle :: Text,
-    mContent :: Text,
+    mTitle :: Subject,
+    mContent :: Body,
     mPublished :: Bool,
     mHeroImageId :: Maybe Images.Id
   }
@@ -58,8 +59,8 @@ data Model = Model
 data Domain = Domain
   { dId :: Id,
     dAuthorId :: User.Id,
-    dTitle :: Text,
-    dContent :: Text,
+    dTitle :: Subject,
+    dContent :: Body,
     dPublished :: Bool,
     dHeroImage :: Maybe Images.Domain
   }
@@ -110,8 +111,8 @@ getBlogPostsWithUsers =
     fromRows ::
       ( Id,
         User.Id,
-        Text,
-        Text,
+        Subject,
+        Body,
         Bool,
         Maybe Images.Id,
         User.Id,
@@ -144,8 +145,8 @@ getBlogPosts =
     fromRows ::
       ( Id,
         User.Id,
-        Text,
-        Text,
+        Subject,
+        Body,
         Bool,
         Maybe Images.Id,
         Maybe User.Id,
@@ -175,8 +176,8 @@ getBlogPostWithUser postId =
     fromRows ::
       ( Id,
         User.Id,
-        Text,
-        Text,
+        Subject,
+        Body,
         Bool,
         Maybe Images.Id,
         User.Id,
@@ -210,8 +211,8 @@ getBlogPost postId =
     fromRows ::
       ( Id,
         User.Id,
-        Text,
-        Text,
+        Subject,
+        Body,
         Bool,
         Maybe Images.Id,
         Maybe User.Id,
@@ -234,10 +235,18 @@ getPostsByAuthor userId =
     WHERE author_id = #{userId} 
   |]
 
+newtype Subject = Subject {getSubject :: Text}
+  deriving stock (Show, Eq)
+  deriving newtype (FromJSON, ToJSON, Servant.FromHttpApiData, Servant.ToHttpApiData, DecodeValue, EncodeValue, Display, Semigroup, Monoid, IsString)
+
+newtype Body = Body {getBody :: Text}
+  deriving stock (Show, Eq)
+  deriving newtype (FromJSON, ToJSON, Servant.FromHttpApiData, Servant.ToHttpApiData, DecodeValue, EncodeValue, Display, Semigroup, Monoid, IsString)
+
 data Insert = Insert
   { iAuthorId :: User.Id,
-    iTitle :: Text,
-    iContent :: Text,
+    iTitle :: Subject,
+    iContent :: Body,
     iPublished :: Bool,
     iHeroImageId :: Maybe Images.Id
   }

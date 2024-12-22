@@ -4,16 +4,24 @@ module API.Blog.New.Template where
 
 --------------------------------------------------------------------------------
 
+import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
+import Data.Text.Display (display)
+import Domain.Types.InvalidField (InvalidField)
+import Effects.Database.Tables.BlogPosts qualified as BlogPost
 import Utils (escapeString)
 
 --------------------------------------------------------------------------------
 
-template :: ByteString
-template =
+template ::
+  Maybe BlogPost.Subject ->
+  Maybe BlogPost.Body ->
+  [InvalidField] ->
+  ByteString
+template subject body invalidFields =
   [i|
 <div class='relative p-4 w-full max-w-4xl max-h-full mx-auto'>
   <div class='flex items-center justify-between p-4 md:p-5'>
@@ -21,9 +29,9 @@ template =
   </div>
   <div class='p-4 md:p-5'>
       <form hx-post='/blog/new' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
-          #{titleField}
+          #{titleField ("Subject" `elem` invalidFields) subject}
           #{fileUploadField}
-          #{contentField}
+          #{contentField ("body" `elem` invalidFields) body}
           #{submitButton}
       </form>
   </div>
@@ -46,12 +54,17 @@ publishToggle =
 
 --------------------------------------------------------------------------------
 
-titleField :: ByteString
-titleField =
-  [i|
+titleField :: Bool -> Maybe BlogPost.Subject -> ByteString
+titleField isInvalid subject =
+  let inputValue = foldMap display subject
+      inputValid :: Text
+      inputValid = [i|<input type='text' placeholder='title' name='title' id='title' value='#{inputValue}' class='bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5' />|]
+      inputInvalid :: Text
+      inputInvalid = [i|<input type='text' placeholder='title' name='title' id='title' value='#{inputValue}' class='bg-red-50 border border-red-500 text-red-900 placeholder-red-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-2.5' />|]
+   in [i|
 <div>
   <label for='title' class='mb-2 text-sm text-gray-900 font-semibold'>Add title</label>
-  <input type='text' placeholder='title' name='title' id='title' class='bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5' />
+  #{bool inputValid inputInvalid isInvalid}
 </div>
 |]
 
@@ -194,9 +207,11 @@ contentFieldFooter =
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: ByteString
-contentFieldEdit =
-  [i|
+contentFieldEdit :: Bool -> Maybe BlogPost.Body -> ByteString
+contentFieldEdit _isInvalid body =
+  let inputValue = foldMap display body
+   in [i|
+  in [i|
 <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
 <div class='flex flex-col border border-gray-300 rounded-lg' x-data="handler">
     <div class='flex mb-2'>
@@ -227,7 +242,7 @@ contentFieldEdit =
         </div>
     </div>
     <div class='m-2 min-h-60'>
-        <textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500'></textarea>
+        <textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500'>#{inputValue}</textarea>
     </div>
     #{contentFieldFooter}
 </div>
@@ -262,11 +277,11 @@ contentFieldPreview content =
 </div>
 |]
 
-contentField :: ByteString
-contentField =
+contentField :: Bool -> Maybe BlogPost.Body -> ByteString
+contentField isInvalid body =
   [i|
 <div id='content-field' x-data="{ contentModel: '' }">
-  #{contentFieldEdit}
+  #{contentFieldEdit isInvalid body}
 </div>
 |]
 

@@ -18,10 +18,10 @@ staticGetLink :: Links.Link
 mailingListPostLink :: Links.Link
 blogGetLink :: Links.Link
 blogIdGetLink :: BlogPosts.Id -> Links.Link
-blogIdEditGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
+blogIdEditGetLink :: BlogPosts.Id -> Maybe BlogPosts.Body -> Links.Link
 blogIdEditPostLink :: BlogPosts.Id -> Links.Link
 blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
-blogNewGetLink :: Links.Link
+blogNewGetLink :: Maybe BlogPosts.Subject -> Maybe BlogPosts.Body -> [InvalidField] -> Links.Link
 blogNewPostLink :: Links.Link
 blogNewEditGetLink :: Links.Link
 blogNewPreviewGetLink :: Maybe Text -> Links.Link

@@ -159,7 +159,7 @@ blogGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Get.Route)
 blogIdGetLink :: BlogPosts.Id -> Links.Link
 blogIdGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Get.Route)
 
-blogIdEditGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
+blogIdEditGetLink :: BlogPosts.Id -> Maybe BlogPosts.Body -> Links.Link
 blogIdEditGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Get.Route)
 
 blogIdEditPostLink :: BlogPosts.Id -> Links.Link
@@ -168,7 +168,7 @@ blogIdEditPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Post.Route
 blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
 blogIdPreviewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Preview.Get.Route)
 
-blogNewGetLink :: Links.Link
+blogNewGetLink :: Maybe BlogPosts.Subject -> Maybe BlogPosts.Body -> [InvalidField] -> Links.Link
 blogNewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Get.Route)
 
 blogNewPostLink :: Links.Link

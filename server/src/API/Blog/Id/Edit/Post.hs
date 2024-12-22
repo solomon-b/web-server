@@ -57,8 +57,8 @@ type Route =
 
 -- | DTO type for editing a blog post.
 data EditPost = EditPost
-  { title :: Text,
-    content :: Text,
+  { title :: BlogPosts.Subject,
+    content :: BlogPosts.Body,
     published :: Bool,
     heroImagePath :: Maybe (Extension, FilePath)
   }
@@ -71,8 +71,8 @@ data EditPost = EditPost
 instance FromMultipart Tmp EditPost where
   fromMultipart :: Multipart.MultipartData Tmp -> Either String EditPost
   fromMultipart form = do
-    title <- Multipart.lookupInput "title" form
-    content <- Multipart.lookupInput "content" form
+    title <- BlogPosts.Subject <$> Multipart.lookupInput "title" form
+    content <- BlogPosts.Body <$> Multipart.lookupInput "content" form
     published <- fromMaybe False <$> readInputMaybe @Bool "published" form
     let heroImagePath = lookupFilePathMaybe "heroImagePath" form
 

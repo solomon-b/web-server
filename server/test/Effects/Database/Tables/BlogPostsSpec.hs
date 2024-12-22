@@ -3,7 +3,6 @@ module Effects.Database.Tables.BlogPostsSpec where
 --------------------------------------------------------------------------------
 
 import Control.Monad.IO.Class (MonadIO (..))
-import Data.Text (Text)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.BlogPosts qualified as UUT
 import Effects.Database.Tables.Images qualified as Images
@@ -84,10 +83,10 @@ prop_insertUpdateSelect cfg = do
 
 --------------------------------------------------------------------------------
 
-blogPostInsertGen :: (MonadIO m, MonadGen m) => m (Text, Text, Bool, Maybe Images.Id)
+blogPostInsertGen :: (MonadIO m, MonadGen m) => m (UUT.Subject, UUT.Body, Bool, Maybe Images.Id)
 blogPostInsertGen = do
-  iTitle <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  iContent <- Gen.text (Range.linear 1 10) Gen.alphaNum
+  iTitle <- UUT.Subject <$> Gen.text (Range.linear 1 10) Gen.alphaNum
+  iContent <- UUT.Body <$> Gen.text (Range.linear 1 10) Gen.alphaNum
   iPublished <- Gen.bool
   pure (iTitle, iContent, iPublished, Nothing)
 
@@ -101,9 +100,9 @@ userInsertGen = do
   miIsAdmin <- Gen.bool
   pure User.ModelInsert {..}
 
-blogPostUpdateGen :: (MonadIO m, MonadGen m) => m (Text, Text, Bool, Maybe Images.Id)
+blogPostUpdateGen :: (MonadIO m, MonadGen m) => m (UUT.Subject, UUT.Body, Bool, Maybe Images.Id)
 blogPostUpdateGen = do
-  muTitle <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  muContent <- Gen.text (Range.linear 1 10) Gen.alphaNum
+  muTitle <- UUT.Subject <$> Gen.text (Range.linear 1 10) Gen.alphaNum
+  muContent <- UUT.Body <$> Gen.text (Range.linear 1 10) Gen.alphaNum
   muPublished <- Gen.bool
   pure (muTitle, muContent, muPublished, Nothing)

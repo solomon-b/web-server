@@ -36,7 +36,7 @@ type Route =
     :> "blog"
     :> Servant.Capture "id" BlogPosts.Id
     :> "edit"
-    :> Servant.QueryParam "content" Text
+    :> Servant.QueryParam "content" BlogPosts.Body
     :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ handler ::
   Auth.Authz ->
   Maybe Bool ->
   BlogPosts.Id ->
-  Maybe Text ->
+  Maybe BlogPosts.Body ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid contentParam =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do

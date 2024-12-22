@@ -16,7 +16,7 @@ import Utils (escapeString)
 
 --------------------------------------------------------------------------------
 
-template :: BlogPosts.Id -> Text -> Text -> Bool -> Maybe Text -> ByteString
+template :: BlogPosts.Id -> BlogPosts.Subject -> BlogPosts.Body -> Bool -> Maybe Text -> ByteString
 template bid title content isPublished heroImagePath =
   [i|
 <div class='relative p-4 w-full max-w-4xl max-h-full mx-auto'>
@@ -25,7 +25,7 @@ template bid title content isPublished heroImagePath =
   </div>
   <div class='p-4 md:p-5'>
       <form hx-post='/blog/#{bid}/edit' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
-          #{titleField title}
+          #{titleField (display title)}
           #{fileUploadField heroImagePath}
           #{contentField bid content}
           #{submitButton isPublished}
@@ -197,7 +197,7 @@ contentModel =
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: BlogPosts.Id -> Text -> ByteString
+contentFieldEdit :: BlogPosts.Id -> BlogPosts.Body -> ByteString
 contentFieldEdit bid content =
   [i|  
 <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
@@ -263,7 +263,7 @@ contentFieldPreview bid content =
 </div>
 |]
 
-contentField :: BlogPosts.Id -> Text -> ByteString
+contentField :: BlogPosts.Id -> BlogPosts.Body -> ByteString
 contentField bid content =
   [i|
 <div id='content-field' x-data="{ contentModel: '#{content}'}">
