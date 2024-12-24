@@ -5,14 +5,13 @@ module API.Blog.Id.Edit.Get where
 import App.Auth qualified as Auth
 import App.Errors (NotFound (..), Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
-import Component.Forms.BlogPost (contentFieldEdit, template)
+import Component.Forms.BlogPost qualified as Forms.BlogPost
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Maybe (fromMaybe)
-import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -24,7 +23,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderDocument, renderNodes)
+import Text.HTML (HTML, RawHtml, parseFragment, renderDocument)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
 
@@ -32,12 +31,11 @@ import Text.XmlHtml.Optics
 
 type Route =
   Servant.AuthProtect "cookie-auth"
-    :> Servant.Header "HX-Request" Bool
     :> "blog"
     :> Servant.Capture "id" BlogPosts.Id
     :> "edit"
     :> Servant.QueryParam "content" BlogPosts.Body
-    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+    :> Servant.Get '[HTML] RawHtml
 
 --------------------------------------------------------------------------------
 
@@ -51,26 +49,19 @@ handler ::
     MonadReader env m
   ) =>
   Auth.Authz ->
-  Maybe Bool ->
   BlogPosts.Id ->
   Maybe BlogPosts.Body ->
-  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid contentParam =
-  Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
+  m RawHtml
+handler (Auth.Authz user@User.Domain {dId = uid, ..} _) bid contentParam =
+  Observability.handlerSpan "GET /post/new" () display $ do
     BlogPosts.Domain {..} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     unless (dIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 
     let content = fromMaybe dContent contentParam
-    Log.logInfo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " content
-    case hxTrigger of
-      Just True -> do
-        pageFragment <- parseFragment $ contentFieldEdit (Just bid) (Just content) False
-        pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
-      _ -> do
-        pageFragment <- parseFragment $ template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage) []
-        page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
-        let html = renderDocument $ swapMain pageFragment page
-        pure $ Servant.addHeader "HX-Request" html
+    pageFragment <- parseFragment $ Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage) []
+    page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
+    let html = renderDocument $ swapMain pageFragment page
+    pure html
 
 --------------------------------------------------------------------------------
 

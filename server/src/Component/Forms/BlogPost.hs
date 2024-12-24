@@ -25,16 +25,18 @@ template ::
 template bid subject body isPublished heroImagePath invalidFields =
   let postPath :: Text
       postPath = maybe "/blog/new" (const [i|/blog/#{display bid}/edit|]) bid
+      subject' = maybe "" display subject
+      body' = maybe "" display body
    in [i|
 <div class='relative p-4 w-full max-w-4xl max-h-full mx-auto'>
   <div class='flex items-center justify-between p-4 md:p-5'>
       <h3 class='text-xl font-semibold text-gray-900'>Create Post</h3>
   </div>
-  <div class='p-4 md:p-5' x-data="{ editMode: true, fields: { subject: { value: '', isValid: true }, body: { value: '', isValid: true }}}">
+  <div class='p-4 md:p-5' x-data="{ editMode: true, fields: { subject: { value: '#{subject'}', isValid: true }, body: { value: `#{body'}`, isValid: true }}}">
       <form hx-post='#{postPath}' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
-          #{titleField ("Subject" `elem` invalidFields) subject}
+          #{titleField ("Subject" `elem` invalidFields)}
           #{fileUploadField heroImagePath}
-          #{contentField bid ("Body" `elem` invalidFields) body}
+          #{contentField bid ("Body" `elem` invalidFields)}
           #{submitButton isPublished}
       </form>
       #{javascript}
@@ -60,10 +62,9 @@ publishToggle isPublished =
 
 --------------------------------------------------------------------------------
 
-titleField :: Bool -> Maybe BlogPost.Subject -> ByteString
-titleField _isInvalid subject =
-  let inputValue = foldMap display subject
-   in [i|
+titleField :: Bool -> ByteString
+titleField _isInvalid =
+   [i|
 <div x-data="alpineHandler">
   <label for='title' class='mb-2 text-sm text-gray-900 font-semibold'>
     Add title
@@ -74,11 +75,11 @@ titleField _isInvalid subject =
     id='title'
     name='title'
     placeholder='title'
-    value='#{inputValue}'
     class='border text-gray-900 text-sm rounded-lg block w-full p-2.5'
-    x-model.lazy="fields.subject.value"
+    x-model="fields.subject.value"
     :class="fields.subject.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
     @blur="validateField('subject')"
+    @input="validateField('subject')"
   />
 </div>
 |]
@@ -206,8 +207,8 @@ contentFieldFooter =
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: Maybe BlogPost.Id -> Maybe BlogPost.Body -> Bool -> ByteString
-contentFieldEdit _bid _content _isInvalid =
+contentFieldEdit :: Maybe BlogPost.Id -> Bool -> ByteString
+contentFieldEdit _bid _isInvalid =
    [i|
 <div id="contentEdit" x-bind:hidden="!editMode">
   <div class='flex mb-2'>
@@ -243,10 +244,11 @@ contentFieldEdit _bid _content _isInvalid =
         placeholder='Add your content here...'
         rows='11'
         class='block p-2.5 w-full text-sm rounded-lg border'
-        x-model.lazy="fields.body.value"
+        x-model="fields.body.value"
         x-ref="contentRef"
         :class="fields.body.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
         @blur="validateField('body')"
+        @input="validateField('body')"
       >
       </textarea>
   </div>
@@ -281,8 +283,8 @@ contentFieldPreview =
 </div>
 |]
 
-contentField :: Maybe BlogPost.Id -> Bool -> Maybe BlogPost.Body -> ByteString
-contentField bid isInvalid body =
+contentField :: Maybe BlogPost.Id -> Bool -> ByteString
+contentField bid isInvalid =
   [i|
 <div id='content-field'>
   <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>
@@ -290,7 +292,7 @@ contentField bid isInvalid body =
     <span class="text-xs text-red-900" x-bind:hidden="fields.body.isValid" hidden> * required</span>
   </label>
   <div class='flex flex-col border border-gray-300 rounded-lg' x-data="alpineHandler">
-    #{contentFieldEdit bid body isInvalid}
+    #{contentFieldEdit bid isInvalid}
     #{contentFieldPreview}
   </div>
 </div>
