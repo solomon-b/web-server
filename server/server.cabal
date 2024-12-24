@@ -126,10 +126,8 @@ library
     API.About.Get
     API.Admin.Get
     API.Blog.Get
-    API.Blog.New.Template
     API.Blog.New.Get
     API.Blog.New.Post
-    API.Blog.New.Edit.Get
     API.Blog.Id.Get
     API.Blog.Id.Edit.Get
     API.Blog.Id.Edit.Post
@@ -152,6 +150,7 @@ library
     API.User.Register.Post
     Component.Frame
     Component.NavBar
+    Component.Forms.BlogPost
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
     Domain.Types.EmailAddress

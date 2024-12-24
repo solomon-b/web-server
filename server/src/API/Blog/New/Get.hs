@@ -2,10 +2,10 @@ module API.Blog.New.Get where
 
 --------------------------------------------------------------------------------
 
-import API.Blog.New.Template (template)
 import App.Auth qualified as Auth
 import App.Errors (Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
+import Component.Forms.BlogPost (template)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)

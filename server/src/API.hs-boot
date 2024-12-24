@@ -23,7 +23,6 @@ blogIdEditPostLink :: BlogPosts.Id -> Links.Link
 blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
 blogNewGetLink :: [InvalidField] -> Links.Link
 blogNewPostLink :: Links.Link
-blogNewEditGetLink :: Links.Link
 imagePostLink :: Links.Link
 aboutGetLink :: Links.Link
 userGetLink :: Links.Link

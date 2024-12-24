@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module API.Blog.New.Template where
+module Component.Forms.BlogPost where
 
 --------------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ titleField :: Bool -> Maybe BlogPost.Subject -> ByteString
 titleField _isInvalid subject =
   let inputValue = foldMap display subject
    in [i|
-<div x-data="handler">
+<div x-data="alpineHandler">
   <label for='title' class='mb-2 text-sm text-gray-900 font-semibold'>
     Add title
     <span class="text-xs text-red-900" x-bind:hidden="fields.subject.isValid" hidden> * required</span>
@@ -99,7 +99,7 @@ fileUploadField _heroImagePath =
 submitButton :: Bool -> ByteString
 submitButton isPublished =
   [i|
-<div class='flex justify-end'  x-data="handler">
+<div class='flex justify-end'  x-data="alpineHandler">
   #{publishToggle isPublished}
   <button
     type='submit'
@@ -118,7 +118,7 @@ submitButton isPublished =
 headingButton :: ByteString
 headingButton =
   let onClick :: Text
-      onClick = [i|x-on:click="fields.body.value += '\#\#\# '; $refs.contentRef.focus()"|]
+      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '\#\#\# ')"|]
    in [i|<i #{onClick} title='Heading' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-heading'></i>|]
 
 boldButton :: ByteString
@@ -142,41 +142,19 @@ quoteButton =
 codeButton :: ByteString
 codeButton =
   let onClick :: Text
-      onClick =
-        [i|x-on:click="fields.body.value += '``';
-$nextTick(() => {
-  $refs.contentRef.focus();
-  const pos = $refs.contentRef.value.length - 1;
-  $refs.contentRef.setSelectionRange(pos, pos);
-})"|]
+      onClick = [i|x-on:click="surroundFocus($refs.contentRef, '`')"|]
    in [i|<i #{onClick} title='Code' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-code'></i>|]
 
 urlButton :: ByteString
 urlButton =
   let onClick :: Text
-      onClick =
-        [i|x-on:click="fields.body.value += '[](url)';
-$nextTick(() => {
-  $refs.contentRef.focus();
-  const pos = $refs.contentRef.value.length - 6;
-  $refs.contentRef.setSelectionRange(pos, pos);
-})"|]
+      onClick = [i|x-on:click="insertUrl($refs.contentRef)"|]
    in [i|<i #{onClick} title='Link' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-link'></i>|]
 
 numberedListButton :: ByteString
 numberedListButton =
   let onClick :: Text
-      onClick =
-        [i|x-on:click="
-$refs.contentRef.focus();
-const currentPos = $refs.contentRef.selectionStart;
-const contentBeforeCursor = $refs.contentRef.value.substring(0, currentPos);
-const rowStart = contentBeforeCursor.lastIndexOf('\\n') + 1;
-fields.body.value = 
-    $refs.contentRef.value.substring(0, rowStart) +
-    '1. ' +
-    $refs.contentRef.value.substring(rowStart);
-"|]
+      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '1. ')"|]
    in [i|<i #{onClick} title='Numbered List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-ol'></i>|]
 
 unorderedListButton :: ByteString
@@ -311,7 +289,7 @@ contentField bid isInvalid body =
     Add body
     <span class="text-xs text-red-900" x-bind:hidden="fields.body.isValid" hidden> * required</span>
   </label>
-  <div class='flex flex-col border border-gray-300 rounded-lg' x-data="handler">
+  <div class='flex flex-col border border-gray-300 rounded-lg' x-data="alpineHandler">
     #{contentFieldEdit bid body isInvalid}
     #{contentFieldPreview}
   </div>
@@ -323,7 +301,212 @@ javascript :: ByteString
 javascript =
   [i|
 <script>
-  function handler() {
+  async function uploadFile (event) {
+    const files = event.target.files;
+
+    this.file = files[0];
+    this.fileName = this.file.name;
+
+    const formData = new FormData();
+    formData.append('title', this.fileName);
+    formData.append('file', this.file);
+
+    try {
+      const response = await fetch('/image/new', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const {url} = await response.json();
+        const urlWithScheme = url.startsWith("http") ? url : "http://" + url
+        const {pathname} = new URL(urlWithScheme);
+        
+        this.fields.body.value += `![${this.fileName}](${pathname})\n`
+        this.$refs.contentRef.focus();
+        this.$nextTick(() => {
+          this.$refs.contentRef.focus();
+        });
+      } else {
+        console.log(`Upload failed: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.log(`Error: ${error.message}`);
+    }
+  };
+
+  /------------------------------------------------------------------------------/
+
+  function insertUrl (textarea) {
+    textarea.focus();
+
+    const spliceContent = (content, splicePoint, updatedLines) => {
+      const beforeSelection = content.substring(0, splicePoint);
+      const afterSelection = content.substring(splicePoint);
+      return beforeSelection + '[](url)' + afterSelection;
+    };
+
+    const updateTextarea = (textarea, newContent, splicePoint) => {
+      textarea.setSelectionRange(0, textarea.value.length); // Select all
+      document.execCommand('insertText', false, newContent); // Update with undo support
+      textarea.setSelectionRange(splicePoint + 1, splicePoint + 1); // Restore selection
+    };
+
+    let {value, selectionStart} = textarea;
+    let updatedContent = spliceContent(value, selectionStart)
+
+    updateTextarea(textarea, updatedContent, selectionStart);
+  };
+
+  /------------------------------------------------------------------------------/
+
+  // Insert or remove a 'prefix' string from the current cursor position in the 'textarea.
+  function togglePrefix (textarea, prefix) {
+    textarea.focus();
+
+    if (!prefix) {
+      throw new Error('The "prefix" parameter is required.');
+    }
+
+    const expandSelectionToFullLines = (content, selectionStart, selectionEnd) => {
+      while (selectionStart > 0 && content[selectionStart - 1] !== '\\n') {
+        selectionStart--;
+      }
+      while (selectionEnd < content.length && content[selectionEnd] !== '\\n') {
+        selectionEnd++;
+      }
+      return {selectionStart, selectionEnd};
+    };
+
+    const processLines = (lines, prefix) => {
+      const allLinesPrefixed = lines.every(line => line.startsWith(prefix));
+      if (allLinesPrefixed) {
+        const removePrefix = (xs) => xs.map(line => line.startsWith(prefix) ? line.substring(prefix.length) : line);
+        return  removePrefix(lines);
+      } else {
+        const addPrefix = (xs) => xs.map(line => (line.startsWith(prefix) ? line : prefix + line)); 
+        return addPrefix(lines)
+      }
+    };
+
+    const reassembleContent = (content, selectionStart, selectionEnd, updatedLines) => {
+      const beforeSelection = content.substring(0, selectionStart);
+      const afterSelection = content.substring(selectionEnd);
+      return beforeSelection + updatedLines.join('\\n') + afterSelection;
+    };
+
+    const updateTextarea = (textarea, newContent, selectionStart, selectionEnd) => {
+      textarea.setSelectionRange(0, textarea.value.length); // Select all
+      document.execCommand('insertText', false, newContent); // Update with undo support
+      textarea.setSelectionRange(selectionStart, selectionEnd); // Restore selection
+    };
+
+    const content = textarea.value;
+    let {selectionStart, selectionEnd} = expandSelectionToFullLines(content, textarea.selectionStart, textarea.selectionEnd);
+
+    const selection = content.substring(selectionStart, selectionEnd);
+    const lines = selection.split('\\n');
+    const updatedLines = processLines(lines, prefix);
+    const updatedContent = reassembleContent(content, selectionStart, selectionEnd, updatedLines);
+    const adjustedStartPos = textarea.selectionStart + prefix.length;
+    const adjustedEndPos = selectionStart + updatedLines.join('\\n').length;
+
+    updateTextarea(textarea, updatedContent, adjustedStartPos, adjustedEndPos);
+  }
+
+  /------------------------------------------------------------------------------/
+
+  // Surround the selected section of the 'textarea' with the 'wrapper' string.
+  function surroundFocus (textarea, wrapper) {
+    textarea.focus();
+  
+    // Split text into a Zipper.
+    const splitText = (text, start, end) => ({
+      before: text.slice(0, start),
+      selection: text.slice(start, end),
+      after: text.slice(end),
+    });
+  
+    const isWrapped = (text, wrapper) =>
+      text.startsWith(wrapper) && text.endsWith(wrapper);
+  
+    const escapeRegex = (text) => text.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&');
+  
+    // Remove any instances of the `wrapper` string from  inside the selection
+    // but otherwise preserve the inner content.
+    const cleanInnerWrappers = (text, wrapper) => {
+      const escapedWrapper = escapeRegex(wrapper);
+      const regex = new RegExp(`${escapedWrapper}(.*?)${escapedWrapper}`, 'g');
+      return text.replace(regex, '$1'); 
+    };
+  
+    // Replace the content of the textarea respecting undo history.
+    const insertText = (textarea, newValue) => {
+      textarea.setSelectionRange(0, textarea.value.length);
+      document.execCommand('insertText', false, newValue);
+    };
+  
+    // Constants
+    const { selectionStart: start, selectionEnd: end } = textarea;
+    const { before, selection, after } = splitText(
+      textarea.value,
+      start,
+      end
+    );
+  
+    const isSelected = start !== end;
+  
+    // Determine the updated text and cursor/selection range
+    let updatedValue, newStart, newEnd;
+  
+    if (isSelected) {
+      if (isWrapped(selection, wrapper)) {
+        // Remove wrapping if fully wrapped
+        const unwrapped = selection.slice(wrapper.length, -wrapper.length);
+        updatedValue = before + unwrapped + after;
+        newStart = start;
+        newEnd = start + unwrapped.length;
+      } else {
+        // Clean inner wrappers and wrap the selection
+        const cleaned = cleanInnerWrappers(selection, wrapper);
+        const wrapped = `${wrapper}${cleaned}${wrapper}`;
+        updatedValue = before + wrapped + after;
+        newStart = start;
+        newEnd = start + wrapped.length;
+      }
+    } else {
+      const hasOuterWrappers =
+        isWrapped(before.slice(-wrapper.length) + after.slice(0, wrapper.length), wrapper);
+  
+      if (hasOuterWrappers) {
+        // Remove outer wrappers
+        updatedValue = before.slice(0, -wrapper.length) + after.slice(wrapper.length);
+        newStart = newEnd = start - wrapper.length;
+      } else {
+        // Insert `${wrapper}${wrapper}` at the cursor and position the cursor between them
+        updatedValue = before + wrapper + wrapper + after;
+        newStart = newEnd = start + wrapper.length;
+      }
+    }
+  
+    // Update the textarea and adjust the selection
+    insertText(textarea, updatedValue);
+    textarea.setSelectionRange(newStart, newEnd);
+  }
+
+  /------------------------------------------------------------------------------/
+
+  function validateField(field) {
+     this.fields[field].isValid = this.fields[field].value.trim() !== '';
+  }
+
+  function allValid() {
+    return Object.values(this.fields).every(field => field.isValid && field.value.trim() !== '');
+  }
+
+  /------------------------------------------------------------------------------/
+
+  function alpineHandler() {
     return {
       file: null,
       fileName: '',
@@ -331,171 +514,11 @@ javascript =
         // Open the file picker
         this.$refs.fileInput.click(); 
       },
-      async uploadFile(event) {
-        const files = event.target.files;
-
-        this.file = files[0];
-        this.fileName = this.file.name;
-
-        const formData = new FormData();
-        formData.append('title', this.fileName);
-        formData.append('file', this.file);
-
-        try {
-          const response = await fetch('/image/new', {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (response.ok) {
-            const {url} = await response.json();
-            const urlWithScheme = url.startsWith("http") ? url : "http://" + url
-            const {pathname} = new URL(urlWithScheme);
-            
-            this.fields.body.value += `![${this.fileName}](${pathname})\n`
-            this.$refs.contentRef.focus();
-            this.$nextTick(() => {
-              this.$refs.contentRef.focus();
-            });
-          } else {
-            console.log(`Upload failed: ${response.statusText}`);
-          }
-        } catch (error) {
-          console.log(`Error: ${error.message}`);
-        }
-      },
-      togglePrefix(textarea, prefix) {
-        textarea.focus();
-
-        if (!prefix) {
-          throw new Error('The "prefix" parameter is required.');
-        }
-
-        const expandSelectionToFullLines = (content, selectionStart, selectionEnd) => {
-          while (selectionStart > 0 && content[selectionStart - 1] !== '\\n') {
-            selectionStart--;
-          }
-          while (selectionEnd < content.length && content[selectionEnd] !== '\\n') {
-            endPos++;
-          }
-          return {selectionStart, selectionEnd};
-        };
-
-        const processLines = (lines, prefix) => {
-          const allLinesPrefixed = lines.every(line => line.startsWith(prefix));
-          if (allLinesPrefixed) {
-            const removePrefix = (xs) => xs.map(line => line.startsWith(prefix) ? line.substring(prefix.length) : line);
-            return  removePrefix(lines);
-          } else {
-            const addPrefix = (xs) => xs.map(line => (line.startsWith(prefix) ? line : prefix + line)); 
-            return addPrefix(lines)
-          }
-        };
-
-        const reassembleContent = (content, selectionStart, selectionEnd, updatedLines) => {
-          const beforeSelection = content.substring(0, selectionStart);
-          const afterSelection = content.substring(selectionEnd);
-          return beforeSelection + updatedLines.join('\\n') + afterSelection;
-        };
-
-        const updateTextarea = (textarea, newContent, selectionStart, selectionEnd) => {
-          textarea.setSelectionRange(0, textarea.value.length); // Select all
-          document.execCommand('insertText', false, newContent); // Update with undo support
-          textarea.setSelectionRange(selectionStart, selectionEnd); // Restore selection
-        };
-
-        const content = textarea.value;
-        let {selectionStart, selectionEnd} = expandSelectionToFullLines(content, textarea.selectionStart, textarea.selectionEnd);
-
-        const selection = content.substring(selectionStart, selectionEnd);
-        const lines = selection.split('\\n');
-        const updatedLines = processLines(lines, prefix);
-        const updatedContent = reassembleContent(content, selectionStart, selectionEnd, updatedLines);
-        const adjustedEndPos = selectionStart + updatedLines.join('\\n').length;
-
-        updateTextarea(textarea, updatedContent, selectionStart, adjustedEndPos);
-      },
-      surroundFocus(textarea, wrapper) {
-        textarea.focus();
-      
-        // Split text into a Zipper.
-        const splitText = (text, start, end) => ({
-          before: text.slice(0, start),
-          selection: text.slice(start, end),
-          after: text.slice(end),
-        });
-      
-        const isWrapped = (text, wrapper) =>
-          text.startsWith(wrapper) && text.endsWith(wrapper);
-      
-        const escapeRegex = (text) => text.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&');
-      
-        // Remove any `**` inside the selection but keep the inner content
-        const cleanInnerWrappers = (text, wrapper) => {
-          const escapedWrapper = escapeRegex(wrapper);
-          const regex = new RegExp(`${escapedWrapper}(.*?)${escapedWrapper}`, 'g');
-          return text.replace(regex, '$1'); 
-        };
-      
-        // Replace the content of the textarea respecting undo history.
-        const insertText = (textarea, newValue) => {
-          textarea.setSelectionRange(0, textarea.value.length);
-          document.execCommand('insertText', false, newValue);
-        };
-      
-        // Constants
-        const { selectionStart: start, selectionEnd: end } = textarea;
-        const { before, selection, after } = splitText(
-          textarea.value,
-          start,
-          end
-        );
-      
-        const isSelected = start !== end;
-      
-        // Determine the updated text and cursor/selection range
-        let updatedValue, newStart, newEnd;
-      
-        if (isSelected) {
-          if (isWrapped(selection, wrapper)) {
-            // Remove wrapping if fully wrapped
-            const unwrapped = selection.slice(wrapper.length, -wrapper.length);
-            updatedValue = before + unwrapped + after;
-            newStart = start;
-            newEnd = start + unwrapped.length;
-          } else {
-            // Clean inner wrappers and wrap the selection
-            const cleaned = cleanInnerWrappers(selection, wrapper);
-            const wrapped = `${wrapper}${cleaned}${wrapper}`;
-            updatedValue = before + wrapped + after;
-            newStart = start;
-            newEnd = start + wrapped.length;
-          }
-        } else {
-          const hasOuterWrappers =
-            isWrapped(before.slice(-wrapper.length) + after.slice(0, wrapper.length), wrapper);
-      
-          if (hasOuterWrappers) {
-            // Remove outer wrappers
-            updatedValue = before.slice(0, -wrapper.length) + after.slice(wrapper.length);
-            newStart = newEnd = start - wrapper.length;
-          } else {
-            // Insert `${wrapper}${wrapper}` at the cursor and position the cursor between them
-            updatedValue = before + wrapper + wrapper + after;
-            newStart = newEnd = start + wrapper.length;
-          }
-        }
-      
-        // Update the textarea and adjust the selection
-        insertText(textarea, updatedValue);
-        textarea.setSelectionRange(newStart, newEnd);
-      },
-      validateField (field) {
-         this.fields[field].isValid = this.fields[field].value.trim() !== '';
-      },
-      allValid() {
-        return Object.values(this.fields).every(field => field.isValid && field.value.trim() !== '');
-      },
+      uploadFile,
+      togglePrefix,
+      surroundFocus,
+      validateField,
+      allValid,
     };
   }
 </script>

@@ -2,10 +2,10 @@ module API.Blog.Id.Edit.Get where
 
 --------------------------------------------------------------------------------
 
-import API.Blog.New.Template (contentFieldEdit, template)
 import App.Auth qualified as Auth
 import App.Errors (NotFound (..), Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
+import Component.Forms.BlogPost (contentFieldEdit, template)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)

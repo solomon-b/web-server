@@ -9,7 +9,6 @@ import API.Blog.Id.Edit.Get qualified as Blog.Id.Edit.Get
 import API.Blog.Id.Edit.Post qualified as Blog.Id.Edit.Post
 import API.Blog.Id.Get qualified as Blog.Id.Get
 import API.Blog.Id.Preview.Get qualified as Blog.Id.Preview.Get
-import API.Blog.New.Edit.Get qualified as Blog.New.Edit.Get
 import API.Blog.New.Get qualified as Blog.New.Get
 import API.Blog.New.Post qualified as Blog.New.Post
 import API.Get qualified as Get
@@ -70,7 +69,6 @@ type API =
     :<|> Blog.Id.Preview.Get.Route
     :<|> Blog.New.Get.Route
     :<|> Blog.New.Post.Route
-    :<|> Blog.New.Edit.Get.Route
     -- Protected Image Routes
     :<|> Image.Post.Route
     -- Unprotected State Page Routes
@@ -123,7 +121,6 @@ server env = do
     :<|> Blog.Id.Preview.Get.handler
     :<|> Blog.New.Get.handler
     :<|> Blog.New.Post.handler
-    :<|> Blog.New.Edit.Get.handler
     :<|> Image.Post.handler
     :<|> About.Get.handler
     :<|> User.Get.handler
@@ -170,9 +167,6 @@ blogNewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Get.Route)
 
 blogNewPostLink :: Links.Link
 blogNewPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Post.Route)
-
-blogNewEditGetLink :: Links.Link
-blogNewEditGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Edit.Get.Route)
 
 imagePostLink :: Links.Link
 imagePostLink = Links.safeLink (Proxy @API) (Proxy @Image.Post.Route)
