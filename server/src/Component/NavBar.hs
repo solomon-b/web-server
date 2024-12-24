@@ -34,7 +34,7 @@ adminGetUrl :: Link.URI
 adminGetUrl = Link.linkURI adminGetLink
 
 blogNewGetUrl :: Link.URI
-blogNewGetUrl = Link.linkURI (blogNewGetLink [])
+blogNewGetUrl = Link.linkURI blogNewGetLink
 
 userLoginGetUrl :: Maybe Text -> Link.URI
 userLoginGetUrl = Link.linkURI . flip userLoginGetLink Nothing

@@ -162,7 +162,7 @@ blogIdEditPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Post.Route
 blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
 blogIdPreviewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Preview.Get.Route)
 
-blogNewGetLink :: [InvalidField] -> Links.Link
+blogNewGetLink :: Links.Link
 blogNewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Get.Route)
 
 blogNewPostLink :: Links.Link

@@ -4,8 +4,8 @@ module API.Blog.Id.Edit.Get where
 
 import App.Auth qualified as Auth
 import App.Errors (NotFound (..), Unauthorized (..), throwErr)
-import Component.Frame (loadFrameWithNav)
 import Component.Forms.BlogPost qualified as Forms.BlogPost
+import Component.Frame (loadFrameWithNav)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -58,7 +58,7 @@ handler (Auth.Authz user@User.Domain {dId = uid, ..} _) bid contentParam =
     unless (dIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 
     let content = fromMaybe dContent contentParam
-    pageFragment <- parseFragment $ Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage) []
+    pageFragment <- parseFragment $ Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage)
     page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
     let html = renderDocument $ swapMain pageFragment page
     pure html

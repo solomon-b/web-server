@@ -9,7 +9,6 @@ import Data.ByteString (ByteString)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
-import Domain.Types.InvalidField (InvalidField)
 import Effects.Database.Tables.BlogPosts qualified as BlogPost
 
 --------------------------------------------------------------------------------
@@ -20,11 +19,10 @@ template ::
   Maybe BlogPost.Body ->
   Bool ->
   Maybe Text ->
-  [InvalidField] ->
   ByteString
-template bid subject body isPublished heroImagePath invalidFields =
+template bid subject body isPublished heroImagePath =
   let postPath :: Text
-      postPath = maybe "/blog/new" (const [i|/blog/#{display bid}/edit|]) bid
+      postPath = maybe "/blog/new" (\bid' -> [i|/blog/#{display bid'}/edit|]) bid
       subject' = maybe "" display subject
       body' = maybe "" display body
    in [i|
@@ -34,9 +32,9 @@ template bid subject body isPublished heroImagePath invalidFields =
   </div>
   <div class='p-4 md:p-5' x-data="{ editMode: true, fields: { subject: { value: '#{subject'}', isValid: true }, body: { value: `#{body'}`, isValid: true }}}">
       <form hx-post='#{postPath}' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
-          #{titleField ("Subject" `elem` invalidFields)}
+          #{titleField}
           #{fileUploadField heroImagePath}
-          #{contentField bid ("Body" `elem` invalidFields)}
+          #{contentField}
           #{submitButton isPublished}
       </form>
       #{javascript}
@@ -62,9 +60,9 @@ publishToggle isPublished =
 
 --------------------------------------------------------------------------------
 
-titleField :: Bool -> ByteString
-titleField _isInvalid =
-   [i|
+titleField :: ByteString
+titleField =
+  [i|
 <div x-data="alpineHandler">
   <label for='title' class='mb-2 text-sm text-gray-900 font-semibold'>
     Add title
@@ -207,9 +205,9 @@ contentFieldFooter =
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: Maybe BlogPost.Id -> Bool -> ByteString
-contentFieldEdit _bid _isInvalid =
-   [i|
+contentFieldEdit :: ByteString
+contentFieldEdit =
+  [i|
 <div id="contentEdit" x-bind:hidden="!editMode">
   <div class='flex mb-2'>
       <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
@@ -283,8 +281,8 @@ contentFieldPreview =
 </div>
 |]
 
-contentField :: Maybe BlogPost.Id -> Bool -> ByteString
-contentField bid isInvalid =
+contentField :: ByteString
+contentField =
   [i|
 <div id='content-field'>
   <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>
@@ -292,7 +290,7 @@ contentField bid isInvalid =
     <span class="text-xs text-red-900" x-bind:hidden="fields.body.isValid" hidden> * required</span>
   </label>
   <div class='flex flex-col border border-gray-300 rounded-lg' x-data="alpineHandler">
-    #{contentFieldEdit bid isInvalid}
+    #{contentFieldEdit}
     #{contentFieldPreview}
   </div>
 </div>

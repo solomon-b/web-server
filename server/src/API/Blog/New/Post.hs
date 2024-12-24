@@ -115,7 +115,7 @@ handler (Auth.Authz User.Domain {dId = userId, dIsAdmin} _) req@CreatePost {..} 
     case validateRequest req of
       Failure err -> do
         Log.logInfo "POST /blog/new Request validation failure" (Aeson.object ["request" .= req, "validationErrors" .= display err])
-        pure $ Servant.addHeader ("/" <> Http.toUrlPiece (blogNewGetLink (fmap toInvalidField err))) Servant.NoContent
+        pure $ Servant.addHeader ("/" <> Http.toUrlPiece blogNewGetLink) Servant.NoContent
       Success () -> do
         heroImageId <- traverse (insertImage userId) heroImagePath
         bid <- execQuerySpanThrow $ BlogPosts.insertBlogPost $ BlogPosts.Insert userId title content published heroImageId

@@ -21,7 +21,7 @@ blogIdGetLink :: BlogPosts.Id -> Links.Link
 blogIdEditGetLink :: BlogPosts.Id -> Maybe BlogPosts.Body -> Links.Link
 blogIdEditPostLink :: BlogPosts.Id -> Links.Link
 blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
-blogNewGetLink :: [InvalidField] -> Links.Link
+blogNewGetLink :: Links.Link
 blogNewPostLink :: Links.Link
 imagePostLink :: Links.Link
 aboutGetLink :: Links.Link

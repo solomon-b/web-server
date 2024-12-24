@@ -4,8 +4,8 @@ module API.Blog.New.Get where
 
 import App.Auth qualified as Auth
 import App.Errors (Unauthorized (..), throwErr)
-import Component.Frame (loadFrameWithNav)
 import Component.Forms.BlogPost (template)
+import Component.Frame (loadFrameWithNav)
 import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -13,7 +13,6 @@ import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
 import Data.Text (Text)
 import Data.Text.Display (display)
-import Domain.Types.InvalidField (InvalidField)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import Log qualified
@@ -31,7 +30,6 @@ type Route =
     :> Servant.Header "HX-Request" Bool
     :> "blog"
     :> "new"
-    :> Servant.QueryParams "invalidField" InvalidField
     :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
 --------------------------------------------------------------------------------
@@ -46,13 +44,12 @@ handler ::
   ) =>
   Auth.Authz ->
   Maybe Bool ->
-  [InvalidField] ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler (Auth.Authz user@User.Domain {..} _) hxTrigger invalidField =
+handler (Auth.Authz user@User.Domain {..} _) hxTrigger =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     unless dIsAdmin $ throwErr Unauthorized
 
-    pageFragment <- parseFragment (template Nothing Nothing Nothing False Nothing invalidField)
+    pageFragment <- parseFragment (template Nothing Nothing Nothing False Nothing)
     page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
 
     case hxTrigger of
