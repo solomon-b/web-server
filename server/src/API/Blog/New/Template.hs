@@ -6,47 +6,53 @@ module API.Blog.New.Template where
 
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
-import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Domain.Types.InvalidField (InvalidField)
 import Effects.Database.Tables.BlogPosts qualified as BlogPost
-import Utils (escapeString)
 
 --------------------------------------------------------------------------------
 
 template ::
+  Maybe BlogPost.Id ->
   Maybe BlogPost.Subject ->
   Maybe BlogPost.Body ->
+  Bool ->
+  Maybe Text ->
   [InvalidField] ->
   ByteString
-template subject body invalidFields =
-  [i|
+template bid subject body isPublished heroImagePath invalidFields =
+  let postPath :: Text
+      postPath = maybe "/blog/new" (const [i|/blog/#{display bid}/edit|]) bid
+   in [i|
 <div class='relative p-4 w-full max-w-4xl max-h-full mx-auto'>
   <div class='flex items-center justify-between p-4 md:p-5'>
       <h3 class='text-xl font-semibold text-gray-900'>Create Post</h3>
   </div>
-  <div class='p-4 md:p-5'>
-      <form hx-post='/blog/new' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
+  <div class='p-4 md:p-5' x-data="{ editMode: true, fields: { subject: { value: '', isValid: true }, body: { value: '', isValid: true }}}">
+      <form hx-post='#{postPath}' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
           #{titleField ("Subject" `elem` invalidFields) subject}
-          #{fileUploadField}
-          #{contentField ("Body" `elem` invalidFields) body}
-          #{submitButton}
+          #{fileUploadField heroImagePath}
+          #{contentField bid ("Body" `elem` invalidFields) body}
+          #{submitButton isPublished}
       </form>
+      #{javascript}
   </div>
 </div>
 |]
 
 --------------------------------------------------------------------------------
 
-publishToggle :: ByteString
-publishToggle =
-  [i|
+publishToggle :: Bool -> ByteString
+publishToggle isPublished =
+  let checked :: Text
+      checked = bool "" "checked" isPublished
+   in [i|
 <div class='px-5 font-medium inline-flex'>
 <label class='inline-flex items-center cursor-pointer'>
   <span class='px-2.5 ms-3 text-sm font-medium text-gray-900 font-semibold'>Published</span>
-  <input type='checkbox' name='published' class='sr-only peer' value='true' />
+  <input type='checkbox' name='published' class='sr-only peer' value='true' #{checked} />
   <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:w-5 after:h-5 after:transition-all peer-checked:bg-green-600"></div>
 </label>
 </div>
@@ -55,23 +61,32 @@ publishToggle =
 --------------------------------------------------------------------------------
 
 titleField :: Bool -> Maybe BlogPost.Subject -> ByteString
-titleField isInvalid subject =
+titleField _isInvalid subject =
   let inputValue = foldMap display subject
-      inputValid :: Text
-      inputValid = [i|<input type='text' placeholder='title' name='title' id='title' value='#{inputValue}' class='bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5' />|]
-      inputInvalid :: Text
-      inputInvalid = [i|<input type='text' placeholder='title' name='title' id='title' value='#{inputValue}' class='bg-red-50 border border-red-500 text-red-900 placeholder-red-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-2.5' />|]
    in [i|
-<div>
-  <label for='title' class='mb-2 text-sm text-gray-900 font-semibold'>Add title</label>
-  #{bool inputValid inputInvalid isInvalid}
+<div x-data="handler">
+  <label for='title' class='mb-2 text-sm text-gray-900 font-semibold'>
+    Add title
+    <span class="text-xs text-red-900" x-bind:hidden="fields.subject.isValid" hidden> * required</span>
+  </label>
+  <input
+    type='text'
+    id='title'
+    name='title'
+    placeholder='title'
+    value='#{inputValue}'
+    class='border text-gray-900 text-sm rounded-lg block w-full p-2.5'
+    x-model.lazy="fields.subject.value"
+    :class="fields.subject.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
+    @blur="validateField('subject')"
+  />
 </div>
 |]
 
 --------------------------------------------------------------------------------
 
-fileUploadField :: ByteString
-fileUploadField =
+fileUploadField :: Maybe Text -> ByteString
+fileUploadField _heroImagePath =
   [i|
 <div>
   <label class="block mb-2 text-sm font-medium text-gray-900 font-semibold" for="hero_image_input">Upload Hero Image</label>
@@ -81,12 +96,18 @@ fileUploadField =
 
 --------------------------------------------------------------------------------
 
-submitButton :: ByteString
-submitButton =
+submitButton :: Bool -> ByteString
+submitButton isPublished =
   [i|
-<div class='flex justify-end'>
-  #{publishToggle}
-  <button id='publishedStatusButton' type='submit' class='text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center'>
+<div class='flex justify-end'  x-data="handler">
+  #{publishToggle isPublished}
+  <button
+    type='submit'
+    id='publishedStatusButton'
+    class='text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center'
+    :disabled="!allValid()"
+    disabled
+  >
     Create Post
   </button>
 </div>
@@ -97,7 +118,7 @@ submitButton =
 headingButton :: ByteString
 headingButton =
   let onClick :: Text
-      onClick = [i|x-on:click="contentModel += '\#\#\# '; $refs.contentRef.focus()"|]
+      onClick = [i|x-on:click="fields.body.value += '\#\#\# '; $refs.contentRef.focus()"|]
    in [i|<i #{onClick} title='Heading' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-heading'></i>|]
 
 boldButton :: ByteString
@@ -122,7 +143,7 @@ codeButton :: ByteString
 codeButton =
   let onClick :: Text
       onClick =
-        [i|x-on:click="contentModel += '``';
+        [i|x-on:click="fields.body.value += '``';
 $nextTick(() => {
   $refs.contentRef.focus();
   const pos = $refs.contentRef.value.length - 1;
@@ -134,7 +155,7 @@ urlButton :: ByteString
 urlButton =
   let onClick :: Text
       onClick =
-        [i|x-on:click="contentModel += '[](url)';
+        [i|x-on:click="fields.body.value += '[](url)';
 $nextTick(() => {
   $refs.contentRef.focus();
   const pos = $refs.contentRef.value.length - 6;
@@ -151,7 +172,7 @@ $refs.contentRef.focus();
 const currentPos = $refs.contentRef.selectionStart;
 const contentBeforeCursor = $refs.contentRef.value.substring(0, currentPos);
 const rowStart = contentBeforeCursor.lastIndexOf('\\n') + 1;
-contentModel = 
+fields.body.value = 
     $refs.contentRef.value.substring(0, rowStart) +
     '1. ' +
     $refs.contentRef.value.substring(rowStart);
@@ -207,67 +228,70 @@ contentFieldFooter =
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: Bool -> ByteString
-contentFieldEdit isInvalid =
-  let textAreaInvalid :: Text
-      textAreaInvalid = [i|<textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-red-900 bg-red-50 rounded-lg border border-red-900 focus:ring-red-500 focus:border-red-500'></textarea>|]
-      textAreaValid :: Text
-      textAreaValid = [i|<textarea name='content' x-model="contentModel" x-ref="contentRef" placeholder='Add your content here...' rows='11' class='block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500'></textarea>|]
-  in [i|
-<label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
-<div class='flex flex-col border border-gray-300 rounded-lg' x-data="handler">
-    <div class='flex mb-2'>
-        <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
-          <button href='\#' role='tab' hx-get='/blog/new/edit' hx-swap='innerHTML' hx-target='\#content-field' @click="console.log(contentModel)">
-            Write
-          </button>
-        </div>
-
-        <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-          <button href='\#' role='tab' hx-get='/blog/new/preview' hx-swap='innerHTML' hx-target='\#content-field' hx-include='next textarea'>
-            Preview
-          </button>
-        </div>
-
-        <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500 grow flex justify-end'>
-            #{headingButton}
-            #{boldButton}
-            #{italicButton}
-            <i class='border-l border-t-0 border-gray-300'></i>
-            #{quoteButton}
-            #{codeButton}
-            #{urlButton}
-            <i class='border-l border-t-0 border-gray-300'></i>
-            #{numberedListButton}
-            #{unorderedListButton}
-            #{taskListButton}
-        </div>
-    </div>
-    <div class='m-2 min-h-60'>
-        #{bool textAreaValid textAreaInvalid isInvalid}
-    </div>
-    #{contentFieldFooter}
+contentFieldEdit :: Maybe BlogPost.Id -> Maybe BlogPost.Body -> Bool -> ByteString
+contentFieldEdit _bid _content _isInvalid =
+   [i|
+<div id="contentEdit" x-bind:hidden="!editMode">
+  <div class='flex mb-2'>
+      <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
+            <button type='button' @click="editMode = true">
+          Write
+        </button>
+      </div>
+  
+      <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
+            <button type='button' @click="editMode = false">
+          Preview
+        </button>
+      </div>
+  
+      <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500 grow flex justify-end'>
+          #{headingButton}
+          #{boldButton}
+          #{italicButton}
+          <i class='border-l border-t-0 border-gray-300'></i>
+          #{quoteButton}
+          #{codeButton}
+          #{urlButton}
+          <i class='border-l border-t-0 border-gray-300'></i>
+          #{numberedListButton}
+          #{unorderedListButton}
+          #{taskListButton}
+      </div>
+  </div>
+  <div class='m-2 min-h-60'>
+      <textarea
+        name='content'
+        placeholder='Add your content here...'
+        rows='11'
+        class='block p-2.5 w-full text-sm rounded-lg border'
+        x-model.lazy="fields.body.value"
+        x-ref="contentRef"
+        :class="fields.body.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
+        @blur="validateField('body')"
+      >
+      </textarea>
+  </div>
+  #{contentFieldFooter}
 </div>
-#{javascript}
 |]
 
 emptyPreview :: Text
 emptyPreview = "<p name='content' rows='8' class='p-2 w-full text-sm text-gray-900'>Nothing to preview</p>"
 
-contentFieldPreview :: Maybe Text -> ByteString
-contentFieldPreview content =
+contentFieldPreview :: ByteString
+contentFieldPreview =
   [i|
-<label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>Add body</label>
-<div class='flex flex-col border rounded-lg border-gray-300'>
+<div id="contentPreview" x-bind:hidden="editMode">
     <div class='flex mb-2'>
         <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50'>
-          <button role='tab' hx-get="/blog/new/edit" hx-swap="innerHTML" hx-target="\#content-field">
+          <button type='button' @click="editMode = true">
             Write
           </button>
         </div>
 
-        <div class='p-2 border-x rounded-t-lg border-gray-300 text-gray-900 bg-white'>
-          <button role='tab' hx-get="/blog/new/preview" hx-swap="innerHTML" hx-target="\#content-field" hx-include='{"content": "#{escapeString $ fromMaybe emptyPreview content}"}'>
+        <div class='p-2 border-x border-t rounded-t-lg border-gray-300 text-gray-900 bg-white'>
+          <button type='button' @click="editMode = false">
             Preview
           </button>
         </div>
@@ -275,16 +299,22 @@ contentFieldPreview content =
         <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end'>
         </div>
     </div>
-    <div class='m-3 min-h-60'>#{fromMaybe emptyPreview content}</div>
+    <div class='m-3 min-h-60' x-text='fields.body.value'></div>
 </div>
 |]
 
-contentField :: Bool -> Maybe BlogPost.Body -> ByteString
-contentField isInvalid body =
-  let inputValue = foldMap display body
-  in [i|
-<div id='content-field' x-data="{ contentModel: '#{inputValue}' }">
-  #{contentFieldEdit isInvalid}
+contentField :: Maybe BlogPost.Id -> Bool -> Maybe BlogPost.Body -> ByteString
+contentField bid isInvalid body =
+  [i|
+<div id='content-field'>
+  <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>
+    Add body
+    <span class="text-xs text-red-900" x-bind:hidden="fields.body.isValid" hidden> * required</span>
+  </label>
+  <div class='flex flex-col border border-gray-300 rounded-lg' x-data="handler">
+    #{contentFieldEdit bid body isInvalid}
+    #{contentFieldPreview}
+  </div>
 </div>
 |]
 
@@ -322,7 +352,7 @@ javascript =
             const urlWithScheme = url.startsWith("http") ? url : "http://" + url
             const {pathname} = new URL(urlWithScheme);
             
-            this.contentModel += `![${this.fileName}](${pathname})\n`
+            this.fields.body.value += `![${this.fileName}](${pathname})\n`
             this.$refs.contentRef.focus();
             this.$nextTick(() => {
               this.$refs.contentRef.focus();
@@ -459,7 +489,13 @@ javascript =
         // Update the textarea and adjust the selection
         insertText(textarea, updatedValue);
         textarea.setSelectionRange(newStart, newEnd);
-      }
+      },
+      validateField (field) {
+         this.fields[field].isValid = this.fields[field].value.trim() !== '';
+      },
+      allValid() {
+        return Object.values(this.fields).every(field => field.isValid && field.value.trim() !== '');
+      },
     };
   }
 </script>

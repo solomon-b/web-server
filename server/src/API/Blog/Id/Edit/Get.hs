@@ -2,7 +2,7 @@ module API.Blog.Id.Edit.Get where
 
 --------------------------------------------------------------------------------
 
-import API.Blog.Id.Template (contentFieldEdit, template)
+import API.Blog.New.Template (contentFieldEdit, template)
 import App.Auth qualified as Auth
 import App.Errors (NotFound (..), Unauthorized (..), throwErr)
 import Component.Frame (loadFrameWithNav)
@@ -61,12 +61,13 @@ handler (Auth.Authz user@User.Domain {dId = uid, ..} _) hxTrigger bid contentPar
     unless (dIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 
     let content = fromMaybe dContent contentParam
+    Log.logInfo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " content
     case hxTrigger of
       Just True -> do
-        pageFragment <- parseFragment $ contentFieldEdit bid content
+        pageFragment <- parseFragment $ contentFieldEdit (Just bid) (Just content) False
         pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
       _ -> do
-        pageFragment <- parseFragment $ template bid dTitle content dPublished (fmap Images.dFilePath dHeroImage)
+        pageFragment <- parseFragment $ template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage) []
         page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
         let html = renderDocument $ swapMain pageFragment page
         pure $ Servant.addHeader "HX-Request" html

@@ -12,7 +12,6 @@ import API.Blog.Id.Preview.Get qualified as Blog.Id.Preview.Get
 import API.Blog.New.Edit.Get qualified as Blog.New.Edit.Get
 import API.Blog.New.Get qualified as Blog.New.Get
 import API.Blog.New.Post qualified as Blog.New.Post
-import API.Blog.New.Preview.Get qualified as Blog.New.Preview.Get
 import API.Get qualified as Get
 import API.Image.Post qualified as Image.Post
 import API.MailingList.Post qualified as MailingList.Post
@@ -72,7 +71,6 @@ type API =
     :<|> Blog.New.Get.Route
     :<|> Blog.New.Post.Route
     :<|> Blog.New.Edit.Get.Route
-    :<|> Blog.New.Preview.Get.Route
     -- Protected Image Routes
     :<|> Image.Post.Route
     -- Unprotected State Page Routes
@@ -126,7 +124,6 @@ server env = do
     :<|> Blog.New.Get.handler
     :<|> Blog.New.Post.handler
     :<|> Blog.New.Edit.Get.handler
-    :<|> Blog.New.Preview.Get.handler
     :<|> Image.Post.handler
     :<|> About.Get.handler
     :<|> User.Get.handler
@@ -168,7 +165,7 @@ blogIdEditPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Post.Route
 blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
 blogIdPreviewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Preview.Get.Route)
 
-blogNewGetLink :: Maybe BlogPosts.Subject -> Maybe BlogPosts.Body -> [InvalidField] -> Links.Link
+blogNewGetLink :: [InvalidField] -> Links.Link
 blogNewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Get.Route)
 
 blogNewPostLink :: Links.Link
@@ -176,9 +173,6 @@ blogNewPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Post.Route)
 
 blogNewEditGetLink :: Links.Link
 blogNewEditGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Edit.Get.Route)
-
-blogNewPreviewGetLink :: Maybe Text -> Links.Link
-blogNewPreviewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Preview.Get.Route)
 
 imagePostLink :: Links.Link
 imagePostLink = Links.safeLink (Proxy @API) (Proxy @Image.Post.Route)

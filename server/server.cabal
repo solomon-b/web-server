@@ -130,7 +130,6 @@ library
     API.Blog.New.Get
     API.Blog.New.Post
     API.Blog.New.Edit.Get
-    API.Blog.New.Preview.Get
     API.Blog.Id.Get
     API.Blog.Id.Edit.Get
     API.Blog.Id.Edit.Post

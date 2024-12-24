@@ -14,7 +14,6 @@ import Data.Has (Has)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Domain.Types.InvalidField (InvalidField)
-import Effects.Database.Tables.BlogPosts qualified as BlogPosts
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import Log qualified
@@ -32,8 +31,6 @@ type Route =
     :> Servant.Header "HX-Request" Bool
     :> "blog"
     :> "new"
-    :> Servant.QueryParam "subject" BlogPosts.Subject
-    :> Servant.QueryParam "body" BlogPosts.Body
     :> Servant.QueryParams "invalidField" InvalidField
     :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 
@@ -49,15 +46,13 @@ handler ::
   ) =>
   Auth.Authz ->
   Maybe Bool ->
-  Maybe BlogPosts.Subject ->
-  Maybe BlogPosts.Body ->
   [InvalidField] ->
   m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler (Auth.Authz user@User.Domain {..} _) hxTrigger subject body invalidField =
+handler (Auth.Authz user@User.Domain {..} _) hxTrigger invalidField =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     unless dIsAdmin $ throwErr Unauthorized
 
-    pageFragment <- parseFragment (template subject body invalidField)
+    pageFragment <- parseFragment (template Nothing Nothing Nothing False Nothing invalidField)
     page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
 
     case hxTrigger of
