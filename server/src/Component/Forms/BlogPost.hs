@@ -4,14 +4,19 @@ module Component.Forms.BlogPost where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (markdownPostLink)
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Tables.BlogPosts qualified as BlogPost
+import Web.HttpApiData qualified as Http
 
 --------------------------------------------------------------------------------
+
+markdownPostUrl :: Text
+markdownPostUrl = "/" <> Http.toUrlPiece markdownPostLink
 
 template ::
   Maybe BlogPost.Id ->
@@ -30,7 +35,7 @@ template bid subject body isPublished heroImagePath =
   <div class='flex items-center justify-between p-4 md:p-5'>
       <h3 class='text-xl font-semibold text-gray-900'>Create Post</h3>
   </div>
-  <div class='p-4 md:p-5' x-data="{ editMode: true, fields: { subject: { value: '#{subject'}', isValid: true }, body: { value: `#{body'}`, isValid: true }}}">
+  <div class='p-4 md:p-5' x-data="{ editMode: true, fields: { subject: { value: '#{subject'}', isValid: true }, body: { value: `#{body'}`, isValid: true, valueParsed: '' }}}">
       <form hx-post='#{postPath}' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
           #{titleField}
           #{fileUploadField heroImagePath}
@@ -217,7 +222,7 @@ contentFieldEdit =
       </div>
   
       <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-            <button type='button' @click="editMode = false">
+            <button type='button' @click="loadPreview">
           Preview
         </button>
       </div>
@@ -260,7 +265,7 @@ emptyPreview = "<p name='content' rows='8' class='p-2 w-full text-sm text-gray-9
 contentFieldPreview :: ByteString
 contentFieldPreview =
   [i|
-<div id="contentPreview" x-bind:hidden="editMode">
+<div x-bind:hidden="editMode">
     <div class='flex mb-2'>
         <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50'>
           <button type='button' @click="editMode = true">
@@ -269,7 +274,7 @@ contentFieldPreview =
         </div>
 
         <div class='p-2 border-x border-t rounded-t-lg border-gray-300 text-gray-900 bg-white'>
-          <button type='button' @click="editMode = false">
+          <button type='button' @click="loadPreview">
             Preview
           </button>
         </div>
@@ -277,7 +282,7 @@ contentFieldPreview =
         <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end'>
         </div>
     </div>
-    <div class='m-3 min-h-60' x-text='fields.body.value'></div>
+    <div id="contentPreview" class='m-3 min-h-60' x-html='fields.body.valueParsed'></div>
 </div>
 |]
 
@@ -412,7 +417,7 @@ javascript =
     const adjustedEndPos = selectionStart + updatedLines.join('\\n').length;
 
     updateTextarea(textarea, updatedContent, adjustedStartPos, adjustedEndPos);
-  }
+  };
 
   /------------------------------------------------------------------------------/
 
@@ -492,17 +497,40 @@ javascript =
     // Update the textarea and adjust the selection
     insertText(textarea, updatedValue);
     textarea.setSelectionRange(newStart, newEnd);
-  }
+  };
 
   /------------------------------------------------------------------------------/
 
   function validateField(field) {
      this.fields[field].isValid = this.fields[field].value.trim() !== '';
-  }
+  };
 
   function allValid() {
     return Object.values(this.fields).every(field => field.isValid && field.value.trim() !== '');
-  }
+  };
+
+  /------------------------------------------------------------------------------/
+
+  async function loadPreview() {
+    this.editMode = false;
+
+    // TODO: Figure out how to set proper hostname here:
+    const response = await fetch('http://localhost:2000/markdown', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: this.fields.body.value
+      });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.text();
+
+    this.fields.body.valueParsed = data;
+  };
 
   /------------------------------------------------------------------------------/
 
@@ -519,6 +547,7 @@ javascript =
       surroundFocus,
       validateField,
       allValid,
+      loadPreview,
     };
   }
 </script>

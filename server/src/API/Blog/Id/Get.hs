@@ -4,6 +4,7 @@ module API.Blog.Id.Get where
 
 --------------------------------------------------------------------------------
 
+import API.Markdown.Post qualified as Markdown
 import App.Auth qualified as Auth
 import App.Errors (NotFound (..), throwErr)
 import Component.Frame (loadFrameWithNav)
@@ -51,13 +52,14 @@ renderImage :: Text -> Text
 renderImage fp = mconcat ["<img src='", fp, "' />"]
 
 renderBlogPost :: BlogPosts.Domain -> Text
-renderBlogPost (BlogPosts.Domain {dContent, dTitle, dHeroImage}) =
+renderBlogPost (BlogPosts.Domain {dTitle, dHeroImage}) =
   let heroImage :: Text
       heroImage = maybe "" (renderImage . Images.dFilePath) dHeroImage
    in [i|
-<h1>#{dTitle}</h1>
+<h1 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 text-6xl">#{BlogPosts.getSubject dTitle}</h1>
   #{heroImage}
-<p>#{dContent}</p>
+  <div id="contentBody">
+  </div>
 |]
 
 --------------------------------------------------------------------------------
@@ -80,8 +82,9 @@ handler cookie hxTrigger bid =
   Observability.handlerSpan "GET /blog/:id" bid (display . Servant.getResponse) $ do
     loginState <- Auth.userLoginState cookie
     post <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
+    bodyNodes <- Markdown.processInput (BlogPosts.getBody $ dContent post)
     postFragment <- parseFragment $ TE.encodeUtf8 $ renderBlogPost post
-    pageFragment <- parseFragment template <&> swapTableFragment postFragment
+    pageFragment <- parseFragment template <&> swapContentBody bodyNodes . swapTableFragment postFragment
 
     case hxTrigger of
       Just True -> do
@@ -94,3 +97,6 @@ handler cookie hxTrigger bid =
 
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "content" . _elChildren) x)
+
+swapContentBody :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
+swapContentBody x = fmap (set (_id "contentBody" . _elChildren) x)

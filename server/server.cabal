@@ -136,6 +136,7 @@ library
     API.Get
     API.MailingList.Post
     API.Image.Post
+    API.Markdown.Post
     API.Static.Get
     API.User.Get
     API.User.Current.Get

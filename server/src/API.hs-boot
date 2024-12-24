@@ -24,6 +24,7 @@ blogIdPreviewGetLink :: BlogPosts.Id -> Maybe Text -> Links.Link
 blogNewGetLink :: Links.Link
 blogNewPostLink :: Links.Link
 imagePostLink :: Links.Link
+markdownPostLink :: Links.Link
 aboutGetLink :: Links.Link
 userGetLink :: Links.Link
 userIdGetLink :: User.Id -> Links.Link

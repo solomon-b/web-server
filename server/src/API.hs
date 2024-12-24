@@ -14,6 +14,7 @@ import API.Blog.New.Post qualified as Blog.New.Post
 import API.Get qualified as Get
 import API.Image.Post qualified as Image.Post
 import API.MailingList.Post qualified as MailingList.Post
+import API.Markdown.Post qualified as Markdown.Post
 import API.Static.Get qualified as Static.Get
 import API.User.Current.Get qualified as User.Current.Get
 import API.User.Delete qualified as Delete
@@ -69,8 +70,9 @@ type API =
     :<|> Blog.Id.Preview.Get.Route
     :<|> Blog.New.Get.Route
     :<|> Blog.New.Post.Route
-    -- Protected Image Routes
+    -- Protected Misc Routes
     :<|> Image.Post.Route
+    :<|> Markdown.Post.Route
     -- Unprotected State Page Routes
     :<|> About.Get.Route
     -- Unprotected User Routes
@@ -122,6 +124,7 @@ server env = do
     :<|> Blog.New.Get.handler
     :<|> Blog.New.Post.handler
     :<|> Image.Post.handler
+    :<|> Markdown.Post.handler
     :<|> About.Get.handler
     :<|> User.Get.handler
     :<|> User.Id.Get.handler
@@ -170,6 +173,9 @@ blogNewPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Post.Route)
 
 imagePostLink :: Links.Link
 imagePostLink = Links.safeLink (Proxy @API) (Proxy @Image.Post.Route)
+
+markdownPostLink :: Links.Link
+markdownPostLink = Links.safeLink (Proxy @API) (Proxy @Markdown.Post.Route)
 
 aboutGetLink :: Links.Link
 aboutGetLink = Links.safeLink (Proxy @API) (Proxy @About.Get.Route)
