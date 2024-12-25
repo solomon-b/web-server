@@ -19,7 +19,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, readNodes, renderDocument, renderNodes)
+import Text.HTML (HTML, RawHtml, parseFragment, readNodes, renderDocument)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
 
@@ -29,10 +29,9 @@ type Route =
   "user"
     :> "login"
     :> Servant.Header "HX-Current-Url" Text
-    :> Servant.Header "HX-Request" Bool
     :> Servant.QueryParam "redirect" Text
     :> Servant.QueryParam "email" EmailAddress
-    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+    :> Servant.Get '[HTML] RawHtml
 
 --------------------------------------------------------------------------------
 
@@ -45,21 +44,16 @@ handler ::
     MonadReader env m
   ) =>
   Maybe Text ->
-  Maybe Bool ->
   Maybe Text ->
   Maybe EmailAddress ->
-  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
-handler hxCurrentUrl hxTrigger redirectQueryParam emailQueryParam =
-  Observability.handlerSpan "GET /user/login" () (display . Servant.getResponse) $ do
+  m RawHtml
+handler hxCurrentUrl redirectQueryParam emailQueryParam =
+  Observability.handlerSpan "GET /user/login" () display $ do
     pageFragment <- parseFragment $ template emailQueryParam $ hxCurrentUrl <|> redirectQueryParam
     page <- loadFrame pageFragment
 
-    case hxTrigger of
-      Just True ->
-        pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
-      _ -> do
-        let html = renderDocument $ swapMain pageFragment page
-        pure $ Servant.addHeader "HX-Request" html
+    let html = renderDocument $ swapMain pageFragment page
+    pure html
 
 --------------------------------------------------------------------------------
 
