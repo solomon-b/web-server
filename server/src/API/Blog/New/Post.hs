@@ -24,7 +24,6 @@ import Data.Text.Display (Display (..), RecordInstance (..), display)
 import Data.Text.Encoding qualified as TE
 import Data.Validation (Validation (..))
 import Deriving.Aeson qualified as Deriving
-import Domain.Types.InvalidField (InvalidField)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
@@ -79,11 +78,6 @@ instance FromMultipart Tmp CreatePost where
     pure CreatePost {..}
 
 data ValidationError = MissingSubject | MissingBody
-
-toInvalidField :: ValidationError -> InvalidField
-toInvalidField = \case
-  MissingSubject -> "Subject"
-  MissingBody -> "Body"
 
 instance Display ValidationError where
   displayBuilder = \case

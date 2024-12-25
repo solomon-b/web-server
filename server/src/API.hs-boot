@@ -6,7 +6,6 @@ import Data.Text (Text)
 import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
 import Domain.Types.FullName (FullName)
-import Domain.Types.InvalidField (InvalidField)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
 import Effects.Database.Tables.User qualified as User
 import Servant.Links qualified as Links
@@ -28,7 +27,7 @@ markdownPostLink :: Links.Link
 aboutGetLink :: Links.Link
 userGetLink :: Links.Link
 userIdGetLink :: User.Id -> Links.Link
-userRegisterGetLink :: Maybe EmailAddress -> Maybe DisplayName -> Maybe FullName -> [InvalidField] -> Links.Link
+userRegisterGetLink :: Maybe EmailAddress -> Maybe DisplayName -> Maybe FullName -> Links.Link
 userRegisterPostLink :: Links.Link
 userLoginPostLink :: Maybe Text -> Links.Link
 userLoginGetLink :: Maybe Text -> Maybe EmailAddress -> Links.Link

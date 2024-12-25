@@ -30,7 +30,6 @@ import Domain.Types.EmailAddress (EmailAddress)
 import Domain.Types.EmailAddress qualified as EmailAddress
 import Domain.Types.FullName (FullName)
 import Domain.Types.FullName qualified as FullName
-import Domain.Types.InvalidField (InvalidField)
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -95,13 +94,6 @@ data ValidationError
   | InvalidPassword [PW.Validate.InvalidReason]
   | EmptyDisplayName
   | EmptyFullName
-
-toInvalidField :: ValidationError -> InvalidField
-toInvalidField = \case
-  InvalidEmailAddress -> "EmailAddress"
-  InvalidPassword _ -> "Password"
-  EmptyDisplayName -> "DisplayName"
-  EmptyFullName -> "FullName"
 
 instance Display ValidationError where
   displayBuilder = \case
@@ -213,4 +205,4 @@ logValidationFailure ::
     )
 logValidationFailure message req@Register {..} validationErrors = do
   Log.logInfo message (Aeson.object ["request" .= req, "validationErrors" .= display validationErrors])
-  pure $ Servant.noHeader $ Servant.addHeader ("/" <> Http.toUrlPiece (userRegisterGetLink (Just urEmail) (Just urDisplayName) (Just urFullName) (fmap toInvalidField validationErrors))) Servant.NoContent
+  pure $ Servant.noHeader $ Servant.addHeader ("/" <> Http.toUrlPiece (userRegisterGetLink (Just urEmail) (Just urDisplayName) (Just urFullName))) Servant.NoContent

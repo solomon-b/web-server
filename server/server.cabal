@@ -152,11 +152,12 @@ library
     Component.Frame
     Component.NavBar
     Component.Forms.BlogPost
+    Component.Forms.Login
+    Component.Forms.Register
     Domain.Types.AdminStatus
     Domain.Types.DisplayName
     Domain.Types.EmailAddress
     Domain.Types.FullName
-    Domain.Types.InvalidField
     Effects.Clock
     Effects.Database.Class
     Effects.Database.Execute
