@@ -10,6 +10,7 @@ import Control.Error (note)
 import Control.Monad ((>=>))
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson qualified as Aeson
+import Data.ByteString (ByteString)
 import Data.Foldable (fold)
 import Data.Functor ((<&>))
 import Data.IP (IP (..), IPRange (..), fromSockAddr, makeAddrRange)
@@ -65,24 +66,35 @@ authHandler pool = mkAuthHandler $ \req ->
         cookie <- note MissingCookieHeader $ lookup "cookie" $ requestHeaders req
         sessionId <- note MissingCookieValue $ lookup "session-id" $ parseCookies cookie
         note MalformedSessionId $ Session.parseSessionId sessionId
-      reqPath = rawPathInfo req
-      reqQuery = rawQueryString req
-      requestPath = reqPath <> reqQuery
-      redirect = "/user/login?redirect=" <> requestPath
+      redirect = mkRedirect req
    in do
         case eSession of
+          -- Valid auth session_id exists in user's cookie:
           Right sessionId ->
             liftIO (HSQL.use pool (HSQL.statement () $ Session.getSessionUser sessionId)) >>= \case
+              -- Internal Server Error: Database usage error:
               Left err -> do
-                -- TODO: This is awful:
-                liftIO $ Log.withJsonStdOutLogger $ \stdOutLogger -> Log.runLogT "webserver-backend" stdOutLogger Log.LogAttention $ throwErr $ InternalServerError $ Text.pack $ show err
+                -- TODO: Propagate logger to here:
+                liftIO $ Log.withJsonStdOutLogger $ \stdOutLogger ->
+                  Log.runLogT "webserver-backend" stdOutLogger Log.LogAttention $ throwErr $ InternalServerError $ Text.pack $ show err
+              -- Auth Failure: Auth session or user do not exist in the DB:
+              -- Note: this is a 307 because we redirect on auth failure.
               Right Nothing ->
-                Servant.throwError $ Servant.err307 {Servant.errHeaders = [("Location", redirect)]}
+                Servant.throwError Servant.err401 --  $ Servant.err307 {Servant.errHeaders = [("Location", redirect)]}
+                -- Auth Success
               Right (Just (userModel, sessionModel)) ->
                 pure $ Authz (User.toDomain userModel) (Session.toDomain sessionModel)
+          -- Auth Failure: Invalid or missing auth session_id in user's cookie:
           Left MissingCookieHeader -> Servant.throwError Servant.err307 {Servant.errBody = "No cookie sent in request", Servant.errHeaders = [("Location", redirect)]}
           Left MissingCookieValue -> Servant.throwError Servant.err307 {Servant.errBody = "Invalid cookie", Servant.errHeaders = [("Location", redirect)]}
           Left MalformedSessionId -> Servant.throwError Servant.err307 {Servant.errBody = "Bad session data", Servant.errHeaders = [("Location", redirect)]}
+
+mkRedirect :: Request -> ByteString
+mkRedirect req =
+  let reqPath = rawPathInfo req
+      reqQuery = rawQueryString req
+      requestPath = reqPath <> reqQuery
+   in "/user/login?redirect=" <> requestPath
 
 getAuth :: (MonadDB m) => Session.Id -> m (Either HSQL.UsageError (Maybe Authz))
 getAuth sessionId = do
