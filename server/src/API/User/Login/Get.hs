@@ -19,7 +19,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, readNodes, renderDocument)
+import Text.HTML (HTML, RawHtml, readNodes, renderDocument)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
 
@@ -49,10 +49,10 @@ handler ::
   m RawHtml
 handler hxCurrentUrl redirectQueryParam emailQueryParam =
   Observability.handlerSpan "GET /user/login" () display $ do
-    pageFragment <- parseFragment $ template emailQueryParam $ hxCurrentUrl <|> redirectQueryParam
-    page <- loadFrame pageFragment
+    let loginForm = template emailQueryParam $ hxCurrentUrl <|> redirectQueryParam
+    page <- loadFrame loginForm
 
-    let html = renderDocument $ swapMain pageFragment page
+    let html = renderDocument page
     pure html
 
 --------------------------------------------------------------------------------

@@ -84,6 +84,7 @@ library
                   , iproute
                   , lens
                   , log-base
+                  , lucid2
                   , mtl
                   , mime-mail
                   , network
