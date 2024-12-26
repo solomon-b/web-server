@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Component.Forms.Register where
@@ -5,13 +6,15 @@ module Component.Forms.Register where
 --------------------------------------------------------------------------------
 
 import {-# SOURCE #-} API (userLoginPostLink, userRegisterGetLink)
-import Data.ByteString
 import Data.String.Interpolate (i)
 import Data.Text
 import Data.Text.Display (display)
 import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
 import Domain.Types.FullName (FullName)
+import Lucid (button_, class_, disabled_, div_, for_, form_, h3_, id_, input_, label_, name_, placeholder_, role_, script_, type_, value_)
+import Lucid qualified
+import Lucid.Base qualified as Lucid
 import Servant.Links qualified as Link
 
 --------------------------------------------------------------------------------
@@ -22,159 +25,138 @@ userLoginPostUrl = Link.linkURI . userLoginPostLink
 userRegisterGetUrl :: Link.URI
 userRegisterGetUrl = Link.linkURI (userRegisterGetLink Nothing Nothing Nothing)
 
-displayNameField :: ByteString
+displayNameField :: Lucid.Html ()
 displayNameField =
-  [i|
-<div>
-  <label for="displayName" class="block mb-2 text-sm font-medium text-gray-900">What should we call you?
-  </label>
-  <input
-    type="displayName"
-    name="displayName"
-    id="displayName"
-    class="border text-sm rounded-lg block w-full p-2.5"
-    x-model="fields.displayName.value"
-    x-data="alpineHandler"
-    :class="fields.displayName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
-    @blur="validateField('displayName')"
-    @input="validateField('displayName')"
-  >
-</div>
-|]
+  div_ do
+    label_
+      [for_ "displayName", class_ "block mb-2 text-sm font-medium text-gray-900"]
+      "What should we call you?"
+    input_
+      [ type_ "displayName",
+        name_ "displayName",
+        id_ "displayName",
+        class_ "border text-sm rounded-lg block w-full p-2.5",
+        xModel_ "fields.displayName.value",
+        xData_ "alpineHandler",
+        xClass_ "fields.displayName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBlur_ "validateField('displayName')",
+        xInput_ "validateField('displayName')"
+      ]
 
-fullNameField :: ByteString
+fullNameField :: Lucid.Html ()
 fullNameField =
-  [i|
-<div>
-  <label for="fullName" class="block mb-2 text-sm font-medium text-gray-900">What is your full name?
-  </label>
-  <input
-    type="fullName"
-    name="fullName"
-    id="fullName"
-    class="border text-sm rounded-lg block w-full p-2.5"
-    x-model="fields.fullName.value"
-    x-data="alpineHandler"
-    :class="fields.fullName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
-    @blur="validateField('fullName')"
-    @input="validateField('fullName')"
-    >
-</div>
-|]
+  div_ do
+    label_
+      [for_ "fullName", class_ "block mb-2 text-sm font-medium text-gray-900"]
+      "What is your full name?"
+    input_
+      [ type_ "fullName",
+        name_ "fullName",
+        id_ "fullName",
+        class_ "border text-sm rounded-lg block w-full p-2.5",
+        xModel_ "fields.fullName.value",
+        xData_ "alpineHandler",
+        xClass_ "fields.fullName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBlur_ "validateField('fullName')",
+        xInput_ "validateField('fullName')"
+      ]
 
-emailField :: ByteString
+emailField :: Lucid.Html ()
 emailField =
-  [i|
-<div>
-  <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Your email
-  </label>
-  <input
-    type="email"
-    name="email"
-    id="email"
-    class="border text-sm rounded-lg block w-full p-2.5"
-    placeholder="name@company.com"
-    x-model="fields.email.value"
-    x-data="alpineHandler"
-    :class="fields.email.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
-    @blur="validateField('email')"
-    @input="validateField('email')"
-  >
-</div>
-|]
+  div_ do
+    label_
+      [for_ "email", class_ "block mb-2 text-sm font-medium text-gray-900"]
+      "Your email"
+    input_
+      [ type_ "email",
+        name_ "email",
+        id_ "email",
+        class_ "border text-sm rounded-lg block w-full p-2.5",
+        placeholder_ "name@company.com",
+        xModel_ "fields.email.value",
+        xData_ "alpineHandler",
+        xClass_ "fields.email.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBlur_ "validateField('email')",
+        xInput_ "validateField('email')"
+      ]
 
-passwordField :: ByteString
+passwordField :: Lucid.Html ()
 passwordField =
-  [i|
-<div>
-  <label for="password" class="block mb-2 text-sm font-medium text-gray-900">Your password
-  </label>
-  <input
-    type="password"
-    name="password"
-    id="password" placeholder="••••••••"
-    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5"
-    x-model="fields.password.value"
-    x-data="alpineHandler"
-    :class="fields.password.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
-    @blur="validateField('password')"
-    @input="validateField('password')"
-  >
-</div>
-|]
+  div_ [] do
+    label_
+      [for_ "password", class_ "block mb-2 text-sm font-medium text-gray-900"]
+      "Your password"
+    input_
+      [ type_ "password",
+        name_ "password",
+        id_ "password",
+        placeholder_ "••••••••",
+        class_ "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5",
+        xModel_ "fields.password.value",
+        xData_ "alpineHandler",
+        xClass_ "fields.password.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBlur_ "validateField('password')",
+        xInput_ "validateField('password')"
+      ]
 
-rememberMeToggle :: ByteString
+rememberMeToggle :: Lucid.Html ()
 rememberMeToggle =
-  [i|
-<div class="flex justify-between">
-  <div class="flex items-start">
-    <div class="flex items-center h-5">
-      <input id="remember" type="checkbox" value="" class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-green-300">
-    </div>
-    <label for="remember" class="ms-2 text-sm font-medium text-gray-900">Remember me
-    </label>
-  </div>
-</div>
-|]
+  div_ [class_ "flex justify-between"] do
+    div_ [class_ "flex items-start"] do
+      div_ [class_ "flex items-center h-5"] do
+        input_ [id_ "remember", type_ "checkbox", value_ "", class_ "w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-green-300"]
+      label_
+        [for_ "remember", class_ "ms-2 text-sm font-medium text-gray-900"]
+        "Remember me"
 
-submitButton :: ByteString
+submitButton :: Lucid.Html ()
 submitButton =
-  [i|
-<button
-  type="submit"
-  class="w-full text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
-  x-data="alpineHandler"
-  :disabled="!allValid()"
-  disabled
->
-  Create your account
-</button>
-|]
+  button_
+    [ type_ "submit",
+      class_ "w-full text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center",
+      xData_ "alpineHandler",
+      xDisabled_ "!allValid()",
+      disabled_ "true"
+    ]
+    "Create your account"
 
-alert :: Text -> ByteString
-alert msg =
-  [i|
-<div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
-  #{msg}
-</div>
-|]
+alert :: Lucid.Html ()
+alert =
+  div_
+    [class_ "p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400", role_ "alert"]
+    "Your email address or password is invalid."
 
-template :: Maybe DisplayName -> Maybe FullName -> Maybe EmailAddress -> Maybe Text -> ByteString
+template :: Maybe DisplayName -> Maybe FullName -> Maybe EmailAddress -> Maybe Text -> Lucid.Html ()
 template displayName fullName emailAddress _redirectLink =
-  let validationNotice = maybe "" (const $ alert "Your email address or password is invalid.") emailAddress
+  let validationNotice = maybe "" (const alert) emailAddress
       displayNameValue = maybe "" display displayName
       fullNameValue = maybe "" display fullName
       emailValue = maybe "" display emailAddress
-   in [i|
-<div
-  class="relative p-4 w-full max-w-md max-h-full mx-auto"
-  x-data="{ fields: { displayName: { value: `#{displayNameValue}`, isValid: true }, fullName: { value: `#{fullNameValue}`, isValid: true }, email: { value: `#{emailValue}`, isValid: true }, password: { value: ``, isValid: true }}}"
->
-  <div class="relative bg-white rounded-lg shadow">
-    <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
-      <h3 class="text-xl font-semibold text-gray-900">Sign in
-      </h3>
-    </div>
-    <div class="p-4 md:p-5">
-      <form hx-post="/#{userRegisterGetUrl}" class="space-y-4" data-bitwarden-watching="1">
-        #{validationNotice}
-        #{displayNameField}
-        #{fullNameField}
-        #{emailField}
-        #{passwordField}
-        #{rememberMeToggle}
-        #{submitButton}
-      </form>
-      #{javascript}
-    </div>
-  </div>
-</div>
-|]
+   in div_
+        [ class_ "relative p-4 w-full max-w-md max-h-full mx-auto",
+          xData_ [i|{ fields: { displayName: { value: `#{displayNameValue}`, isValid: true }, fullName: { value: `#{fullNameValue}`, isValid: true }, email: { value: `#{emailValue}`, isValid: true }, password: { value: ``, isValid: true }}}|]
+        ]
+        do
+          div_ [class_ "relative bg-white rounded-lg shadow"] do
+            div_ [class_ "flex items-center justify-between p-4 md:p-5 border-b rounded-t"] do
+              h3_
+                [class_ "text-xl font-semibold text-gray-900"]
+                "Sign in"
+            div_ [class_ "p-4 md:p-5"] do
+              form_ [hxPost_ [i|/#{userRegisterGetUrl}|], class_ "space-y-4"] do
+                validationNotice
+                displayNameField
+                fullNameField
+                emailField
+                passwordField
+                rememberMeToggle
+                submitButton
+              javascript
 
-javascript :: ByteString
+javascript :: Lucid.Html ()
 javascript =
-  [i|
-<script>
+  script_
+    [i|
   function validateField(field) {
      this.fields[field].isValid = this.fields[field].value.trim() !== '';
   };
@@ -191,5 +173,37 @@ javascript =
       allValid,
     };
   }
-</script>
 |]
+
+xData_ :: Text -> Lucid.Attributes
+xData_ = Lucid.makeAttributes "x-data"
+
+xModel_ :: Text -> Lucid.Attributes
+xModel_ = Lucid.makeAttributes "x-model"
+
+xClass_ :: Text -> Lucid.Attributes
+xClass_ = Lucid.makeAttributes ":class"
+
+xBlur_ :: Text -> Lucid.Attributes
+xBlur_ = Lucid.makeAttributes "@blur"
+
+xInput_ :: Text -> Lucid.Attributes
+xInput_ = Lucid.makeAttributes "@input"
+
+xDisabled_ :: Text -> Lucid.Attributes
+xDisabled_ = Lucid.makeAttributes ":disabled"
+
+hxGet_ :: Text -> Lucid.Attributes
+hxGet_ = Lucid.makeAttributes "hx-get"
+
+hxPost_ :: Text -> Lucid.Attributes
+hxPost_ = Lucid.makeAttributes "hx-post"
+
+hxSwap_ :: Text -> Lucid.Attributes
+hxSwap_ = Lucid.makeAttributes "hx-swap"
+
+hxTarget_ :: Text -> Lucid.Attributes
+hxTarget_ = Lucid.makeAttributes "hx-target"
+
+hxPushUrl_ :: Text -> Lucid.Attributes
+hxPushUrl_ = Lucid.makeAttributes "hx-push-url"

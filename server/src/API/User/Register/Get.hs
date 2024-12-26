@@ -17,8 +17,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderDocument)
-import Text.XmlHtml.Optics
+import Text.HTML (HTML, RawHtml, renderDocument)
 
 --------------------------------------------------------------------------------
 
@@ -46,8 +45,8 @@ handler ::
   m RawHtml
 handler emailAddress displayName fullName =
   Observability.handlerSpan "GET /user/register" (emailAddress, displayName, fullName) display $ do
-    pageFragment <- parseFragment $ template displayName fullName emailAddress Nothing
-    page <- loadFrame pageFragment
+    let registerForm = template displayName fullName emailAddress Nothing
+    page <- loadFrame registerForm
 
-    let html = renderDocument $ swapInner _main pageFragment page
+    let html = renderDocument page
     pure html
