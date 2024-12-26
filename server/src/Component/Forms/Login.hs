@@ -6,6 +6,7 @@ module Component.Forms.Login where
 
 import {-# SOURCE #-} API (userLoginPostLink, userRegisterGetLink)
 import Data.ByteString
+import Data.Maybe (fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text
 import Data.Text.Display (display)
@@ -14,8 +15,8 @@ import Servant.Links qualified as Link
 
 --------------------------------------------------------------------------------
 
-userLoginPostUrl :: Maybe Text -> Link.URI
-userLoginPostUrl = Link.linkURI . userLoginPostLink
+userLoginPostUrl :: Text -> Link.URI
+userLoginPostUrl = Link.linkURI . userLoginPostLink . Just
 
 userRegisterGetUrl :: Link.URI
 userRegisterGetUrl = Link.linkURI (userRegisterGetLink Nothing Nothing Nothing)
@@ -73,6 +74,7 @@ template :: Maybe EmailAddress -> Maybe Text -> ByteString
 template emailAddress redirectLink =
   let validationNotice = maybe "" (const $ alert "Your email address or password is invalid.") emailAddress
       emailValue = maybe "" display emailAddress
+      redirectLink' = fromMaybe "/" redirectLink
    in [i|
 <div
   class="relative p-4 w-full max-w-md max-h-full mx-auto"
@@ -84,7 +86,7 @@ template emailAddress redirectLink =
       </h3>
     </div>
     <div class="p-4 md:p-5">
-      <form hx-post="/#{userLoginPostUrl redirectLink}" class="space-y-4" data-bitwarden-watching="1">
+      <form hx-post="/#{userLoginPostUrl redirectLink'}" class="space-y-4" data-bitwarden-watching="1">
         #{validationNotice}
         #{emailField}
         #{passwordField}
