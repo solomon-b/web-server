@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Component.Forms.BlogPost where
@@ -5,12 +6,14 @@ module Component.Forms.BlogPost where
 --------------------------------------------------------------------------------
 
 import {-# SOURCE #-} API (markdownPostLink)
-import Data.Bool (bool)
-import Data.ByteString (ByteString)
+import Data.Maybe (catMaybes)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Tables.BlogPosts qualified as BlogPost
+import Lucid (a_, button_, checked_, class_, disabled_, div_, enctype_, for_, form_, h3_, height_, hidden_, href_, i_, id_, input_, label_, name_, placeholder_, rows_, script_, span_, style_, svg_, target_, textarea_, title_, type_, value_, width_)
+import Lucid qualified
+import Lucid.Base qualified as Lucid
 import Web.HttpApiData qualified as Http
 
 --------------------------------------------------------------------------------
@@ -24,288 +27,222 @@ template ::
   Maybe BlogPost.Body ->
   Bool ->
   Maybe Text ->
-  ByteString
+  Lucid.Html ()
 template bid subject body isPublished heroImagePath =
   let postPath :: Text
       postPath = maybe "/blog/new" (\bid' -> [i|/blog/#{display bid'}/edit|]) bid
       subject' = maybe "" display subject
       body' = maybe "" display body
-   in [i|
-<div class='relative p-4 w-full max-w-4xl max-h-full mx-auto'>
-  <div class='flex items-center justify-between p-4 md:p-5'>
-      <h3 class='text-xl font-semibold text-gray-900'>Create Post</h3>
-  </div>
-  <div class='p-4 md:p-5' x-data="{ editMode: true, fields: { subject: { value: '#{subject'}', isValid: true }, body: { value: `#{body'}`, isValid: true, valueParsed: '' }}}">
-      <form hx-post='#{postPath}' class='space-y-4 flex flex-col' data-bitwarden-watching='1' enctype="multipart/form-data">
-          #{titleField}
-          #{fileUploadField heroImagePath}
-          #{contentField}
-          #{submitButton isPublished}
-      </form>
-      #{javascript}
-  </div>
-</div>
-|]
+   in div_ [class_ "relative p-4 w-full max-w-4xl max-h-full mx-auto"] do
+        div_ [class_ "flex items-center justify-between p-4 md:p-5"] do
+          h3_ [class_ "text-xl font-semibold text-gray-900"] do
+            "Create Post"
+
+        div_ [class_ "p-4 md:p-5", xData_ [i|{ editMode: true, fields: { subject: { value: '#{subject'}', isValid: true }, body: { value: `#{body'}`, isValid: true, valueParsed: '' }}}|]] do
+          form_ [hxPost_ postPath, class_ "space-y-4 flex flex-col", enctype_ "multipart/form-data"] do
+            titleField
+            fileUploadField heroImagePath
+            contentField
+            submitButton isPublished
+          javascript
 
 --------------------------------------------------------------------------------
 
-publishToggle :: Bool -> ByteString
+publishToggle :: Bool -> Lucid.Html ()
 publishToggle isPublished =
-  let checked :: Text
-      checked = bool "" "checked" isPublished
-   in [i|
-<div class='px-5 font-medium inline-flex'>
-<label class='inline-flex items-center cursor-pointer'>
-  <span class='px-2.5 ms-3 text-sm font-medium text-gray-900 font-semibold'>Published</span>
-  <input type='checkbox' name='published' class='sr-only peer' value='true' #{checked} />
-  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:w-5 after:h-5 after:transition-all peer-checked:bg-green-600"></div>
-</label>
-</div>
-|]
+  div_ [class_ "px-5 font-medium inline-flex'"] do
+    label_ [class_ "inline-flex items-center cursor-pointer"] do
+      span_ [class_ "px-2.5 ms-3 text-sm font-medium text-gray-900 font-semibold"] do
+        "Published"
+      input_ ([type_ "checkbox", name_ "published", class_ "sr-only peer", value_ "true"] <> catMaybes [if isPublished then Just checked_ else Nothing])
+      div_ [class_ "relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:w-5 after:h-5 after:transition-all peer-checked:bg-green-600"] mempty
 
 --------------------------------------------------------------------------------
 
-titleField :: ByteString
+titleField :: Lucid.Html ()
 titleField =
-  [i|
-<div x-data="alpineHandler">
-  <label for='title' class='mb-2 text-sm text-gray-900 font-semibold'>
-    Add title
-    <span class="text-xs text-red-900" x-bind:hidden="fields.subject.isValid" hidden> * required</span>
-  </label>
-  <input
-    type='text'
-    id='title'
-    name='title'
-    placeholder='title'
-    class='border text-gray-900 text-sm rounded-lg block w-full p-2.5'
-    x-model="fields.subject.value"
-    :class="fields.subject.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
-    @blur="validateField('subject')"
-    @input="validateField('subject')"
-  />
-</div>
-|]
+  div_ [xData_ "alpineHandler"] do
+    label_ [for_ "title", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
+      "Add title"
+      span_ [class_ "text-xs text-red-900", xBindHidden_ "fields.subject.isValid", hidden_ "true"] do
+        " * required"
+    input_
+      [ type_ "text",
+        id_ "title",
+        name_ "title",
+        placeholder_ "title",
+        class_ "border text-gray-900 text-sm rounded-lg block w-full p-2.5",
+        xModel_ "fields.subject.value",
+        xBindClass_ "fields.subject.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xOnBlur_ "validateField('subject')",
+        xOnInput_ "validateField('subject')"
+      ]
 
 --------------------------------------------------------------------------------
 
-fileUploadField :: Maybe Text -> ByteString
+fileUploadField :: Maybe Text -> Lucid.Html ()
 fileUploadField _heroImagePath =
-  [i|
-<div>
-  <label class="block mb-2 text-sm font-medium text-gray-900 font-semibold" for="hero_image_input">Upload Hero Image</label>
-  <input type="file" name="heroImagePath" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" id="hero_image_input">
-</div>
-|]
+  div_ do
+    label_
+      [class_ "block mb-2 text-sm font-medium text-gray-900 font-semibold", for_ "hero_image_input"]
+      "Upload Hero Image"
+    input_ [type_ "file", name_ "heroImagePath", class_ "block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none", id_ "hero_image_input"]
 
 --------------------------------------------------------------------------------
 
-submitButton :: Bool -> ByteString
+submitButton :: Bool -> Lucid.Html ()
 submitButton isPublished =
-  [i|
-<div class='flex justify-end'  x-data="alpineHandler">
-  #{publishToggle isPublished}
-  <button
-    type='submit'
-    id='publishedStatusButton'
-    class='text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center'
-    :disabled="!allValid()"
-    disabled
-  >
-    Create Post
-  </button>
-</div>
-|]
+  div_ [class_ "flex justify-end", xData_ "alpineHandler"] do
+    publishToggle isPublished
+    button_
+      [ type_ "submit",
+        id_ "publishedStatusButton",
+        class_ "text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center",
+        xBindDisabled_ "!allValid()",
+        disabled_ "true"
+      ]
+      "Create Post"
 
 --------------------------------------------------------------------------------
 
-headingButton :: ByteString
+headingButton :: Lucid.Html ()
 headingButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '\#\#\# ')"|]
-   in [i|<i #{onClick} title='Heading' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-heading'></i>|]
+  i_ [xOnClick_ "togglePrefix($refs.contentRef, '### ')", title_ "Heading", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-heading"] mempty
 
-boldButton :: ByteString
+boldButton :: Lucid.Html ()
 boldButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="surroundFocus($refs.contentRef, '**')"|]
-   in [i|<i #{onClick} title='Bold' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-bold'></i>|]
+  i_ [xOnClick_ "surroundFocus($refs.contentRef, '**')", title_ "Bold", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-bold"] mempty
 
-italicButton :: ByteString
+italicButton :: Lucid.Html ()
 italicButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="surroundFocus($refs.contentRef, '_')"|]
-   in [i|<i #{onClick} title='Italic' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-italic'></i>|]
+  i_ [xOnClick_ "surroundFocus($refs.contentRef, '_')", title_ "Italic", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-italic"] mempty
 
-quoteButton :: ByteString
+quoteButton :: Lucid.Html ()
 quoteButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '> ')"|]
-   in [i|<i #{onClick} title='Quote' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-quote-left'></i>|]
+  i_ [xOnClick_ "togglePrefix($refs.contentRef, '> ')", title_ "Quote", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-quote-left"] mempty
 
-codeButton :: ByteString
+codeButton :: Lucid.Html ()
 codeButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="surroundFocus($refs.contentRef, '`')"|]
-   in [i|<i #{onClick} title='Code' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-code'></i>|]
+  i_ [xOnClick_ "surroundFocus($refs.contentRef, '`')", title_ "Code", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-code"] mempty
 
-urlButton :: ByteString
+urlButton :: Lucid.Html ()
 urlButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="insertUrl($refs.contentRef)"|]
-   in [i|<i #{onClick} title='Link' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-link'></i>|]
+  i_ [xOnClick_ "insertUrl($refs.contentRef)", title_ "Link", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-link"] mempty
 
-numberedListButton :: ByteString
+numberedListButton :: Lucid.Html ()
 numberedListButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '1. ')"|]
-   in [i|<i #{onClick} title='Numbered List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-ol'></i>|]
+  i_ [xOnClick_ "togglePrefix($refs.contentRef, '1. ')", title_ "Numbered List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-ol"] mempty
 
-unorderedListButton :: ByteString
+unorderedListButton :: Lucid.Html ()
 unorderedListButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '- ')"|]
-   in [i|<i #{onClick} title='Unordered List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list'></i>|]
+  i_ [xOnClick_ "togglePrefix($refs.contentRef, '- ')", title_ "Unordered List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list"] mempty
 
-taskListButton :: ByteString
+taskListButton :: Lucid.Html ()
 taskListButton =
-  let onClick :: Text
-      onClick = [i|x-on:click="togglePrefix($refs.contentRef, '- [ ] ')"|]
-   in [i|<i #{onClick} title='Task List' class='p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-check'></i>|]
+  i_ [xOnClick_ "togglePrefix($refs.contentRef, '- [ ] ')", title_ "Task List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-check"] mempty
 
 --------------------------------------------------------------------------------
 
-contentFieldFooter :: ByteString
+contentFieldFooter :: Lucid.Html ()
 contentFieldFooter =
-  [i|
-<div class="flex text-xs text-gray-800">
-  <div class="p-1">
-    <a href="https://daringfireball.net/projects/markdown/syntax" target="_blank" class="">
-      <span class="flex rounded-lg hover:bg-gray-200 p-2">
-        <span class="px-1">
-          <svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" class="octicon octicon-markdown">
-            <path d="M14.85 3c.63 0 1.15.52 1.14 1.15v7.7c0 .63-.51 1.15-1.15 1.15H1.15C.52 13 0 12.48 0 11.84V4.15C0 3.52.52 3 1.15 3ZM9 11V5H7L5.5 7 4 5H2v6h2V8l1.5 1.92L7 8v3Zm2.99.5L14.5 8H13V5h-2v3H9.5Z"></path>
-          </svg>
-        </span>
-        <span class="Button-label">Markdown is supported</span>
-      </span>
-    </a>
-  </div>
-  <i class='border-l border-t-0 border-gray-300 my-2'></i>
-  <div class="p-1">
-    <button type='button' @click="selectAndUpload">
-      <span class="flex p-2 rounded-lg hover:bg-gray-200">
-        <span class="px-1">
-          <svg height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="octicon octicon-image">
-            <path d="M16 13.25A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75ZM1.75 2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h.94l.03-.03 6.077-6.078a1.75 1.75 0 0 1 2.412-.06L14.5 10.31V2.75a.25.25 0 0 0-.25-.25Zm12.5 11a.25.25 0 0 0 .25-.25v-.917l-4.298-3.889a.25.25 0 0 0-.344.009L4.81 13.5ZM7 6a2 2 0 1 1-3.999.001A2 2 0 0 1 7 6ZM5.5 6a.5.5 0 1 0-1 0 .5.5 0 0 0 1 0Z"></path>
-          </svg>
-        </span>
-        <span class="Button-label">Click to add files</span>
-      </span>
-    </button>
-    <input type="file" x-ref="fileInput" @change="uploadFile" style="display: none;">
-  </div>
-</div>
-|]
+  div_ [class_ "flex text-xs text-gray-800"] $ do
+    div_ [class_ "p-1"] do
+      a_ [href_ "https://daringfireball.net/projects/markdown/syntax", target_ "_blank", class_ ""] do
+        span_ [class_ "flex rounded-lg hover:bg-gray-200 p-2"] do
+          span_ [class_ "px-1"] do
+            svg_ [ariaHidden_ "true", height_ "16", viewBox_ "0 0 16 16", version_ "1.1", width_ "16", class_ "octicon octicon-markdown"] do
+              path_ [d_ "M14.85 3c.63 0 1.15.52 1.14 1.15v7.7c0 .63-.51 1.15-1.15 1.15H1.15C.52 13 0 12.48 0 11.84V4.15C0 3.52.52 3 1.15 3ZM9 11V5H7L5.5 7 4 5H2v6h2V8l1.5 1.92L7 8v3Zm2.99.5L14.5 8H13V5h-2v3H9.5Z"] mempty
+          span_ [class_ "Button-label"] do
+            "Markdown is supported"
+    i_ [class_ "border-l border-t-0 border-gray-300 my-2"] mempty
+    div_ [class_ "p-1"] do
+      button_ [type_ "button", xOnClick_ "selectAndUpload"] do
+        span_ [class_ "flex p-2 rounded-lg hover:bg-gray-200"] do
+          span_ [class_ "px-1"] do
+            svg_ [height_ "16", viewBox_ "0 0 16 16", version_ "1.1", width_ "16", dataViewComponent_ "true", class_ "octicon octicon-image"] do
+              path_ [d_ "M16 13.25A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75ZM1.75 2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h.94l.03-.03 6.077-6.078a1.75 1.75 0 0 1 2.412-.06L14.5 10.31V2.75a.25.25 0 0 0-.25-.25Zm12.5 11a.25.25 0 0 0 .25-.25v-.917l-4.298-3.889a.25.25 0 0 0-.344.009L4.81 13.5ZM7 6a2 2 0 1 1-3.999.001A2 2 0 0 1 7 6ZM5.5 6a.5.5 0 1 0-1 0 .5.5 0 0 0 1 0Z"] mempty
+          span_ [class_ "Button-label"] do
+            "Click to add files"
+      input_ [type_ "file", xRef_ "fileInput", xOnChange_ "uploadFile", style_ "display: none;"]
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: ByteString
+contentFieldEdit :: Lucid.Html ()
 contentFieldEdit =
-  [i|
-<div id="contentEdit" x-bind:hidden="!editMode">
-  <div class='flex mb-2'>
-      <div class='p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900'>
-            <button type='button' @click="editMode = true">
-          Write
-        </button>
-      </div>
-  
-      <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500'>
-            <button type='button' @click="loadPreview">
-          Preview
-        </button>
-      </div>
-  
-      <div class='p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500 grow flex justify-end'>
-          #{headingButton}
-          #{boldButton}
-          #{italicButton}
-          <i class='border-l border-t-0 border-gray-300'></i>
-          #{quoteButton}
-          #{codeButton}
-          #{urlButton}
-          <i class='border-l border-t-0 border-gray-300'></i>
-          #{numberedListButton}
-          #{unorderedListButton}
-          #{taskListButton}
-      </div>
-  </div>
-  <div class='m-2 min-h-60'>
-      <textarea
-        name='content'
-        placeholder='Add your content here...'
-        rows='11'
-        class='block p-2.5 w-full text-sm rounded-lg border'
-        x-model="fields.body.value"
-        x-ref="contentRef"
-        :class="fields.body.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'"
-        @blur="validateField('body')"
-        @input="validateField('body')"
-      >
-      </textarea>
-  </div>
-  #{contentFieldFooter}
-</div>
-|]
+  div_ [id_ "contentEdit", xBindHidden_ "!editMode"] do
+    div_ [class_ "flex mb-2"] do
+      div_ [class_ "p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900"] do
+        button_
+          [type_ "button", xOnClick_ "editMode = true"]
+          "Write"
 
-emptyPreview :: Text
-emptyPreview = "<p name='content' rows='8' class='p-2 w-full text-sm text-gray-900'>Nothing to preview</p>"
+      div_ [class_ "p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500"] do
+        button_
+          [type_ "button", xOnClick_ "loadPreview"]
+          "Preview"
 
-contentFieldPreview :: ByteString
+      div_ [class_ "p-2 border-b border-gray-300 rounded-t-lg bg-gray-50 text-gray-500 grow flex justify-end"] do
+        headingButton
+        boldButton
+        italicButton
+        i_ [class_ "border-l border-t-0 border-gray-300"] mempty
+        quoteButton
+        codeButton
+        urlButton
+        i_ [class_ "border-l border-t-0 border-gray-300"] mempty
+        numberedListButton
+        unorderedListButton
+        taskListButton
+
+    div_ [class_ "m-2 min-h-60"] do
+      textarea_
+        [ name_ "content",
+          placeholder_ "Add your content here...",
+          rows_ "11",
+          class_ "block p-2.5 w-full text-sm rounded-lg border",
+          xModel_ "fields.body.value",
+          xRef_ "contentRef",
+          xBindClass_ "fields.body.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+          xOnBlur_ "validateField('body')",
+          xOnInput_ "validateField('body')"
+        ]
+        mempty
+    contentFieldFooter
+
+contentFieldPreview :: Lucid.Html ()
 contentFieldPreview =
-  [i|
-<div x-bind:hidden="editMode">
-    <div class='flex mb-2'>
-        <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50'>
-          <button type='button' @click="editMode = true">
-            Write
-          </button>
-        </div>
+  div_ [xBindHidden_ "editMode"] do
+    div_ [class_ "flex mb-2"] do
+      div_ [class_ "p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50"] do
+        button_
+          [type_ "button", xOnClick_ "editMode = true"]
+          "Write"
 
-        <div class='p-2 border-x border-t rounded-t-lg border-gray-300 text-gray-900 bg-white'>
-          <button type='button' @click="loadPreview">
-            Preview
-          </button>
-        </div>
+      div_ [class_ "p-2 border-x border-t rounded-t-lg border-gray-300 text-gray-900 bg-white"] do
+        button_
+          [type_ "button", xOnClick_ "loadPreview"]
+          "Preview"
 
-        <div class='p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end'>
-        </div>
-    </div>
-    <div id="contentPreview" class='m-3 min-h-60' x-html='fields.body.valueParsed'></div>
-</div>
-|]
+      div_ [class_ "p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end"] mempty
+    div_ [id_ "contentPreview", class_ "m-3 min-h-60", xHtml_ "fields.body.valueParsed"] mempty
 
-contentField :: ByteString
+contentField :: Lucid.Html ()
 contentField =
-  [i|
-<div id='content-field'>
-  <label for='content' class='mb-2 text-sm text-gray-900 font-semibold'>
-    Add body
-    <span class="text-xs text-red-900" x-bind:hidden="fields.body.isValid" hidden> * required</span>
-  </label>
-  <div class='flex flex-col border border-gray-300 rounded-lg' x-data="alpineHandler">
-    #{contentFieldEdit}
-    #{contentFieldPreview}
-  </div>
-</div>
-|]
+  div_ [id_ "content-field"] do
+    label_ [for_ "content", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
+      "Add body"
+      span_
+        [class_ "text-xs text-red-900", xBindHidden_ "fields.body.isValid", hidden_ "true"]
+        " * required"
+    div_ [class_ "flex flex-col border border-gray-300 rounded-lg", xData_ "alpineHandler"] do
+      contentFieldEdit
+      contentFieldPreview
 
 -- TODO: Move this into a js file:
-javascript :: ByteString
+javascript :: Lucid.Html ()
 javascript =
-  [i|
-<script>
+  Lucid.script_
+    [i|
   async function uploadFile (event) {
     const files = event.target.files;
 
@@ -550,5 +487,79 @@ javascript =
       loadPreview,
     };
   }
-</script>
 |]
+
+--------------------------------------------------------------------------------
+-- HTML5
+
+path_ :: [Lucid.Attributes] -> Lucid.Html () -> Lucid.Html ()
+path_ = Lucid.term "path"
+
+ariaHidden_ :: Text -> Lucid.Attributes
+ariaHidden_ = Lucid.makeAttributes "aria-hidden"
+
+viewBox_ :: Text -> Lucid.Attributes
+viewBox_ = Lucid.makeAttributes "viewBox"
+
+version_ :: Text -> Lucid.Attributes
+version_ = Lucid.makeAttributes "version"
+
+d_ :: Text -> Lucid.Attributes
+d_ = Lucid.makeAttributes "d"
+
+dataViewComponent_ :: Text -> Lucid.Attributes
+dataViewComponent_ = Lucid.makeAttributes "data-view-component"
+
+--------------------------------------------------------------------------------
+-- AlpineJS
+
+xData_ :: Text -> Lucid.Attributes
+xData_ = Lucid.makeAttributes "x-data"
+
+xModel_ :: Text -> Lucid.Attributes
+xModel_ = Lucid.makeAttributes "x-model"
+
+xBindHidden_ :: Text -> Lucid.Attributes
+xBindHidden_ = Lucid.makeAttributes "x-bind:hidden"
+
+xOnBlur_ :: Text -> Lucid.Attributes
+xOnBlur_ = Lucid.makeAttributes "x-on:blur"
+
+xOnInput_ :: Text -> Lucid.Attributes
+xOnInput_ = Lucid.makeAttributes "x-on:input"
+
+xOnChange_ :: Text -> Lucid.Attributes
+xOnChange_ = Lucid.makeAttributes "x-on:change"
+
+xOnClick_ :: Text -> Lucid.Attributes
+xOnClick_ = Lucid.makeAttributes "x-on:click"
+
+xBindClass_ :: Text -> Lucid.Attributes
+xBindClass_ = Lucid.makeAttributes "x-bind:class"
+
+xBindDisabled_ :: Text -> Lucid.Attributes
+xBindDisabled_ = Lucid.makeAttributes "x-bind:disabled"
+
+xRef_ :: Text -> Lucid.Attributes
+xRef_ = Lucid.makeAttributes "x-ref"
+
+xHtml_ :: Text -> Lucid.Attributes
+xHtml_ = Lucid.makeAttributes "x-html"
+
+--------------------------------------------------------------------------------
+-- HTMX
+
+hxGet_ :: Text -> Lucid.Attributes
+hxGet_ = Lucid.makeAttributes "hx-get"
+
+hxPost_ :: Text -> Lucid.Attributes
+hxPost_ = Lucid.makeAttributes "hx-post"
+
+hxSwap_ :: Text -> Lucid.Attributes
+hxSwap_ = Lucid.makeAttributes "hx-swap"
+
+hxTarget_ :: Text -> Lucid.Attributes
+hxTarget_ = Lucid.makeAttributes "hx-target"
+
+hxPushUrl_ :: Text -> Lucid.Attributes
+hxPushUrl_ = Lucid.makeAttributes "hx-push-url"

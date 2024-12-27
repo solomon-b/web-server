@@ -10,12 +10,14 @@ import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
+import Data.ByteString.Lazy qualified as BL
 import Data.Has (Has)
 import Data.Text (Text)
 import Data.Text.Display (display)
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import Log qualified
+import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
@@ -49,7 +51,7 @@ handler (Auth.Authz user@User.Domain {..} _) hxTrigger =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     unless dIsAdmin $ throwErr Unauthorized
 
-    pageFragment <- parseFragment (template Nothing Nothing Nothing False Nothing)
+    pageFragment <- parseFragment $ BL.toStrict $ Lucid.renderBS (template Nothing Nothing Nothing False Nothing)
     page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
 
     case hxTrigger of

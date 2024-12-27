@@ -38,7 +38,7 @@ displayNameField =
         class_ "border text-sm rounded-lg block w-full p-2.5",
         xModel_ "fields.displayName.value",
         xData_ "alpineHandler",
-        xClass_ "fields.displayName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBindClass_ "fields.displayName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
         xBlur_ "validateField('displayName')",
         xInput_ "validateField('displayName')"
       ]
@@ -56,7 +56,7 @@ fullNameField =
         class_ "border text-sm rounded-lg block w-full p-2.5",
         xModel_ "fields.fullName.value",
         xData_ "alpineHandler",
-        xClass_ "fields.fullName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBindClass_ "fields.fullName.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
         xBlur_ "validateField('fullName')",
         xInput_ "validateField('fullName')"
       ]
@@ -75,7 +75,7 @@ emailField =
         placeholder_ "name@company.com",
         xModel_ "fields.email.value",
         xData_ "alpineHandler",
-        xClass_ "fields.email.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBindClass_ "fields.email.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
         xBlur_ "validateField('email')",
         xInput_ "validateField('email')"
       ]
@@ -94,7 +94,7 @@ passwordField =
         class_ "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5",
         xModel_ "fields.password.value",
         xData_ "alpineHandler",
-        xClass_ "fields.password.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xBindClass_ "fields.password.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
         xBlur_ "validateField('password')",
         xInput_ "validateField('password')"
       ]
@@ -115,7 +115,7 @@ submitButton =
     [ type_ "submit",
       class_ "w-full text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center",
       xData_ "alpineHandler",
-      xDisabled_ "!allValid()",
+      xBindDisabled_ "!allValid()",
       disabled_ "true"
     ]
     "Create your account"
@@ -181,8 +181,8 @@ xData_ = Lucid.makeAttributes "x-data"
 xModel_ :: Text -> Lucid.Attributes
 xModel_ = Lucid.makeAttributes "x-model"
 
-xClass_ :: Text -> Lucid.Attributes
-xClass_ = Lucid.makeAttributes ":class"
+xBindClass_ :: Text -> Lucid.Attributes
+xBindClass_ = Lucid.makeAttributes ":class"
 
 xBlur_ :: Text -> Lucid.Attributes
 xBlur_ = Lucid.makeAttributes "@blur"
@@ -190,8 +190,8 @@ xBlur_ = Lucid.makeAttributes "@blur"
 xInput_ :: Text -> Lucid.Attributes
 xInput_ = Lucid.makeAttributes "@input"
 
-xDisabled_ :: Text -> Lucid.Attributes
-xDisabled_ = Lucid.makeAttributes ":disabled"
+xBindDisabled_ :: Text -> Lucid.Attributes
+xBindDisabled_ = Lucid.makeAttributes ":disabled"
 
 hxGet_ :: Text -> Lucid.Attributes
 hxGet_ = Lucid.makeAttributes "hx-get"
