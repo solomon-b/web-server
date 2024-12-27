@@ -14,6 +14,9 @@ path_ = Lucid.term "path"
 ariaHidden_ :: Text -> Lucid.Attributes
 ariaHidden_ = Lucid.makeAttributes "aria-hidden"
 
+ariaLabelledby_ :: Text -> Lucid.Attributes
+ariaLabelledby_ = Lucid.makeAttributes "aria-labelledby"
+
 viewBox_ :: Text -> Lucid.Attributes
 viewBox_ = Lucid.makeAttributes "viewBox"
 
@@ -61,6 +64,15 @@ xRef_ = Lucid.makeAttributes "x-ref"
 
 xHtml_ :: Text -> Lucid.Attributes
 xHtml_ = Lucid.makeAttributes "x-html"
+
+dataDropdownToggle_ :: Text -> Lucid.Attributes
+dataDropdownToggle_ = Lucid.makeAttributes "data-dropdown-toggle"
+
+dataDropdownOffsetDistance_ :: Text -> Lucid.Attributes
+dataDropdownOffsetDistance_ = Lucid.makeAttributes "data-dropdown-offset-distance"
+
+dataDropdownTrigger_ :: Text -> Lucid.Attributes
+dataDropdownTrigger_ = Lucid.makeAttributes "data-dropdown-trigger"
 
 --------------------------------------------------------------------------------
 -- HTMX
