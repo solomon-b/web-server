@@ -170,6 +170,7 @@ library
     Effects.Database.Tables.ServerSessions
     Effects.MailSender
     Effects.Observability
+    Lucid.Extras
     OrphanInstances.CaseInsensitive
     OrphanInstances.IPRange
     OrphanInstances.MultipartData

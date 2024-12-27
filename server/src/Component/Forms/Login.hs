@@ -13,7 +13,7 @@ import Data.Text.Display (display)
 import Domain.Types.EmailAddress (EmailAddress)
 import Lucid (a_, button_, class_, disabled_, div_, for_, form_, h3_, href_, id_, input_, label_, name_, placeholder_, role_, script_, span_, type_, value_)
 import Lucid qualified
-import Lucid.Base qualified as Lucid
+import Lucid.Extras
 import Servant.Links qualified as Link
 
 --------------------------------------------------------------------------------
@@ -39,8 +39,8 @@ emailField =
         xModel_ "fields.email.value",
         xData_ "alpineHandler",
         xBindClass_ "fields.email.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
-        xBlur_ "validateField('email')",
-        xInput_ "validateField('email')"
+        xOnBlur_ "validateField('email')",
+        xOnInput_ "validateField('email')"
       ]
 
 passwordField :: Lucid.Html ()
@@ -58,8 +58,8 @@ passwordField =
         xModel_ "fields.password.value",
         xData_ "alpineHandler",
         xBindClass_ "fields.password.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
-        xBlur_ "validateField('password')",
-        xInput_ "validateField('password')"
+        xOnBlur_ "validateField('password')",
+        xOnInput_ "validateField('password')"
       ]
 
 alert :: Lucid.Html ()
@@ -137,36 +137,3 @@ alpineHandler =
     };
   }
 |]
-
-xData_ :: Text -> Lucid.Attributes
-xData_ = Lucid.makeAttributes "x-data"
-
-xModel_ :: Text -> Lucid.Attributes
-xModel_ = Lucid.makeAttributes "x-model"
-
-xBindClass_ :: Text -> Lucid.Attributes
-xBindClass_ = Lucid.makeAttributes ":class"
-
-xBlur_ :: Text -> Lucid.Attributes
-xBlur_ = Lucid.makeAttributes "@blur"
-
-xInput_ :: Text -> Lucid.Attributes
-xInput_ = Lucid.makeAttributes "@input"
-
-xBindDisabled_ :: Text -> Lucid.Attributes
-xBindDisabled_ = Lucid.makeAttributes ":disabled"
-
-hxGet_ :: Text -> Lucid.Attributes
-hxGet_ = Lucid.makeAttributes "hx-get"
-
-hxPost_ :: Text -> Lucid.Attributes
-hxPost_ = Lucid.makeAttributes "hx-post"
-
-hxSwap_ :: Text -> Lucid.Attributes
-hxSwap_ = Lucid.makeAttributes "hx-swap"
-
-hxTarget_ :: Text -> Lucid.Attributes
-hxTarget_ = Lucid.makeAttributes "hx-target"
-
-hxPushUrl_ :: Text -> Lucid.Attributes
-hxPushUrl_ = Lucid.makeAttributes "hx-push-url"
