@@ -112,7 +112,6 @@ library
                   , warp
                   , xmlhtml
                   , xmlhtml-lens
-                  , xmlhtml-qq
   exposed-modules:
     App
     App.Auth
