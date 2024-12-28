@@ -1,4 +1,20 @@
-module Text.HTML where
+module Text.HTML
+  ( HTML (..),
+    RawHtml (..),
+    -- printRawHtml,
+    renderLucid,
+    -- printDocument,
+    -- renderDocument,
+    renderNodes,
+    -- renderNode,
+    -- parseDocument',
+    -- parseDocument,
+    -- parseNode,
+    parseFragment,
+    -- readDocument,
+    -- readNodes
+  )
+where
 
 --------------------------------------------------------------------------------
 
@@ -13,6 +29,7 @@ import Data.Text qualified as Text
 import Data.Text.Display (Display (..))
 import Data.Text.Lazy.Encoding qualified as TE
 import Log qualified
+import Lucid.Base qualified as Lucid
 import Network.HTTP.Media ((//), (/:))
 import Servant
 import Text.XmlHtml qualified as Xml
@@ -36,6 +53,9 @@ instance MimeRender HTML RawHtml where
 
 --------------------------------------------------------------------------------
 
+renderLucid :: Lucid.Html () -> RawHtml
+renderLucid = RawHtml . Lucid.renderBS
+
 printRawHtml :: RawHtml -> IO ()
 printRawHtml = Lazy.putStr . unRaw
 
@@ -50,9 +70,9 @@ renderDocument =
   RawHtml . Builder.toLazyByteString . Xml.render
 
 -- | Serialize a list of 'Xml.Node' into 'RawHtml'.
-renderNodes :: [Xml.Node] -> RawHtml
+renderNodes :: [Xml.Node] -> Lucid.Html ()
 renderNodes =
-  RawHtml . Builder.toLazyByteString . Xml.renderHtmlFragment Xml.UTF8
+  Lucid.toHtmlRaw . Builder.toLazyByteString . Xml.renderHtmlFragment Xml.UTF8
 
 -- | Serialize an 'Xml.Node' into 'RawHtml'.
 renderNode :: Xml.Node -> RawHtml

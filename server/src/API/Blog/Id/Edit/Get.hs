@@ -10,7 +10,6 @@ import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
-import Data.ByteString.Lazy qualified as BL
 import Data.Has (Has)
 import Data.Maybe (fromMaybe)
 import Data.Text.Display (display)
@@ -21,13 +20,10 @@ import Effects.Database.Tables.Images qualified as Images
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import Log qualified
-import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderDocument)
-import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics
+import Text.HTML (HTML, RawHtml, renderLucid)
 
 --------------------------------------------------------------------------------
 
@@ -60,12 +56,6 @@ handler (Auth.Authz user@User.Domain {dId = uid, ..} _) bid contentParam =
     unless (dIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 
     let content = fromMaybe dContent contentParam
-    pageFragment <- parseFragment $ BL.toStrict $ Lucid.renderBS $ Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage)
+    let pageFragment = Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage)
     page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
-    let html = renderDocument $ swapMain pageFragment page
-    pure html
-
---------------------------------------------------------------------------------
-
-swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
-swapMain = swapInner _main
+    pure (renderLucid page)

@@ -2,12 +2,10 @@ module API.User.Login.Get where
 
 --------------------------------------------------------------------------------
 
-import App.Auth qualified as Auth
 import Component.Forms.Login (template)
 import Component.Frame (loadFrame)
 import Control.Applicative ((<|>))
-import Control.Monad.Catch (MonadCatch, MonadThrow)
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
@@ -19,9 +17,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, readNodes, renderDocument)
-import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics
+import Text.HTML (HTML, RawHtml, renderLucid)
 
 --------------------------------------------------------------------------------
 
@@ -52,15 +48,4 @@ handler hxCurrentUrl redirectQueryParam emailQueryParam =
     let loginForm = template emailQueryParam $ hxCurrentUrl <|> redirectQueryParam
     page <- loadFrame loginForm
 
-    let html = renderDocument page
-    pure html
-
---------------------------------------------------------------------------------
-
-swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
-swapMain = swapInner _body
-
-readUserAuthFragment :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Auth.LoggedIn -> m [Xml.Node]
-readUserAuthFragment = \case
-  Auth.IsLoggedIn _ -> readNodes "src/Templates/Root/Logout/button.html"
-  Auth.IsNotLoggedIn -> liftA2 (<>) (readNodes "src/Templates/Root/Login/button.html") (readNodes "src/Templates/Root/Register/button.html")
+    pure (renderLucid page)

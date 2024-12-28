@@ -17,7 +17,7 @@ import Log qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, renderDocument)
+import Text.HTML (HTML, RawHtml, renderLucid)
 
 --------------------------------------------------------------------------------
 
@@ -48,5 +48,4 @@ handler emailAddress displayName fullName =
     let registerForm = template displayName fullName emailAddress Nothing
     page <- loadFrame registerForm
 
-    let html = renderDocument page
-    pure html
+    pure (renderLucid page)

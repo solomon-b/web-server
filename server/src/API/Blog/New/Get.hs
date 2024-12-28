@@ -10,7 +10,6 @@ import Control.Monad (unless)
 import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
-import Data.ByteString.Lazy qualified as BL
 import Data.Has (Has)
 import Data.Text (Text)
 import Data.Text.Display (display)
@@ -21,9 +20,7 @@ import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderDocument, renderNodes)
-import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics
+import Text.HTML (HTML, RawHtml (..), renderLucid)
 
 --------------------------------------------------------------------------------
 
@@ -51,17 +48,12 @@ handler (Auth.Authz user@User.Domain {..} _) hxTrigger =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     unless dIsAdmin $ throwErr Unauthorized
 
-    pageFragment <- parseFragment $ BL.toStrict $ Lucid.renderBS (template Nothing Nothing Nothing False Nothing)
-    page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
+    let formFragment = template Nothing Nothing Nothing False Nothing
+    fullPage <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" formFragment
 
     case hxTrigger of
       Just True ->
-        pure $ Servant.addHeader "HX-Request" $ renderNodes pageFragment
+        pure $ Servant.addHeader "HX-Request" $ RawHtml $ Lucid.renderBS formFragment
       _ -> do
-        let html = renderDocument $ swapMain pageFragment page
+        let html = renderLucid fullPage
         pure $ Servant.addHeader "HX-Request" html
-
---------------------------------------------------------------------------------
-
-swapMain :: [Xml.Node] -> Xml.Document -> Xml.Document
-swapMain = swapInner _main

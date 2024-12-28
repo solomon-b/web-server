@@ -1,37 +1,28 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
 module API.Admin.Get where
 
 --------------------------------------------------------------------------------
 
 import App.Auth qualified as Auth
 import Component.Frame (loadFrameWithNav)
-import Control.Lens (set, (<&>))
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
-import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
 import Data.Has (Has)
-import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
-import Data.Text.Encoding qualified as TE
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
 import Effects.Database.Tables.MailingList qualified as MailingList
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import Log qualified
+import Lucid (class_, div_, h1_, h3_, id_, scope_, table_, tbody_, td_, th_, thead_, tr_)
+import Lucid qualified
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderDocument, renderNodes)
-import Text.XmlHtml qualified as Xml
-import Text.XmlHtml.Optics (_elChildren, _id)
+import Text.HTML (HTML, RawHtml (..), renderLucid)
 
 --------------------------------------------------------------------------------
 
@@ -43,78 +34,61 @@ type Route =
 
 --------------------------------------------------------------------------------
 
-template :: ByteString
-template =
-  [i|<div class="flex flex-col justify-center items-center w-full">
-  <h1 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">Admin Page</h1>
-  <div id="db-tables" class="p-4 my-8 border border-solid border-gray-200 rounded-lg shadow-md"></div>
-</div>
-|]
+template :: Lucid.Html () -> Lucid.Html () -> Lucid.Html ()
+template userTable' mailingListTable' =
+  div_ [class_ "flex flex-col justify-center items-center w-full"] $ do
+    h1_ [class_ "mt-3 text-3xl font-extrabold tracking-tight text-slate-900"] "Admin Page"
+    div_ [id_ "db-tables", class_ "p-4 my-8 border border-solid border-gray-200 rounded-lg shadow-md"] $ do
+      userTable'
+      mailingListTable'
 
 --------------------------------------------------------------------------------
--- Components
 
-userRow :: User.Model -> Text
+userRow :: User.Model -> Lucid.Html ()
 userRow User.Model {..} =
-  [i|<tr class="bg-white border-b">
-       <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">#{display mId}</th>
-       <td class="px-6 py-4">#{display mEmail}</td>
-       <td class="px-6 py-4">#{display mDisplayName}</td>
-       <td class="px-6 py-4">#{display mAvatarUrl}</td>
-       <td class="px-6 py-4">#{display mIsAdmin}</td>
-     </tr>
-    |]
+  tr_ [class_ "bg-white border-b"] $ do
+    th_ [scope_ "row", class_ "px-6 py-4 font-medium text-gray-900 whitespace-nowrap"] (Lucid.toHtml $ display mId)
+    td_ [class_ "px-6 py-4"] (Lucid.toHtml $ display mEmail)
+    td_ [class_ "px-6 py-4"] (Lucid.toHtml $ display mDisplayName)
+    td_ [class_ "px-6 py-4"] (Lucid.toHtml $ display mAvatarUrl)
+    td_ [class_ "px-6 py-4"] (Lucid.toHtml $ display mIsAdmin)
 
-userTable :: [User.Model] -> Text
+userTable :: [User.Model] -> Lucid.Html ()
 userTable entries =
-  [i|<div class="relative overflow-x-auto">
-       <table class="w-full text-sm text-left rtl:text-right text-gray-500">
-         <h3 class="mt-3 text-xl font-extrabold tracking-tight text-slate-900">Users</h3>
-         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-           <tr>
-             <th scope="col" class="px-6 py-3">id</th>
-             <th scope="col" class="px-6 py-3">email</th>
-             <th scope="col" class="px-6 py-3">display name</th>
-             <th scope="col" class="px-6 py-3">avatar url</th>
-             <th scope="col" class="px-6 py-3">is admin</th>
-           </tr>
-         </thead>
-         <tbody>
-           #{foldMap userRow entries}
-         </tbody>
-       </table>
-     </div>
-    |]
+  div_ [class_ "relative overflow-x-auto"] $ do
+    table_ [class_ "w-full text-sm text-left rtl:text-right text-gray-500"] $ do
+      h3_ [class_ "mt-3 text-xl font-extrabold tracking-tight text-slate-900"] "Users"
+      thead_ [class_ "text-xs text-gray-700 uppercase bg-gray-50"] $ do
+        tr_ $ do
+          th_ [scope_ "col", class_ "px-6 py-3"] "id"
+          th_ [scope_ "col", class_ "px-6 py-3"] "email"
+          th_ [scope_ "col", class_ "px-6 py-3"] "display name"
+          th_ [scope_ "col", class_ "px-6 py-3"] "avatar url"
+          th_ [scope_ "col", class_ "px-6 py-3"] "is admin"
+      tbody_
+        (foldMap userRow entries)
 
-mailingListRow :: MailingList.Model -> Text
+mailingListRow :: MailingList.Model -> Lucid.Html ()
 mailingListRow MailingList.Model {..} =
-  [i|<tr class="bg-white border-b">
-       <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">#{display mId}</th>
-       <td class="px-6 py-4">#{display mEmail}</td>
-     </tr>
-    |]
+  tr_ [class_ "bg-white border-b"] $ do
+    th_ [scope_ "row", class_ "px-6 py-4 font-medium text-gray-900 whitespace-nowrap"] (Lucid.toHtml $ display mId)
+    td_ [class_ "px-6 py-4"] (Lucid.toHtml $ display mEmail)
 
-mailingListTable :: [MailingList.Model] -> Text
+mailingListTable :: [MailingList.Model] -> Lucid.Html ()
 mailingListTable entries =
-  [i|<div class="relative overflow-x-auto">
-       <table class="w-full text-sm text-left rtl:text-right text-gray-500">
-         <h3 class="mt-3 text-xl font-extrabold tracking-tight text-slate-900">Mailing List</h3>
-         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-           <tr>
-             <th scope="col" class="px-6 py-3">id</th>
-             <th scope="col" class="px-6 py-3">email</th>
-           </tr>
-         </thead>
-         <tbody>
-           #{foldMap mailingListRow entries}
-         </tbody>
-       </table>
-     </div>
-    |]
+  div_ [class_ "relative overflow-x-auto"] $
+    table_ [class_ "w-full text-sm text-left rtl:text-right text-gray-500"] $ do
+      h3_ [class_ "mt-3 text-xl font-extrabold tracking-tight text-slate-900"] "Mailing List"
+      thead_ [class_ "text-xs text-gray-700 uppercase bg-gray-50"] $
+        tr_ $ do
+          th_ [scope_ "col", class_ "px-6 py-3"] "id"
+          th_ [scope_ "col", class_ "px-6 py-3"] "email"
+      tbody_
+        (foldMap mailingListRow entries)
 
-unauthorized :: BS.ByteString
+unauthorized :: Lucid.Html ()
 unauthorized =
-  [i|<h1 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900">Unauthorized</h1>|]
+  h1_ [class_ "mt-1 text-xl font-extrabold tracking-tight text-slate-900"] "Unauthorized"
 
 --------------------------------------------------------------------------------
 -- Handler
@@ -138,30 +112,25 @@ handler (Auth.Authz user@User.Domain {..} _) hxTrigger = do
     if dIsAdmin
       then do
         users <- execQuerySpanThrow User.getUsers
-        let x = TE.encodeUtf8 $ userTable users
-        userTableFragment <- parseFragment x
+        let userTableFragment = userTable users
 
         mailingList <- execQuerySpanThrow MailingList.getEmailListEntries
-        mailingListTableFragment <- parseFragment $ TE.encodeUtf8 $ mailingListTable mailingList
+        let mailingListTableFragment = mailingListTable mailingList
 
         case hxTrigger of
           Just True -> do
-            pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-            let html = renderNodes pageFragment
+            let page = template userTableFragment mailingListTableFragment
+            let html = RawHtml $ Lucid.renderBS page
             pure $ Servant.addHeader "HX-Request" html
           _ -> do
-            pageFragment <- parseFragment template <&> swapTableFragment (userTableFragment <> mailingListTableFragment)
-            page <- loadFrameWithNav (Auth.IsLoggedIn user) "about-tab" pageFragment
-            let html = renderDocument page
+            let page = template userTableFragment mailingListTableFragment
+            pageWithFrame <- loadFrameWithNav (Auth.IsLoggedIn user) "about-tab" page
+            let html = renderLucid pageWithFrame
             pure $ Servant.addHeader "HX-Request" html
       else renderUnauthorized $ Auth.IsLoggedIn user
 
-swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
-swapTableFragment x = fmap (set (_id "db-tables" . _elChildren) x)
-
 renderUnauthorized :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Auth.LoggedIn -> m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
 renderUnauthorized loginState = do
-  pageFragment <- parseFragment unauthorized
-  page <- loadFrameWithNav loginState "about-tab" pageFragment
-  let html = renderDocument page
+  page <- loadFrameWithNav loginState "about-tab" unauthorized
+  let html = renderLucid page
   pure $ Servant.addHeader "HX-Request" html

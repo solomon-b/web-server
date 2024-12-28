@@ -2,11 +2,10 @@ module API.Markdown.Post where
 
 --------------------------------------------------------------------------------
 
-import App.Auth qualified as Auth
-import App.Errors (InternalServerError (InternalServerError), Unauthorized (..), throwErr)
+import App.Errors (InternalServerError (InternalServerError), throwErr)
 import Control.Arrow ((>>>))
 import Control.Lens
-import Control.Monad (unless, (>=>))
+import Control.Monad ((>=>))
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -18,10 +17,11 @@ import Data.Text.Display (display)
 import Data.Text.Encoding as TE
 import Effects.Observability qualified as Observability
 import Log qualified
+import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderNodes)
+import Text.HTML (HTML, RawHtml, parseFragment, renderLucid, renderNodes)
 import Text.Pandoc
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
@@ -48,7 +48,7 @@ handler ::
 handler markdown = do
   Observability.handlerSpan "GET /markdown" markdown display $ do
     nodes <- processInput markdown
-    pure $ renderNodes nodes
+    pure (renderLucid nodes)
 
 processInput ::
   ( MonadIO m,
@@ -56,9 +56,9 @@ processInput ::
     MonadThrow m
   ) =>
   Text ->
-  m [Xml.Node]
+  m (Lucid.Html ())
 processInput =
-  parseMarkdown >=> (TE.encodeUtf8 >>> parseFragment) >>> fmap applyStyle
+  parseMarkdown >=> (TE.encodeUtf8 >>> parseFragment) >>> fmap (applyStyle >>> renderNodes)
 
 parseMarkdown :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Text -> m Text
 parseMarkdown md = do
