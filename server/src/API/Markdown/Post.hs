@@ -21,7 +21,7 @@ import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, parseFragment, renderLucid, renderNodes)
+import Text.HTML (HTML, parseFragment, renderNodes)
 import Text.Pandoc
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
@@ -31,7 +31,7 @@ import Text.XmlHtml.Optics
 type Route =
   "markdown"
     :> Servant.ReqBody '[Servant.PlainText] Text
-    :> Servant.Post '[HTML] RawHtml
+    :> Servant.Post '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
@@ -44,11 +44,10 @@ handler ::
     MonadReader env m
   ) =>
   Text ->
-  m RawHtml
+  m (Lucid.Html ())
 handler markdown = do
   Observability.handlerSpan "GET /markdown" markdown display $ do
-    nodes <- processInput markdown
-    pure (renderLucid nodes)
+    processInput markdown
 
 processInput ::
   ( MonadIO m,

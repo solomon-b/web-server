@@ -25,11 +25,11 @@ import Lucid.Extras (hxGet_, hxPushUrl_, hxTarget_)
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.Header "Cookie" Text :> "blog" :> Servant.Get '[HTML] RawHtml
+type Route = Servant.Header "Cookie" Text :> "blog" :> Servant.Get '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
@@ -65,13 +65,11 @@ handler ::
     MonadCatch m
   ) =>
   Maybe Text ->
-  m RawHtml
+  m (Lucid.Html ())
 handler cookie =
   Observability.handlerSpan "GET /blog" () display $ do
     loginState <- Auth.userLoginState cookie
 
     posts <- fmap BlogPosts.toDomain <$> execQuerySpanThrow BlogPosts.getBlogPosts
     let pageFragment = template posts
-    page <- loadFrameWithNav loginState "blog-tab" pageFragment
-
-    pure $ renderLucid page
+    loadFrameWithNav loginState "blog-tab" pageFragment

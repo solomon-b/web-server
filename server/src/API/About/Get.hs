@@ -20,11 +20,11 @@ import Lucid qualified
 import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml (..), renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
-type Route = "about" :> Servant.Header "Cookie" Text :> Servant.Header "HX-Request" Bool :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+type Route = "about" :> Servant.Header "Cookie" Text :> Servant.Header "HX-Request" Bool :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 
 --------------------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ handler ::
   ) =>
   Maybe Text ->
   Maybe Bool ->
-  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+  m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler cookie hxTrigger =
   Observability.handlerSpan "GET /" () (display . Servant.getResponse) $ do
     loginState <- Auth.userLoginState cookie
@@ -62,7 +62,6 @@ handler cookie hxTrigger =
 
     case hxTrigger of
       Just True ->
-        pure $ Servant.addHeader "HX-Request" $ RawHtml $ Lucid.renderBS template
+        pure $ Servant.addHeader "HX-Request" template
       _ -> do
-        let html = renderLucid page
-        pure $ Servant.addHeader "HX-Request" html
+        pure $ Servant.addHeader "HX-Request" page

@@ -24,11 +24,11 @@ import OpenTelemetry.Trace (Tracer)
 import Servant ((:>))
 import Servant qualified
 import Servant.Links qualified as Link
-import Text.HTML (HTML, RawHtml (..), renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.Header "Cookie" Text :> Servant.Get '[HTML] RawHtml
+type Route = Servant.Header "Cookie" Text :> Servant.Get '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
@@ -66,10 +66,8 @@ handler ::
     MonadUnliftIO m
   ) =>
   Maybe Text ->
-  m RawHtml
+  m (Lucid.Html ())
 handler cookie =
   Observability.handlerSpan "GET /" () display $ do
     loginState <- Auth.userLoginState cookie
-
-    page <- loadFrameWithNav loginState "home-tab" template
-    pure $ renderLucid page
+    loadFrameWithNav loginState "home-tab" template

@@ -25,13 +25,13 @@ import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml (..), renderLucid)
+import Text.HTML (HTML)
 import Text.XmlHtml qualified as Xml
 import Text.XmlHtml.Optics
 
 --------------------------------------------------------------------------------
 
-type Route = Servant.Header "Cookie" Text :> Servant.Header "HX-Request" Bool :> "blog" :> Servant.Capture "id" BlogPosts.Id :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+type Route = Servant.Header "Cookie" Text :> Servant.Header "HX-Request" Bool :> "blog" :> Servant.Capture "id" BlogPosts.Id :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 
 --------------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ handler ::
   Maybe Text ->
   Maybe Bool ->
   BlogPosts.Id ->
-  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+  m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler cookie hxTrigger bid =
   Observability.handlerSpan "GET /blog/:id" bid (display . Servant.getResponse) $ do
     loginState <- Auth.userLoginState cookie
@@ -84,12 +84,10 @@ handler cookie hxTrigger bid =
 
     case hxTrigger of
       Just True -> do
-        let html = RawHtml $ Lucid.renderBS page
-        pure $ Servant.addHeader "HX-Request" html
+        pure $ Servant.addHeader "HX-Request" page
       _ -> do
         pageWithFrame <- loadFrameWithNav loginState "blog-tab" page
-        let html = renderLucid pageWithFrame
-        pure $ Servant.addHeader "HX-Request" html
+        pure $ Servant.addHeader "HX-Request" pageWithFrame
 
 swapTableFragment :: [Xml.Node] -> [Xml.Node] -> [Xml.Node]
 swapTableFragment x = fmap (set (_id "content" . _elChildren) x)

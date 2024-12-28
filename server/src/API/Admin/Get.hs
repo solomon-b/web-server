@@ -22,7 +22,7 @@ import Lucid qualified
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml (..), renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ type Route =
   Servant.AuthProtect "cookie-auth"
     :> Servant.Header "HX-Request" Bool
     :> "admin"
-    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 
 --------------------------------------------------------------------------------
 
@@ -106,7 +106,7 @@ handler ::
   ) =>
   Auth.Authz ->
   Maybe Bool ->
-  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+  m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler (Auth.Authz user@User.Domain {..} _) hxTrigger = do
   Observability.handlerSpan "GET /admin" () (display . Servant.getResponse) $
     if dIsAdmin
@@ -120,17 +120,14 @@ handler (Auth.Authz user@User.Domain {..} _) hxTrigger = do
         case hxTrigger of
           Just True -> do
             let page = template userTableFragment mailingListTableFragment
-            let html = RawHtml $ Lucid.renderBS page
-            pure $ Servant.addHeader "HX-Request" html
+            pure $ Servant.addHeader "HX-Request" page
           _ -> do
             let page = template userTableFragment mailingListTableFragment
             pageWithFrame <- loadFrameWithNav (Auth.IsLoggedIn user) "about-tab" page
-            let html = renderLucid pageWithFrame
-            pure $ Servant.addHeader "HX-Request" html
+            pure $ Servant.addHeader "HX-Request" pageWithFrame
       else renderUnauthorized $ Auth.IsLoggedIn user
 
-renderUnauthorized :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Auth.LoggedIn -> m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+renderUnauthorized :: (MonadIO m, Log.MonadLog m, MonadThrow m) => Auth.LoggedIn -> m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 renderUnauthorized loginState = do
   page <- loadFrameWithNav loginState "about-tab" unauthorized
-  let html = renderLucid page
-  pure $ Servant.addHeader "HX-Request" html
+  pure $ Servant.addHeader "HX-Request" page

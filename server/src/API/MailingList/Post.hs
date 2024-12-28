@@ -23,13 +23,14 @@ import Effects.MailSender
 import Effects.Observability qualified as Observability
 import GHC.Generics (Generic)
 import Log qualified
+import Lucid qualified
 import Network.Mail.Mime qualified as Mime
 import Network.Mail.SMTP qualified as SMTP
 import OpenTelemetry.Trace qualified as OTEL
 import OrphanInstances.OneRow ()
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, renderLucid)
+import Text.HTML (HTML)
 import Web.FormUrlEncoded (FromForm)
 
 --------------------------------------------------------------------------------
@@ -41,7 +42,7 @@ newtype MailingListForm = MailingListForm
   deriving newtype (Display)
   deriving anyclass (FromJSON, ToJSON, FromForm)
 
-type Route = "mailing-list" :> "signup" :> Servant.ReqBody '[Servant.JSON, Servant.FormUrlEncoded] MailingListForm :> Servant.Post '[HTML] RawHtml
+type Route = "mailing-list" :> "signup" :> Servant.ReqBody '[Servant.JSON, Servant.FormUrlEncoded] MailingListForm :> Servant.Post '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 -- Handler
@@ -59,9 +60,9 @@ handler ::
     MonadUnliftIO m
   ) =>
   MailingListForm ->
-  m RawHtml
+  m (Lucid.Html ())
 handler req@(MailingListForm emailAddress) = do
-  Observability.handlerSpan "POST /mailing-list" req display $ do
+  Observability.handlerSpan "POST /mailing-list" req Lucid.renderText $ do
     unless (isValid emailAddress) $ throwErr Unauthorized
 
     _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert emailAddress
@@ -70,7 +71,7 @@ handler req@(MailingListForm emailAddress) = do
     sendConfirmationEmail emailAddress
     Log.logInfo "Sent confirmation email to:" (KeyMap.singleton "email" (display emailAddress))
 
-    pure $ renderLucid "You have been added to the mailing list!"
+    pure "You have been added to the mailing list!"
 
 sendConfirmationEmail ::
   ( MonadEmail m,

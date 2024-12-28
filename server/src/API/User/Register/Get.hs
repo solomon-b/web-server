@@ -14,10 +14,11 @@ import Domain.Types.EmailAddress (EmailAddress)
 import Domain.Types.FullName (FullName)
 import Effects.Observability qualified as Observability
 import Log qualified
+import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
@@ -27,7 +28,7 @@ type Route =
     :> Servant.QueryParam "emailAddress" EmailAddress
     :> Servant.QueryParam "displayName" DisplayName
     :> Servant.QueryParam "fullName" FullName
-    :> Servant.Get '[HTML] RawHtml
+    :> Servant.Get '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
@@ -42,10 +43,8 @@ handler ::
   Maybe EmailAddress ->
   Maybe DisplayName ->
   Maybe FullName ->
-  m RawHtml
+  m (Lucid.Html ())
 handler emailAddress displayName fullName =
   Observability.handlerSpan "GET /user/register" (emailAddress, displayName, fullName) display $ do
     let registerForm = template displayName fullName emailAddress Nothing
-    page <- loadFrame registerForm
-
-    pure (renderLucid page)
+    loadFrame registerForm

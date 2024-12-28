@@ -14,10 +14,11 @@ import Data.Text.Display (display)
 import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Observability qualified as Observability
 import Log qualified
+import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
@@ -27,7 +28,7 @@ type Route =
     :> Servant.Header "HX-Current-Url" Text
     :> Servant.QueryParam "redirect" Text
     :> Servant.QueryParam "email" EmailAddress
-    :> Servant.Get '[HTML] RawHtml
+    :> Servant.Get '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
@@ -42,10 +43,8 @@ handler ::
   Maybe Text ->
   Maybe Text ->
   Maybe EmailAddress ->
-  m RawHtml
+  m (Lucid.Html ())
 handler hxCurrentUrl redirectQueryParam emailQueryParam =
   Observability.handlerSpan "GET /user/login" () display $ do
     let loginForm = template emailQueryParam $ hxCurrentUrl <|> redirectQueryParam
-    page <- loadFrame loginForm
-
-    pure (renderLucid page)
+    loadFrame loginForm

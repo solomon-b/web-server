@@ -20,10 +20,11 @@ import Effects.Database.Tables.Images qualified as Images
 import Effects.Database.Tables.User qualified as User
 import Effects.Observability qualified as Observability
 import Log qualified
+import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml, renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
@@ -33,7 +34,7 @@ type Route =
     :> Servant.Capture "id" BlogPosts.Id
     :> "edit"
     :> Servant.QueryParam "content" BlogPosts.Body
-    :> Servant.Get '[HTML] RawHtml
+    :> Servant.Get '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
@@ -49,7 +50,7 @@ handler ::
   Auth.Authz ->
   BlogPosts.Id ->
   Maybe BlogPosts.Body ->
-  m RawHtml
+  m (Lucid.Html ())
 handler (Auth.Authz user@User.Domain {dId = uid, ..} _) bid contentParam =
   Observability.handlerSpan "GET /post/new" () display $ do
     BlogPosts.Domain {..} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
@@ -57,5 +58,4 @@ handler (Auth.Authz user@User.Domain {dId = uid, ..} _) bid contentParam =
 
     let content = fromMaybe dContent contentParam
     let pageFragment = Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage)
-    page <- loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment
-    pure (renderLucid page)
+    loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment

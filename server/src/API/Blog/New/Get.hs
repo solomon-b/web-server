@@ -20,7 +20,7 @@ import Lucid qualified
 import OpenTelemetry.Trace qualified as Trace
 import Servant ((:>))
 import Servant qualified
-import Text.HTML (HTML, RawHtml (..), renderLucid)
+import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ type Route =
     :> Servant.Header "HX-Request" Bool
     :> "blog"
     :> "new"
-    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+    :> Servant.Get '[HTML] (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 
 --------------------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ handler ::
   ) =>
   Auth.Authz ->
   Maybe Bool ->
-  m (Servant.Headers '[Servant.Header "Vary" Text] RawHtml)
+  m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler (Auth.Authz user@User.Domain {..} _) hxTrigger =
   Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
     unless dIsAdmin $ throwErr Unauthorized
@@ -53,7 +53,6 @@ handler (Auth.Authz user@User.Domain {..} _) hxTrigger =
 
     case hxTrigger of
       Just True ->
-        pure $ Servant.addHeader "HX-Request" $ RawHtml $ Lucid.renderBS formFragment
-      _ -> do
-        let html = renderLucid fullPage
-        pure $ Servant.addHeader "HX-Request" html
+        pure $ Servant.addHeader "HX-Request" formFragment
+      _ ->
+        pure $ Servant.addHeader "HX-Request" fullPage
