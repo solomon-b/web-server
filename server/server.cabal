@@ -66,6 +66,7 @@ library
                   , deriving-aeson
                   , directory
                   , exceptions
+                  , fuzzy
                   , email-validate
                   , errors
                   , filepath
@@ -126,6 +127,8 @@ library
     API
     API.About.Get
     API.Admin.Get
+    API.Admin.Blog.Get
+    API.Blog.Delete
     API.Blog.Get
     API.Blog.New.Get
     API.Blog.New.Post

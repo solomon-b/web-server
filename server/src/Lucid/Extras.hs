@@ -83,6 +83,9 @@ hxGet_ = Lucid.makeAttributes "hx-get"
 hxPost_ :: Text -> Lucid.Attributes
 hxPost_ = Lucid.makeAttributes "hx-post"
 
+hxDelete_ :: Text -> Lucid.Attributes
+hxDelete_ = Lucid.makeAttributes "hx-delete"
+
 hxSwap_ :: Text -> Lucid.Attributes
 hxSwap_ = Lucid.makeAttributes "hx-swap"
 
@@ -91,3 +94,18 @@ hxTarget_ = Lucid.makeAttributes "hx-target"
 
 hxPushUrl_ :: Text -> Lucid.Attributes
 hxPushUrl_ = Lucid.makeAttributes "hx-push-url"
+
+hxInclude_ :: Text -> Lucid.Attributes
+hxInclude_ = Lucid.makeAttributes "hx-include"
+
+hxParams_ :: Text -> Lucid.Attributes
+hxParams_ = Lucid.makeAttributes "hx-params"
+
+hxTrigger_ :: Text -> Lucid.Attributes
+hxTrigger_ = Lucid.makeAttributes "hx-trigger"
+
+hxOn_ :: Text -> Lucid.Attributes
+hxOn_ = Lucid.makeAttributesRaw "hx-on"
+
+hxOnAfterRequest_ :: Text -> Lucid.Attributes
+hxOnAfterRequest_ = Lucid.makeAttributesRaw "hx-on:afterRequest"

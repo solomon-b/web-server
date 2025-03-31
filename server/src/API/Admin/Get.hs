@@ -1,9 +1,12 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module API.Admin.Get where
 
 --------------------------------------------------------------------------------
 
+import {-# SOURCE #-} API (adminBlogGetLink)
 import App.Auth qualified as Auth
-import Component.Frame (loadFrameWithNav)
+import Component.Frame (adminColumn, loadFrameWithNav, loadFrameWithNavAdmin)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -22,6 +25,7 @@ import Lucid qualified
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant ((:>))
 import Servant qualified
+import Servant.Links qualified as Link
 import Text.HTML (HTML)
 
 --------------------------------------------------------------------------------
@@ -34,10 +38,12 @@ type Route =
 
 --------------------------------------------------------------------------------
 
+adminBlogGetUrl :: Link.URI
+adminBlogGetUrl = Link.linkURI adminBlogGetLink
+
 template :: Lucid.Html () -> Lucid.Html () -> Lucid.Html ()
 template userTable' mailingListTable' =
-  div_ [class_ "flex flex-col justify-center items-center w-full"] $ do
-    h1_ [class_ "mt-3 text-3xl font-extrabold tracking-tight text-slate-900"] "Admin Page"
+  div_ [class_ "flex-auto", id_ "admin-main"] $ do
     div_ [id_ "db-tables", class_ "p-4 my-8 border border-solid border-gray-200 rounded-lg shadow-md"] $ do
       userTable'
       mailingListTable'
@@ -120,10 +126,10 @@ handler (Auth.Authz user@User.Domain {..} _) hxTrigger = do
         case hxTrigger of
           Just True -> do
             let page = template userTableFragment mailingListTableFragment
-            pure $ Servant.addHeader "HX-Request" page
+            pure $ Servant.addHeader "HX-Request" (adminColumn page)
           _ -> do
             let page = template userTableFragment mailingListTableFragment
-            pageWithFrame <- loadFrameWithNav (Auth.IsLoggedIn user) "about-tab" page
+            pageWithFrame <- loadFrameWithNavAdmin (Auth.IsLoggedIn user) "about-tab" page
             pure $ Servant.addHeader "HX-Request" pageWithFrame
       else renderUnauthorized $ Auth.IsLoggedIn user
 
