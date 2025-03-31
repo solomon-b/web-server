@@ -58,7 +58,7 @@ contactGetUrl = Link.linkURI rootGetLink
 
 userDropdown :: User.Domain -> Lucid.Html ()
 userDropdown User.Domain {dId, dDisplayName, dAvatarUrl} =
-  let avatar = fromMaybe "/#{staticGetUrl}/avatar.png" dAvatarUrl
+  let avatar = fromMaybe [i|/#{staticGetUrl}/avatar.png|] dAvatarUrl
    in div_ do
         button_ [id_ "adminUserButton", hxGet_ [i|/user/#{display dId}|], hxTarget_ "#main", hxPushUrl_ "true", dataDropdownToggle_ "adminUserDropdown", dataDropdownOffsetDistance_ "0", dataDropdownTrigger_ "hover", class_ "font-medium text-sm p-2.5 text-center inline-flex items-center", type_ "button"] do
           img_ [src_ avatar, class_ "size-4"]
