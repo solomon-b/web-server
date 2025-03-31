@@ -5,3 +5,4 @@
 /backend/keys/
 /secrets.env
 /server/static/images/*
+/.projectile-cache.eld
