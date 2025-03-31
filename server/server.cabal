@@ -66,6 +66,7 @@ library
                   , deriving-aeson
                   , directory
                   , exceptions
+                  , fuzzy
                   , email-validate
                   , errors
                   , filepath
@@ -126,6 +127,8 @@ library
     API
     API.About.Get
     API.Admin.Get
+    API.Admin.Blog.Get
+    API.Blog.Delete
     API.Blog.Get
     API.Blog.New.Get
     API.Blog.New.Post
@@ -159,6 +162,7 @@ library
     Domain.Types.DisplayName
     Domain.Types.EmailAddress
     Domain.Types.FullName
+    Domain.Types.OptionalField
     Effects.Clock
     Effects.Database.Class
     Effects.Database.Execute
@@ -171,6 +175,7 @@ library
     Effects.MailSender
     Effects.Observability
     Lucid.Extras
+    OrphanInstances.Day
     OrphanInstances.CaseInsensitive
     OrphanInstances.IPRange
     OrphanInstances.MultipartData

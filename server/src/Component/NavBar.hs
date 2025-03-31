@@ -78,7 +78,7 @@ adminNavBar :: Auth.LoggedIn -> Lucid.Html ()
 adminNavBar = \case
   (Auth.IsLoggedIn user@User.Domain {dIsAdmin})
     | dIsAdmin ->
-        div_ [id_ "admin-nav", class_ "w-full flex flex-wrap justify-between items-center bg-red-400"] do
+        div_ [id_ "admin-nav", class_ "flex flex-wrap justify-between items-center bg-red-400 px-4"] do
           div_ do
             button_ [hxGet_ [i|/#{adminGetUrl}|], hxTarget_ "#main", hxPushUrl_ "true", class_ "font-medium text-sm p-2.5 text-center inline-flex items-center me-1"] do
               i_ [class_ "fa-solid fa-gauge pe-2"] mempty

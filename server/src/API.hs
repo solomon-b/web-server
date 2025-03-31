@@ -3,7 +3,9 @@ module API where
 --------------------------------------------------------------------------------
 
 import API.About.Get qualified as About.Get
+import API.Admin.Blog.Get qualified as Admin.Blog.Get
 import API.Admin.Get qualified as Admin.Get
+import API.Blog.Delete qualified as Blog.Delete
 import API.Blog.Get qualified as Blog.Get
 import API.Blog.Id.Delete qualified as Blog.Id.Delete
 import API.Blog.Id.Edit.Get qualified as Blog.Id.Edit.Get
@@ -62,6 +64,7 @@ type API =
     :<|> Static.Get.Route
     :<|> MailingList.Post.Route
     -- Unprotected BlogPosts Routes
+    :<|> Blog.Delete.Route
     :<|> Blog.Get.Route
     :<|> Blog.Id.Get.Route
     :<|> Blog.Id.TogglePublish.Patch.Route
@@ -91,6 +94,7 @@ type API =
     :<|> User.PasswordReset.Post.Route
     -- Protected Admin Routes
     :<|> Admin.Get.Route
+    :<|> Admin.Blog.Get.Route
 
 --------------------------------------------------------------------------------
 
@@ -117,6 +121,7 @@ server env = do
   Get.handler
     :<|> Static.Get.handler env
     :<|> MailingList.Post.handler
+    :<|> Blog.Delete.handler
     :<|> Blog.Get.handler
     :<|> Blog.Id.Get.handler
     :<|> Blog.Id.TogglePublish.Patch.handler
@@ -140,6 +145,7 @@ server env = do
     :<|> Delete.handler
     :<|> PasswordReset.Post.handler
     :<|> Admin.Get.handler
+    :<|> Admin.Blog.Get.handler
 
 --------------------------------------------------------------------------------
 
@@ -151,6 +157,9 @@ staticGetLink = Links.safeLink (Proxy @API) (Proxy @Static.Get.Route)
 
 mailingListPostLink :: Links.Link
 mailingListPostLink = Links.safeLink (Proxy @API) (Proxy @MailingList.Post.Route)
+
+blogDeleteLink :: Links.Link
+blogDeleteLink = Links.safeLink (Proxy @API) (Proxy @Blog.Delete.Route)
 
 blogGetLink :: Links.Link
 blogGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Get.Route)
@@ -217,3 +226,9 @@ adminGetLink = Links.safeLink (Proxy @API) (Proxy @Admin.Get.Route)
 
 blogTogglePublish :: BlogPosts.Id -> Links.Link
 blogTogglePublish = Links.safeLink (Proxy @API) (Proxy @Blog.Id.TogglePublish.Patch.Route)
+
+adminBlogGetLink :: Links.Link
+adminBlogGetLink = Links.safeLink (Proxy @API) (Proxy @Admin.Blog.Get.Route) Nothing Nothing Nothing Nothing
+
+adminBlogGetLinkSearch :: Admin.Blog.Get.SearchQuery -> Links.Link
+adminBlogGetLinkSearch x = Links.safeLink (Proxy @API) (Proxy @Admin.Blog.Get.Route) (Just x) Nothing Nothing Nothing
