@@ -17,7 +17,6 @@ import Data.CaseInsensitive qualified as CI
 import Data.Text (Text)
 import Data.Text.Display (Display (..))
 import Data.Text.Encoding qualified as Text.Encoding
-import Data.Text.Internal.Builder qualified as Text
 import GHC.Generics
 import Hasql.Interpolate (DecodeValue, EncodeValue)
 import OrphanInstances.CaseInsensitive ()
@@ -37,7 +36,7 @@ instance ToJSON EmailAddress where
   toJSON EmailAddress {..} = Aeson.String $ CI.original emailAddress
 
 instance Display EmailAddress where
-  displayBuilder EmailAddress {..} = Text.fromText (CI.original emailAddress)
+  displayBuilder EmailAddress {..} = displayBuilder (CI.original emailAddress)
 
 instance Servant.ToHttpApiData EmailAddress where
   toUrlPiece = CI.original . emailAddress

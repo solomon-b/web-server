@@ -15,7 +15,6 @@ import Data.Text qualified as T
 import Data.Text qualified as Text
 import Data.Text.Display (Display)
 import Data.Text.Display.Core (Display (..))
-import Data.Text.Internal.Builder qualified as TB
 import Servant (FromHttpApiData)
 import Servant.Multipart (MultipartData (..))
 import Servant.Multipart qualified as Multipart
@@ -26,7 +25,7 @@ import Web.HttpApiData qualified as HTTP
 
 instance Display (MultipartData Multipart.Tmp) where
   displayBuilder MultipartData {..} =
-    TB.fromText $
+    displayBuilder $
       fold
         [ "inputs: ",
           T.pack $ show inputs,
@@ -37,7 +36,7 @@ instance Display (MultipartData Multipart.Tmp) where
 
 instance Display (MultipartData Multipart.Mem) where
   displayBuilder MultipartData {..} =
-    TB.fromText $
+    displayBuilder $
       fold
         [ "inputs: ",
           T.pack $ show inputs,
