@@ -174,6 +174,10 @@ getBlogPosts =
       i.user_id, i.title, i.file_path 
     FROM blog_posts AS bp
     LEFT JOIN images AS i ON (i.id = bp.hero_image_id)
+    ORDER BY
+      bp.published_at IS NOT NULL,
+      bp.published_at DESC,
+      bp.created_at DESC
   |]
   where
     fromRows ::
@@ -191,6 +195,50 @@ getBlogPosts =
     fromRows (bId, bAuthorId, bTitle, bContent, bPublishedAt, bHeroImageId, iUserId, iTitle, iFilePath) =
       ( Model bId bAuthorId bTitle bContent bPublishedAt bHeroImageId,
         Images.Model <$> bHeroImageId <*> iUserId <*> iTitle <*> iFilePath
+      )
+
+getBlogPostsWithUser :: Hasql.Statement () [(Model, Maybe Images.Model, User.Model)]
+getBlogPostsWithUser =
+  fmap fromRows
+    <$> interp
+      False
+      [sql|
+    SELECT
+      bp.id, bp.author_id, bp.title, bp.content, bp.published_at, bp.hero_image_id,
+      i.user_id, i.title, i.file_path,
+      u.id, u.email, u.password, u.display_name, u.full_name, u.avatar_url, u.is_admin
+    FROM blog_posts AS bp
+    INNER JOIN users AS u ON u.id = bp.author_id
+    LEFT JOIN images AS i ON (i.id = bp.hero_image_id)
+    ORDER BY
+      bp.published_at IS NOT NULL,
+      bp.published_at DESC,
+      bp.created_at DESC
+  |]
+  where
+    fromRows ::
+      ( Id,
+        User.Id,
+        Subject,
+        Body,
+        Maybe UTCTime,
+        Maybe Images.Id,
+        Maybe User.Id,
+        Maybe Text,
+        Maybe Text,
+        User.Id,
+        EmailAddress,
+        PasswordHash Argon2,
+        DisplayName,
+        FullName,
+        Maybe Text,
+        Bool
+      ) ->
+      (Model, Maybe Images.Model, User.Model)
+    fromRows (bId, bAuthorId, bTitle, bContent, bPublishedAt, bHeroImageId, iUserId, iTitle, iFilePath, uId, uEmail, uPassword, uDisplayname, uFullName, uAvatarUrl, uIsAdmin) =
+      ( Model bId bAuthorId bTitle bContent bPublishedAt bHeroImageId,
+        Images.Model <$> bHeroImageId <*> iUserId <*> iTitle <*> iFilePath,
+        User.Model uId uEmail uPassword uDisplayname uFullName uAvatarUrl uIsAdmin
       )
 
 getBlogPostWithUser :: Id -> Hasql.Statement () (Maybe (Model, User.Model))

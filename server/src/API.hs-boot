@@ -37,3 +37,4 @@ userDeleteLink :: User.Id -> Links.Link
 userPasswordResetPostLink :: User.Id -> Links.Link
 adminGetLink :: Links.Link
 blogTogglePublish :: BlogPosts.Id -> Links.Link
+adminBlogGetLink :: Links.Link
