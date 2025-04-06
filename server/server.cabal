@@ -129,6 +129,7 @@ library
     API.Blog.New.Get
     API.Blog.New.Post
     API.Blog.Id.Get
+    API.Blog.Id.Delete
     API.Blog.Id.Edit.Get
     API.Blog.Id.Edit.Post
     API.Get
@@ -227,6 +228,7 @@ test-suite tests
     , xmlhtml
     , server
   other-modules:
+     API.Blog.Id.DeleteSpec
      API.User.DeleteSpec
      API.User.GetSpec
      API.User.Id.GetSpec
