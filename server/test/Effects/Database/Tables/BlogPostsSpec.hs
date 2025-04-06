@@ -32,6 +32,7 @@ spec =
     describe "Effects.Database.Tables.BlogPosts" $ do
       runs 30 . it "insert ; select" $ hedgehog . prop_insertSelect
       runs 30 . it "insert ; update ; select" $ hedgehog . prop_insertUpdateSelect
+      runs 30 . it "insert ; delete ; select" $ hedgehog . prop_insertDeleteSelect
 
 prop_insertSelect :: TestDBConfig -> PropertyT IO ()
 prop_insertSelect cfg = do
@@ -44,11 +45,13 @@ prop_insertSelect cfg = do
         (OneRow userId) <- TRX.statement () (User.insertUser userInsert)
         (OneRow insertedId) <- TRX.statement () (UUT.insertBlogPost UUT.Insert {UUT.iAuthorId = userId, ..})
         selected <- TRX.statement () (UUT.getBlogPost insertedId)
+
         pure (userId, insertedId, selected)
 
       assert $ do
         (userId, insertedId, mSelected) <- assertRight result
         (blogPost, _heroImage) <- assertJust mSelected
+
         iTitle === UUT.mTitle blogPost
         iContent === UUT.mContent blogPost
         iPublished === UUT.mPublished blogPost
@@ -74,12 +77,35 @@ prop_insertUpdateSelect cfg = do
       assert $ do
         (userId, insertedId, mSelected) <- assertRight result
         (blogPost, _heroImage) <- assertJust mSelected
+
         mTitle === UUT.mTitle blogPost
         mContent === UUT.mContent blogPost
         mPublished === UUT.mPublished blogPost
         mHeroImageId === UUT.mHeroImageId blogPost
         userId === UUT.mAuthorId blogPost
         insertedId === UUT.mId blogPost
+
+prop_insertDeleteSelect :: TestDBConfig -> PropertyT IO ()
+prop_insertDeleteSelect cfg = do
+  arrange (bracketConn cfg) $ do
+    userInsert <- forAllT userInsertGen
+    (iTitle, iContent, iPublished, iHeroImageId) <- forAllT blogPostInsertGen
+    act $ do
+      result <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
+        (OneRow userId) <- TRX.statement () (User.insertUser userInsert)
+        (OneRow insertedId) <- TRX.statement () (UUT.insertBlogPost UUT.Insert {UUT.iAuthorId = userId, ..})
+        inserted <- TRX.statement () (UUT.getBlogPost insertedId)
+        () <- TRX.statement () (UUT.deleteBlogPost insertedId)
+        selected <- TRX.statement () (UUT.getBlogPost insertedId)
+
+        pure (userId, inserted, selected)
+
+      assert $ do
+        (userId, inserted, selectedAfterDelete) <- assertRight result
+        (blogPost, _heroImage) <- assertJust inserted
+
+        userId === UUT.mAuthorId blogPost
+        selectedAfterDelete === Nothing
 
 --------------------------------------------------------------------------------
 

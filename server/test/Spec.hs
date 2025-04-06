@@ -2,6 +2,7 @@ module Main where
 
 --------------------------------------------------------------------------------
 
+import API.Blog.Id.DeleteSpec qualified as Blog.Id.Delete
 import API.User.DeleteSpec qualified as User.Delete
 import API.User.GetSpec qualified as User.Get
 import API.User.Id.GetSpec qualified as User.Id.Get
@@ -41,6 +42,7 @@ main = do
     User.spec
 
     -- Handlers
+    Blog.Id.Delete.spec
     User.Delete.spec
     User.Get.spec
     User.Id.Get.spec
