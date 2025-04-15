@@ -3,8 +3,8 @@ CREATE TABLE blog_posts
   , author_id SERIAL8 NOT NULL REFERENCES users (id) ON DELETE RESTRICT
   , title VARCHAR NOT NULL
   , content VARCHAR NOT NULL
-  , published BOOLEAN NOT NULL DEFAULT False
   , hero_image_id INTEGER NULL REFERENCES images(id) ON DELETE SET NULL
+  , published_at TIMESTAMP WITH TIME ZONE
   , created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
   , updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );

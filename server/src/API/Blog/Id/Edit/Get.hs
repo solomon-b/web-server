@@ -11,7 +11,7 @@ import Control.Monad.Catch (MonadCatch)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader)
 import Data.Has (Has)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text.Display (display)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -57,5 +57,5 @@ handler (Auth.Authz user@User.Domain {dId = uid, ..} _) bid contentParam =
     unless (dIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 
     let content = fromMaybe dContent contentParam
-    let pageFragment = Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) dPublished (fmap Images.dFilePath dHeroImage)
+    let pageFragment = Forms.BlogPost.template (Just bid) (Just dTitle) (Just content) (isJust dPublishedAt) (fmap Images.dFilePath dHeroImage)
     loadFrameWithNav (Auth.IsLoggedIn user) "blog-tab" pageFragment

@@ -1,8 +1,13 @@
+{-# LANGUAGE NumDecimals #-}
+
 module Effects.Database.Tables.BlogPostsSpec where
 
 --------------------------------------------------------------------------------
 
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.Ratio ((%))
+import Data.Time (UTCTime, getCurrentTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.BlogPosts qualified as UUT
 import Effects.Database.Tables.Images qualified as Images
@@ -54,7 +59,7 @@ prop_insertSelect cfg = do
 
         iTitle === UUT.mTitle blogPost
         iContent === UUT.mContent blogPost
-        iPublished === UUT.mPublished blogPost
+        Nothing === UUT.mPublishedAt blogPost
         iHeroImageId === UUT.mHeroImageId blogPost
         userId === UUT.mAuthorId blogPost
         insertedId === UUT.mId blogPost
@@ -64,7 +69,7 @@ prop_insertUpdateSelect cfg = do
   arrange (bracketConn cfg) $ do
     userInsert <- forAllT userInsertGen
     (iTitle, iContent, iPublished, iHeroImageId) <- forAllT blogPostInsertGen
-    (mTitle, mContent, mPublished, mHeroImageId) <- forAllT blogPostUpdateGen
+    (mTitle, mContent, mPublishedAt, mHeroImageId) <- forAllT blogPostUpdateGen
 
     act $ do
       result <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
@@ -80,7 +85,7 @@ prop_insertUpdateSelect cfg = do
 
         mTitle === UUT.mTitle blogPost
         mContent === UUT.mContent blogPost
-        mPublished === UUT.mPublished blogPost
+        mPublishedAt === UUT.mPublishedAt blogPost
         mHeroImageId === UUT.mHeroImageId blogPost
         userId === UUT.mAuthorId blogPost
         insertedId === UUT.mId blogPost
@@ -113,8 +118,7 @@ blogPostInsertGen :: (MonadIO m, MonadGen m) => m (UUT.Subject, UUT.Body, Bool, 
 blogPostInsertGen = do
   iTitle <- UUT.Subject <$> Gen.text (Range.linear 1 10) Gen.alphaNum
   iContent <- UUT.Body <$> Gen.text (Range.linear 1 10) Gen.alphaNum
-  iPublished <- Gen.bool
-  pure (iTitle, iContent, iPublished, Nothing)
+  pure (iTitle, iContent, False, Nothing)
 
 userInsertGen :: (MonadIO m, MonadGen m) => m User.ModelInsert
 userInsertGen = do
@@ -126,9 +130,16 @@ userInsertGen = do
   miIsAdmin <- Gen.bool
   pure User.ModelInsert {..}
 
-blogPostUpdateGen :: (MonadIO m, MonadGen m) => m (UUT.Subject, UUT.Body, Bool, Maybe Images.Id)
+blogPostUpdateGen :: (MonadIO m, MonadGen m) => m (UUT.Subject, UUT.Body, Maybe UTCTime, Maybe Images.Id)
 blogPostUpdateGen = do
   muTitle <- UUT.Subject <$> Gen.text (Range.linear 1 10) Gen.alphaNum
   muContent <- UUT.Body <$> Gen.text (Range.linear 1 10) Gen.alphaNum
-  muPublished <- Gen.bool
-  pure (muTitle, muContent, muPublished, Nothing)
+  muPublishedAt <- Gen.maybe $ truncateToMicros <$> liftIO getCurrentTime
+  pure (muTitle, muContent, muPublishedAt, Nothing)
+
+truncateToMicros :: UTCTime -> UTCTime
+truncateToMicros t =
+  posixSecondsToUTCTime $
+    fromRational $
+      (truncate (toRational (utcTimeToPOSIXSeconds t) * 1e6) :: Integer)
+        % 1e6

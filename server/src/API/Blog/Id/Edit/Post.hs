@@ -13,6 +13,7 @@ import Control.Monad.Reader (MonadReader)
 import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Base64.Types qualified as Base64
+import Data.Bool (bool)
 import Data.ByteString.Base64.URL qualified as Base64.Url
 import Data.ByteString.Char8 qualified as Char8
 import Data.Has (Has)
@@ -21,6 +22,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display (..), RecordInstance (..), display)
 import Data.Text.Encoding qualified as TE
+import Data.Time (getCurrentTime)
 import Deriving.Aeson qualified as Deriving
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -104,7 +106,8 @@ handler (Auth.Authz User.Domain {dId = userId, dIsAdmin} _) bid req@EditPost {..
     unless (dIsAdmin || userId == dAuthorId) $ throwErr Unauthorized
     let oldHeroImageId = fmap Images.dId dHeroImage
     heroImageId <- traverse (insertImage userId) heroImagePath
-    void $ execQuerySpanThrow $ BlogPosts.updateBlogPost $ BlogPosts.Model bid dAuthorId title content published (heroImageId <|> oldHeroImageId)
+    publishedAt <- bool (pure Nothing) (Just <$> liftIO getCurrentTime) published
+    void $ execQuerySpanThrow $ BlogPosts.updateBlogPost $ BlogPosts.Model bid dAuthorId title content publishedAt (heroImageId <|> oldHeroImageId)
     pure $ Servant.addHeader ("/blog/" <> display bid) Servant.NoContent
 
 insertImage ::
