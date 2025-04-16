@@ -13,8 +13,7 @@ import Data.Foldable
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text qualified as Text
-import Data.Text.Display (Display)
-import Data.Text.Display.Core (Display (..))
+import Data.Text.Display (Display (..))
 import Servant (FromHttpApiData)
 import Servant.Multipart (MultipartData (..))
 import Servant.Multipart qualified as Multipart

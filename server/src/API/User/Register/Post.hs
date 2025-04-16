@@ -25,11 +25,9 @@ import Data.Text.Display.Generic (RecordInstance (..))
 import Data.Validation
 import Deriving.Aeson qualified as Deriving
 import Domain.Types.DisplayName (DisplayName)
-import Domain.Types.DisplayName qualified as DisplayName
 import Domain.Types.EmailAddress (EmailAddress)
 import Domain.Types.EmailAddress qualified as EmailAddress
 import Domain.Types.FullName (FullName)
-import Domain.Types.FullName qualified as FullName
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Execute (execQuerySpanThrow)
@@ -186,9 +184,7 @@ validateRequest :: (MonadIO m) => Register -> m (Validation [ValidationError] Re
 validateRequest Register {..} = do
   let emailValidation = fromEither $ first (const [InvalidEmailAddress]) $ EmailAddress.validate urEmail
   passwordValidation <- parsePassword urPassword
-  let displayName = if DisplayName.null urDisplayName then Failure [EmptyDisplayName] else Success urDisplayName
-      fullName = if FullName.null urFullName then Failure [EmptyFullName] else Success urFullName
-  pure $ RegisterParsed <$> emailValidation <*> passwordValidation <*> displayName <*> fullName
+  pure $ RegisterParsed <$> emailValidation <*> passwordValidation <*> pure urDisplayName <*> pure urFullName
 
 logValidationFailure ::
   ( Log.MonadLog m
