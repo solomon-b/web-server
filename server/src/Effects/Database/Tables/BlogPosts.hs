@@ -131,6 +131,38 @@ getBlogPostsWithUsers =
         User.Model uId uEmail uPassword uDisplayname uFullName uAvatarUrl uIsAdmin
       )
 
+getPublishedBlogPosts :: Hasql.Statement () [(Model, Maybe Images.Model)]
+getPublishedBlogPosts =
+  fmap fromRows
+    <$> interp
+      False
+      [sql|
+    SELECT
+      bp.id, bp.author_id, bp.title, bp.content, bp.published_at, bp.hero_image_id,
+      i.user_id, i.title, i.file_path
+    FROM blog_posts AS bp
+    LEFT JOIN images AS i ON (i.id = bp.hero_image_id)
+    WHERE
+      bp.published_at IS NOT NULL
+  |]
+  where
+    fromRows ::
+      ( Id,
+        User.Id,
+        Subject,
+        Body,
+        Maybe UTCTime,
+        Maybe Images.Id,
+        Maybe User.Id,
+        Maybe Text,
+        Maybe Text
+      ) ->
+      (Model, Maybe Images.Model)
+    fromRows (bId, bAuthorId, bTitle, bContent, bPublishedAt, bHeroImageId, iUserId, iTitle, iFilePath) =
+      ( Model bId bAuthorId bTitle bContent bPublishedAt bHeroImageId,
+        Images.Model <$> bHeroImageId <*> iUserId <*> iTitle <*> iFilePath
+      )
+
 getBlogPosts :: Hasql.Statement () [(Model, Maybe Images.Model)]
 getBlogPosts =
   fmap fromRows

@@ -70,6 +70,6 @@ handler cookie =
   Observability.handlerSpan "GET /blog" () display $ do
     loginState <- Auth.userLoginState cookie
 
-    posts <- fmap BlogPosts.toDomain <$> execQuerySpanThrow BlogPosts.getBlogPosts
+    posts <- fmap BlogPosts.toDomain <$> execQuerySpanThrow BlogPosts.getPublishedBlogPosts
     let pageFragment = template posts
     loadFrameWithNav loginState "blog-tab" pageFragment
