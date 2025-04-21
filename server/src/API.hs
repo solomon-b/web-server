@@ -9,6 +9,7 @@ import API.Blog.Id.Delete qualified as Blog.Id.Delete
 import API.Blog.Id.Edit.Get qualified as Blog.Id.Edit.Get
 import API.Blog.Id.Edit.Post qualified as Blog.Id.Edit.Post
 import API.Blog.Id.Get qualified as Blog.Id.Get
+import API.Blog.Id.TogglePublish.Patch qualified as Blog.Id.TogglePublish.Patch
 import API.Blog.New.Get qualified as Blog.New.Get
 import API.Blog.New.Post qualified as Blog.New.Post
 import API.Get qualified as Get
@@ -63,6 +64,7 @@ type API =
     -- Unprotected BlogPosts Routes
     :<|> Blog.Get.Route
     :<|> Blog.Id.Get.Route
+    :<|> Blog.Id.TogglePublish.Patch.Route
     -- Protected BlogPosts Routes
     :<|> Blog.Id.Delete.Route
     :<|> Blog.Id.Edit.Get.Route
@@ -117,6 +119,7 @@ server env = do
     :<|> MailingList.Post.handler
     :<|> Blog.Get.handler
     :<|> Blog.Id.Get.handler
+    :<|> Blog.Id.TogglePublish.Patch.handler
     :<|> Blog.Id.Delete.handler
     :<|> Blog.Id.Edit.Get.handler
     :<|> Blog.Id.Edit.Post.handler
@@ -211,3 +214,6 @@ userPasswordResetPostLink = Links.safeLink (Proxy @API) (Proxy @User.PasswordRes
 
 adminGetLink :: Links.Link
 adminGetLink = Links.safeLink (Proxy @API) (Proxy @Admin.Get.Route)
+
+blogTogglePublish :: BlogPosts.Id -> Links.Link
+blogTogglePublish = Links.safeLink (Proxy @API) (Proxy @Blog.Id.TogglePublish.Patch.Route)

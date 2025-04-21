@@ -133,6 +133,7 @@ library
     API.Blog.Id.Delete
     API.Blog.Id.Edit.Get
     API.Blog.Id.Edit.Post
+    API.Blog.Id.TogglePublish.Patch
     API.Get
     API.MailingList.Post
     API.Image.Post

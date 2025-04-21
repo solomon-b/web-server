@@ -320,22 +320,16 @@ updateBlogPost Model {..} =
         WHERE id = #{mId}
   |]
 
-publishBlogPost :: Id -> Hasql.Statement () ()
-publishBlogPost postId =
+togglePublished :: Id -> Hasql.Statement () ()
+togglePublished postId =
   interp
     False
     [sql|
         UPDATE blog_posts
-        SET published_at = now()
-        WHERE id = #{postId}
-  |]
-
-unpublishBlogPost :: Id -> Hasql.Statement () ()
-unpublishBlogPost postId =
-  interp
-    False
-    [sql|
-        UPDATE blog_posts
-        SET published = null
+        SET published_at =
+            CASE
+                WHEN published_at IS NULL THEN now()
+                ELSE NULL
+            END
         WHERE id = #{postId}
   |]
