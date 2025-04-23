@@ -1,16 +1,19 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Component.Forms.BlogPost where
+module Component.Forms.Product where
 
 --------------------------------------------------------------------------------
 
 import {-# SOURCE #-} API (markdownPostLink)
-import Data.Maybe (catMaybes)
+import Data.Int (Int64)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.String.Interpolate (i)
 import Data.Text (Text)
 import Data.Text.Display (display)
-import Effects.Database.Tables.BlogPosts qualified as BlogPost
+import Domain.Types.Amount (Amount)
+import Domain.Types.ProductName (ProductName)
+import Effects.Database.Tables.Products qualified as Products
 import Lucid (a_, button_, checked_, class_, disabled_, div_, enctype_, for_, form_, h3_, height_, hidden_, href_, i_, id_, input_, label_, name_, placeholder_, rows_, script_, span_, style_, svg_, target_, textarea_, title_, type_, value_, width_)
 import Lucid qualified
 import Lucid.Extras
@@ -22,17 +25,24 @@ markdownPostUrl :: Text
 markdownPostUrl = "/" <> Http.toUrlPiece markdownPostLink
 
 template ::
-  Maybe BlogPost.Id ->
-  Maybe BlogPost.Subject ->
-  Maybe BlogPost.Body ->
-  Bool ->
+  Maybe Products.Id ->
+  Maybe ProductName ->
+  -- | Description
   Maybe Text ->
+  -- | FilePath
+  Maybe Text ->
+  -- | PriceCents
+  Maybe Amount ->
+  -- | Currency
+  Maybe Text ->
+  -- | StockQuantity
+  Maybe Int64 ->
+  -- | Published
+  Bool ->
   Lucid.Html ()
-template bid subject body isPublished heroImagePath =
+template pid name description heroImagePath priceCents currency stockQuantity isPublished =
   let postPath :: Text
-      postPath = maybe "/blog/new" (\bid' -> [i|/blog/#{display bid'}/edit|]) bid
-      subject' = maybe "" display subject
-      body' = maybe "" display body
+      postPath = maybe "/store/new" (\bid' -> [i|/store/#{display bid'}/edit|]) pid
    in div_ [class_ "relative p-4 w-full max-w-4xl max-h-full mx-auto"] do
         div_ [class_ "flex items-center justify-between p-4 md:p-5"] do
           h3_ [class_ "text-xl font-semibold text-gray-900"] do
@@ -44,18 +54,23 @@ template bid subject body isPublished heroImagePath =
               [i|
                 { editMode: true,
                   fields: {
-                    subject: { value: '#{subject'}', isValid: true },
-                    body: { value: `#{body'}`,
-                    isValid: true, valueParsed: ''}
+                    name: { value: '#{maybe "" display name}', isValid: true },
+                    description: { value: `#{fromMaybe "" description}`, isValid: true, valueParsed: '' },
+                    priceCents: { value: `#{maybe "0.00" display priceCents}`, isValid: true },
+                    currency: { value: `#{fromMaybe "" currency}`, isValid: true },
+                    stockQuantity: { value: `#{fromMaybe 0 stockQuantity}`, isValid: true }
                   }
-                }
-              |]
+               }
+               |]
           ]
           do
             form_ [hxPost_ postPath, class_ "space-y-4 flex flex-col", enctype_ "multipart/form-data"] do
-              titleField
+              nameField
+              priceCentsField
+              currencyField
+              stockQuantityField
               fileUploadField heroImagePath
-              contentField
+              descriptionField
               submitButton isPublished
             javascript
 
@@ -72,23 +87,87 @@ publishToggle isPublished =
 
 --------------------------------------------------------------------------------
 
-titleField :: Lucid.Html ()
-titleField =
+nameField :: Lucid.Html ()
+nameField =
   div_ [xData_ "alpineHandler"] do
-    label_ [for_ "title", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
-      "Add title"
-      span_ [class_ "text-xs text-red-900", xBindHidden_ "fields.subject.isValid", hidden_ "true"] do
+    label_ [for_ "name", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
+      "Add name"
+      span_ [class_ "text-xs text-red-900", xBindHidden_ "fields.name.isValid", hidden_ "true"] do
         " * required"
     input_
       [ type_ "text",
-        id_ "title",
-        name_ "title",
-        placeholder_ "title",
+        id_ "name",
+        name_ "name",
+        placeholder_ "name",
         class_ "border text-gray-900 text-sm rounded-lg block w-full p-2.5",
-        xModel_ "fields.subject.value",
-        xBindClass_ "fields.subject.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
-        xOnBlur_ "validateField('subject')",
-        xOnInput_ "validateField('subject')"
+        xModel_ "fields.name.value",
+        xBindClass_ "fields.name.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xOnBlur_ "validateField('name')",
+        xOnInput_ "validateField('name')"
+      ]
+
+--------------------------------------------------------------------------------
+
+priceCentsField :: Lucid.Html ()
+priceCentsField =
+  div_ [xData_ "alpineHandler"] do
+    label_ [for_ "priceCents", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
+      "Price"
+      span_ [class_ "text-xs text-red-900", xBindHidden_ "fields.name.isValid", hidden_ "true"] do
+        " * required"
+    input_
+      [ type_ "text",
+        id_ "priceCents",
+        name_ "priceCents",
+        placeholder_ "priceCents",
+        class_ "border text-gray-900 text-sm rounded-lg block w-full p-2.5",
+        xModel_ "fields.priceCents.value",
+        xBindClass_ "fields.priceCents.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xOnBlur_ "validateField('priceCents')",
+        xOnInput_ "validateField('priceCents')"
+      ]
+
+--------------------------------------------------------------------------------
+
+stockQuantityField :: Lucid.Html ()
+stockQuantityField =
+  div_ [xData_ "alpineHandler"] do
+    label_ [for_ "stockQuantity", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
+      "Quantity"
+      span_ [class_ "text-xs text-red-900", xBindHidden_ "fields.name.isValid", hidden_ "true"] do
+        " * required"
+    input_
+      [ type_ "text",
+        id_ "stockQuantity",
+        name_ "stockQuantity",
+        placeholder_ "stockQuantity",
+        class_ "border text-gray-900 text-sm rounded-lg block w-full p-2.5",
+        xModel_ "fields.stockQuantity.value",
+        xBindClass_ "fields.stockQuantity.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xOnBlur_ "validateField('stockQuantity')",
+        xOnInput_ "validateField('stockQuantity')"
+      ]
+
+--------------------------------------------------------------------------------
+
+currencyField :: Lucid.Html ()
+currencyField =
+  div_ [xData_ "alpineHandler"] do
+    label_ [for_ "currency", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
+      "Currency"
+      span_ [class_ "text-xs text-red-900", xBindHidden_ "fields.name.isValid", hidden_ "true"] do
+        " * required"
+    input_
+      [ type_ "text",
+        id_ "currency",
+        name_ "currency",
+        placeholder_ "currency",
+        value_ "USD",
+        class_ "border text-gray-900 text-sm rounded-lg block w-full p-2.5",
+        xModel_ "fields.currency.value",
+        xBindClass_ "fields.currency.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+        xOnBlur_ "validateField('currency')",
+        xOnInput_ "validateField('currency')"
       ]
 
 --------------------------------------------------------------------------------
@@ -114,50 +193,50 @@ submitButton isPublished =
         xBindDisabled_ "!allValid()",
         disabled_ "true"
       ]
-      "Create Post"
+      "Submit"
 
 --------------------------------------------------------------------------------
 
 headingButton :: Lucid.Html ()
 headingButton =
-  i_ [xOnClick_ "togglePrefix($refs.contentRef, '### ')", title_ "Heading", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-heading"] mempty
+  i_ [xOnClick_ "togglePrefix($refs.descriptionRef, '### ')", title_ "Heading", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-heading"] mempty
 
 boldButton :: Lucid.Html ()
 boldButton =
-  i_ [xOnClick_ "surroundFocus($refs.contentRef, '**')", title_ "Bold", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-bold"] mempty
+  i_ [xOnClick_ "surroundFocus($refs.descriptionRef, '**')", title_ "Bold", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-bold"] mempty
 
 italicButton :: Lucid.Html ()
 italicButton =
-  i_ [xOnClick_ "surroundFocus($refs.contentRef, '_')", title_ "Italic", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-italic"] mempty
+  i_ [xOnClick_ "surroundFocus($refs.descriptionRef, '_')", title_ "Italic", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-italic"] mempty
 
 quoteButton :: Lucid.Html ()
 quoteButton =
-  i_ [xOnClick_ "togglePrefix($refs.contentRef, '> ')", title_ "Quote", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-quote-left"] mempty
+  i_ [xOnClick_ "togglePrefix($refs.descriptionRef, '> ')", title_ "Quote", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-quote-left"] mempty
 
 codeButton :: Lucid.Html ()
 codeButton =
-  i_ [xOnClick_ "surroundFocus($refs.contentRef, '`')", title_ "Code", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-code"] mempty
+  i_ [xOnClick_ "surroundFocus($refs.descriptionRef, '`')", title_ "Code", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-code"] mempty
 
 urlButton :: Lucid.Html ()
 urlButton =
-  i_ [xOnClick_ "insertUrl($refs.contentRef)", title_ "Link", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-link"] mempty
+  i_ [xOnClick_ "insertUrl($refs.descriptionRef)", title_ "Link", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-link"] mempty
 
 numberedListButton :: Lucid.Html ()
 numberedListButton =
-  i_ [xOnClick_ "togglePrefix($refs.contentRef, '1. ')", title_ "Numbered List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-ol"] mempty
+  i_ [xOnClick_ "togglePrefix($refs.descriptionRef, '1. ')", title_ "Numbered List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-ol"] mempty
 
 unorderedListButton :: Lucid.Html ()
 unorderedListButton =
-  i_ [xOnClick_ "togglePrefix($refs.contentRef, '- ')", title_ "Unordered List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list"] mempty
+  i_ [xOnClick_ "togglePrefix($refs.descriptionRef, '- ')", title_ "Unordered List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list"] mempty
 
 taskListButton :: Lucid.Html ()
 taskListButton =
-  i_ [xOnClick_ "togglePrefix($refs.contentRef, '- [ ] ')", title_ "Task List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-check"] mempty
+  i_ [xOnClick_ "togglePrefix($refs.descriptionRef, '- [ ] ')", title_ "Task List", class_ "p-1 px-2 rounded-lg hover:bg-gray-200 fa-solid fa-list-check"] mempty
 
 --------------------------------------------------------------------------------
 
-contentFieldFooter :: Lucid.Html ()
-contentFieldFooter =
+descriptionFieldFooter :: Lucid.Html ()
+descriptionFieldFooter =
   div_ [class_ "flex text-xs text-gray-800"] $ do
     div_ [class_ "p-1"] do
       a_ [href_ "https://daringfireball.net/projects/markdown/syntax", target_ "_blank", class_ ""] do
@@ -180,9 +259,9 @@ contentFieldFooter =
 
 --------------------------------------------------------------------------------
 
-contentFieldEdit :: Lucid.Html ()
-contentFieldEdit =
-  div_ [id_ "contentEdit", xBindHidden_ "!editMode"] do
+descriptionFieldEdit :: Lucid.Html ()
+descriptionFieldEdit =
+  div_ [id_ "descriptionEdit", xBindHidden_ "!editMode"] do
     div_ [class_ "flex mb-2"] do
       div_ [class_ "p-2 border-r border-gray-300 rounded-t-lg bg-white text-gray-900"] do
         button_
@@ -209,21 +288,21 @@ contentFieldEdit =
 
     div_ [class_ "m-2 min-h-60"] do
       textarea_
-        [ name_ "content",
-          placeholder_ "Add your content here...",
+        [ name_ "description",
+          placeholder_ "Add your description here...",
           rows_ "11",
           class_ "block p-2.5 w-full text-sm rounded-lg border",
-          xModel_ "fields.body.value",
-          xRef_ "contentRef",
-          xBindClass_ "fields.body.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
-          xOnBlur_ "validateField('body')",
-          xOnInput_ "validateField('body')"
+          xModel_ "fields.description.value",
+          xRef_ "descriptionRef",
+          xBindClass_ "fields.description.isValid ? 'bg-gray-50 border-gray-300 focus:ring-green-500 focus:border-green-500' : 'bg-red-50 border-red-900 focus:ring-red-500 focus:border-red-500'",
+          xOnBlur_ "validateField('description')",
+          xOnInput_ "validateField('description')"
         ]
         mempty
-    contentFieldFooter
+    descriptionFieldFooter
 
-contentFieldPreview :: Lucid.Html ()
-contentFieldPreview =
+descriptionFieldPreview :: Lucid.Html ()
+descriptionFieldPreview =
   div_ [xBindHidden_ "editMode"] do
     div_ [class_ "flex mb-2"] do
       div_ [class_ "p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50"] do
@@ -237,19 +316,19 @@ contentFieldPreview =
           "Preview"
 
       div_ [class_ "p-2 border-b rounded-t-lg border-gray-300 text-gray-500 bg-gray-50 grow flex justify-end"] mempty
-    div_ [id_ "contentPreview", class_ "m-3 min-h-60", xHtml_ "fields.body.valueParsed"] mempty
+    div_ [id_ "descriptionPreview", class_ "m-3 min-h-60", xHtml_ "fields.description.valueParsed"] mempty
 
-contentField :: Lucid.Html ()
-contentField =
-  div_ [id_ "content-field"] do
-    label_ [for_ "content", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
-      "Add body"
+descriptionField :: Lucid.Html ()
+descriptionField =
+  div_ [id_ "description-field"] do
+    label_ [for_ "description", class_ "mb-2 text-sm text-gray-900 font-semibold"] do
+      "Add description"
       span_
-        [class_ "text-xs text-red-900", xBindHidden_ "fields.body.isValid", hidden_ "true"]
+        [class_ "text-xs text-red-900", xBindHidden_ "fields.description.isValid", hidden_ "true"]
         " * required"
     div_ [class_ "flex flex-col border border-gray-300 rounded-lg", xData_ "alpineHandler"] do
-      contentFieldEdit
-      contentFieldPreview
+      descriptionFieldEdit
+      descriptionFieldPreview
 
 -- TODO: Move this into a js file:
 javascript :: Lucid.Html ()
@@ -269,18 +348,18 @@ javascript =
     try {
       const response = await fetch('/image/new', {
         method: 'POST',
-        body: formData,
+        description: formData,
       });
 
       if (response.ok) {
         const {url} = await response.json();
         const urlWithScheme = url.startsWith("http") ? url : "http://" + url
         const {pathname} = new URL(urlWithScheme);
-        
-        this.fields.body.value += `![${this.fileName}](${pathname})\n`
-        this.$refs.contentRef.focus();
+
+        this.fields.description.value += `![${this.fileName}](${pathname})\n`
+        this.$refs.descriptionRef.focus();
         this.$nextTick(() => {
-          this.$refs.contentRef.focus();
+          this.$refs.descriptionRef.focus();
         });
       } else {
         console.log(`Upload failed: ${response.statusText}`);
@@ -339,7 +418,7 @@ javascript =
         const removePrefix = (xs) => xs.map(line => line.startsWith(prefix) ? line.substring(prefix.length) : line);
         return  removePrefix(lines);
       } else {
-        const addPrefix = (xs) => xs.map(line => (line.startsWith(prefix) ? line : prefix + line)); 
+        const addPrefix = (xs) => xs.map(line => (line.startsWith(prefix) ? line : prefix + line));
         return addPrefix(lines)
       }
     };
@@ -374,33 +453,33 @@ javascript =
   // Surround the selected section of the 'textarea' with the 'wrapper' string.
   function surroundFocus (textarea, wrapper) {
     textarea.focus();
-  
+
     // Split text into a Zipper.
     const splitText = (text, start, end) => ({
       before: text.slice(0, start),
       selection: text.slice(start, end),
       after: text.slice(end),
     });
-  
+
     const isWrapped = (text, wrapper) =>
       text.startsWith(wrapper) && text.endsWith(wrapper);
-  
+
     const escapeRegex = (text) => text.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&');
-  
+
     // Remove any instances of the `wrapper` string from  inside the selection
     // but otherwise preserve the inner content.
     const cleanInnerWrappers = (text, wrapper) => {
       const escapedWrapper = escapeRegex(wrapper);
       const regex = new RegExp(`${escapedWrapper}(.*?)${escapedWrapper}`, 'g');
-      return text.replace(regex, '$1'); 
+      return text.replace(regex, '$1');
     };
-  
+
     // Replace the content of the textarea respecting undo history.
     const insertText = (textarea, newValue) => {
       textarea.setSelectionRange(0, textarea.value.length);
       document.execCommand('insertText', false, newValue);
     };
-  
+
     // Constants
     const { selectionStart: start, selectionEnd: end } = textarea;
     const { before, selection, after } = splitText(
@@ -408,12 +487,12 @@ javascript =
       start,
       end
     );
-  
+
     const isSelected = start !== end;
-  
+
     // Determine the updated text and cursor/selection range
     let updatedValue, newStart, newEnd;
-  
+
     if (isSelected) {
       if (isWrapped(selection, wrapper)) {
         // Remove wrapping if fully wrapped
@@ -432,7 +511,7 @@ javascript =
     } else {
       const hasOuterWrappers =
         isWrapped(before.slice(-wrapper.length) + after.slice(0, wrapper.length), wrapper);
-  
+
       if (hasOuterWrappers) {
         // Remove outer wrappers
         updatedValue = before.slice(0, -wrapper.length) + after.slice(wrapper.length);
@@ -443,7 +522,7 @@ javascript =
         newStart = newEnd = start + wrapper.length;
       }
     }
-  
+
     // Update the textarea and adjust the selection
     insertText(textarea, updatedValue);
     textarea.setSelectionRange(newStart, newEnd);
@@ -470,7 +549,7 @@ javascript =
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
-      body: this.fields.body.value
+      description: this.fields.description.value
       });
 
     if (!response.ok) {
@@ -479,7 +558,7 @@ javascript =
 
     const data = await response.text();
 
-    this.fields.body.valueParsed = data;
+    this.fields.description.valueParsed = data;
   };
 
   /------------------------------------------------------------------------------/
@@ -490,7 +569,7 @@ javascript =
       fileName: '',
       selectAndUpload() {
         // Open the file picker
-        this.$refs.fileInput.click(); 
+        this.$refs.fileInput.click();
       },
       uploadFile,
       togglePrefix,

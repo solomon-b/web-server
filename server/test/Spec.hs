@@ -10,6 +10,7 @@ import Data.Maybe (fromMaybe)
 import Effects.Database.Tables.BlogPostsSpec qualified as BlogPosts
 import Effects.Database.Tables.ImagesSpec qualified as Images
 import Effects.Database.Tables.MailingListSpec qualified as MailingList
+import Effects.Database.Tables.ProductsSpec qualified as Products
 import Effects.Database.Tables.ServerSessionsSpec qualified as ServerSessions
 import Effects.Database.Tables.UserSpec qualified as User
 import System.Environment (lookupEnv)
@@ -36,6 +37,7 @@ main = do
   withTmpPG $ hspecWith cfg $ parallel $ do
     -- DB Models
     BlogPosts.spec
+    Products.spec
     Images.spec
     MailingList.spec
     ServerSessions.spec

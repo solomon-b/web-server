@@ -5,7 +5,7 @@ module Component.NavBar where
 
 --------------------------------------------------------------------------------
 
-import {-# SOURCE #-} API (aboutGetLink, adminGetLink, blogGetLink, blogNewGetLink, rootGetLink, staticGetLink, userLoginGetLink, userLogoutPostLink, userRegisterGetLink)
+import {-# SOURCE #-} API (aboutGetLink, adminGetLink, blogGetLink, blogNewGetLink, rootGetLink, staticGetLink, storeGetLink, storeNewGetLink, userLoginGetLink, userLogoutPostLink, userRegisterGetLink)
 import App.Auth qualified as Auth
 import Control.Monad.Catch (MonadThrow)
 import Data.Bool (bool)
@@ -48,7 +48,10 @@ blogGetUrl :: Link.URI
 blogGetUrl = Link.linkURI blogGetLink
 
 storeGetUrl :: Link.URI
-storeGetUrl = Link.linkURI rootGetLink
+storeGetUrl = Link.linkURI storeGetLink
+
+storeNewGetUrl :: Link.URI
+storeNewGetUrl = Link.linkURI storeNewGetLink
 
 aboutGetUrl :: Link.URI
 aboutGetUrl = Link.linkURI aboutGetLink
@@ -92,6 +95,8 @@ adminNavBar = \case
               ul_ [class_ "text-sm text-gray-700", ariaLabelledby_ "adminNewButton"] do
                 li_ $
                   button_ [hxGet_ [i|/#{blogNewGetUrl}|], hxTarget_ "#main", hxPushUrl_ "true", class_ "block px-4 py-2 hover:bg-gray-100"] "Blog Post"
+                li_ $
+                  button_ [hxGet_ [i|/#{storeNewGetUrl}|], hxTarget_ "#main", hxPushUrl_ "true", class_ "block px-4 py-2 hover:bg-gray-100"] "Product"
                 li_ $
                   button_ [class_ "block px-4 py-2 hover:bg-gray-100"] "Event"
 

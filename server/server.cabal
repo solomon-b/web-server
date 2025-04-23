@@ -139,6 +139,15 @@ library
     API.Blog.Id.TogglePublish.Patch
     API.Get
     API.MailingList.Post
+    API.Store.Delete
+    API.Store.Get
+    API.Store.New.Get
+    API.Store.New.Post
+    API.Store.Id.Delete
+    API.Store.Id.Edit.Get
+    API.Store.Id.Edit.Post
+    API.Store.Id.Get
+    API.Store.Id.TogglePublish.Patch
     API.Image.Post
     API.Markdown.Post
     API.Static.Get
@@ -157,21 +166,25 @@ library
     Component.NavBar
     Component.Forms.BlogPost
     Component.Forms.Login
+    Component.Forms.Product
     Component.Forms.Register
     Domain.Types.AdminStatus
+    Domain.Types.Amount
     Domain.Types.DisplayName
     Domain.Types.EmailAddress
     Domain.Types.FullName
     Domain.Types.OptionalField
+    Domain.Types.ProductName
     Effects.Clock
     Effects.Database.Class
     Effects.Database.Execute
     Effects.Database.SerializedStatement
     Effects.Database.Tables.BlogPosts
-    Effects.Database.Tables.MailingList
     Effects.Database.Tables.Images
-    Effects.Database.Tables.User
+    Effects.Database.Tables.MailingList
+    Effects.Database.Tables.Products
     Effects.Database.Tables.ServerSessions
+    Effects.Database.Tables.User
     Effects.MailSender
     Effects.Observability
     Lucid.Extras
@@ -242,6 +255,7 @@ test-suite tests
      API.User.Id.GetSpec
      Effects.Database.Tables.BlogPostsSpec
      Effects.Database.Tables.MailingListSpec
+     Effects.Database.Tables.ProductsSpec
      Effects.Database.Tables.ImagesSpec
      Effects.Database.Tables.UserSpec
      Effects.Database.Tables.ServerSessionsSpec
@@ -251,6 +265,7 @@ test-suite tests
      Test.Gen.FullName
      Test.Gen.Network
      Test.Gen.Password
+     Test.Gen.Tables.Products
      Test.Gen.Time
      Test.Database.Monad
      Test.Database.Property
