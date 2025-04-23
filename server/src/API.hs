@@ -19,6 +19,15 @@ import API.Image.Post qualified as Image.Post
 import API.MailingList.Post qualified as MailingList.Post
 import API.Markdown.Post qualified as Markdown.Post
 import API.Static.Get qualified as Static.Get
+import API.Store.Delete qualified as Store.Delete
+import API.Store.Get qualified as Store.Get
+import API.Store.Id.Delete qualified as Store.Id.Delete
+import API.Store.Id.Edit.Get qualified as Store.Id.Edit.Get
+import API.Store.Id.Edit.Post qualified as Store.Id.Edit.Post
+import API.Store.Id.Get qualified as Store.Id.Get
+import API.Store.Id.TogglePublish.Patch qualified as Store.Id.TogglePublish.Patch
+import API.Store.New.Get qualified as Store.New.Get
+import API.Store.New.Post qualified as Store.New.Post
 import API.User.Current.Get qualified as User.Current.Get
 import API.User.Delete qualified as Delete
 import API.User.Delete qualified as User.Delete
@@ -46,6 +55,7 @@ import Domain.Types.FullName (FullName)
 import Effects.Clock (MonadClock)
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
+import Effects.Database.Tables.Products qualified as Products
 import Effects.Database.Tables.User qualified as User
 import Effects.MailSender (MonadEmail)
 import Hasql.Pool qualified as HSQL
@@ -74,6 +84,17 @@ type API =
     :<|> Blog.Id.Edit.Post.Route
     :<|> Blog.New.Get.Route
     :<|> Blog.New.Post.Route
+    -- Unprotected Store Routes
+    :<|> Store.Get.Route
+    :<|> Store.Id.Get.Route
+    -- Protected Store Routes
+    :<|> Store.Delete.Route
+    :<|> Store.New.Get.Route
+    :<|> Store.New.Post.Route
+    :<|> Store.Id.Delete.Route
+    :<|> Store.Id.Edit.Get.Route
+    :<|> Store.Id.Edit.Post.Route
+    :<|> Store.Id.TogglePublish.Patch.Route
     -- Protected Misc Routes
     :<|> Image.Post.Route
     :<|> Markdown.Post.Route
@@ -130,6 +151,15 @@ server env = do
     :<|> Blog.Id.Edit.Post.handler
     :<|> Blog.New.Get.handler
     :<|> Blog.New.Post.handler
+    :<|> Store.Get.handler
+    :<|> Store.Id.Get.handler
+    :<|> Store.Delete.handler
+    :<|> Store.New.Get.handler
+    :<|> Store.New.Post.handler
+    :<|> Store.Id.Delete.handler
+    :<|> Store.Id.Edit.Get.handler
+    :<|> Store.Id.Edit.Post.handler
+    :<|> Store.Id.TogglePublish.Patch.handler
     :<|> Image.Post.handler
     :<|> Markdown.Post.handler
     :<|> About.Get.handler
@@ -148,7 +178,6 @@ server env = do
     :<|> Admin.Blog.Get.handler
 
 --------------------------------------------------------------------------------
-
 
 -- | Route: GET /
 rootGetLink :: Links.Link
@@ -189,6 +218,42 @@ blogNewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Get.Route)
 -- | Route: POST /blog/new
 blogNewPostLink :: Links.Link
 blogNewPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Post.Route)
+
+-- | Route: Delete /store
+storeDeleteLink :: Links.Link
+storeDeleteLink = Links.safeLink (Proxy @API) (Proxy @Store.Delete.Route)
+
+-- | Route: GET /store
+storeGetLink :: Links.Link
+storeGetLink = Links.safeLink (Proxy @API) (Proxy @Store.Get.Route)
+
+-- | Route: GET /store/new
+storeNewGetLink :: Links.Link
+storeNewGetLink = Links.safeLink (Proxy @API) (Proxy @Store.New.Get.Route)
+
+-- | Route: POST /store/new
+storeNewPostLink :: Links.Link
+storeNewPostLink = Links.safeLink (Proxy @API) (Proxy @Store.New.Post.Route)
+
+-- | Route: DELETE /store/:id
+storeIdDeleteLink :: Products.Id -> Links.Link
+storeIdDeleteLink = Links.safeLink (Proxy @API) (Proxy @Store.Id.Delete.Route)
+
+-- | Route: GET /store/:id/edit
+storeIdEditGetLink :: Products.Id -> Maybe Text -> Links.Link
+storeIdEditGetLink = Links.safeLink (Proxy @API) (Proxy @Store.Id.Edit.Get.Route)
+
+-- | Route: POST /store/:id/edit
+storeIdEditPostLink :: Products.Id -> Links.Link
+storeIdEditPostLink = Links.safeLink (Proxy @API) (Proxy @Store.Id.Edit.Post.Route)
+
+-- | Route: GET /store/:id
+storeIdGetLink :: Products.Id -> Links.Link
+storeIdGetLink = Links.safeLink (Proxy @API) (Proxy @Store.Id.Get.Route)
+
+-- | Route: PATCH /store/:id/toggle-publish
+storeIdTogglePublishPatchLink :: Products.Id -> Links.Link
+storeIdTogglePublishPatchLink = Links.safeLink (Proxy @API) (Proxy @Store.Id.TogglePublish.Patch.Route)
 
 -- | Route: POST /image
 imagePostLink :: Links.Link
