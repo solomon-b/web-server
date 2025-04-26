@@ -149,86 +149,115 @@ server env = do
 
 --------------------------------------------------------------------------------
 
+
+-- | Route: GET /
 rootGetLink :: Links.Link
 rootGetLink = Links.safeLink (Proxy @API) (Proxy @Get.Route)
 
+-- | Route: GET /static
 staticGetLink :: Links.Link
 staticGetLink = Links.safeLink (Proxy @API) (Proxy @Static.Get.Route)
 
+-- | Route: POST /mailing-list
 mailingListPostLink :: Links.Link
 mailingListPostLink = Links.safeLink (Proxy @API) (Proxy @MailingList.Post.Route)
 
+-- | Route: DELETE /mailing-list
 blogDeleteLink :: Links.Link
 blogDeleteLink = Links.safeLink (Proxy @API) (Proxy @Blog.Delete.Route)
 
+-- | Route: GET /blog/delete
 blogGetLink :: Links.Link
 blogGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Get.Route)
 
+-- | Route: GET /blog/:id/delete
 blogIdGetLink :: BlogPosts.Id -> Links.Link
 blogIdGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Get.Route)
 
+-- | Route: GET /blog/:id/edit
 blogIdEditGetLink :: BlogPosts.Id -> Maybe BlogPosts.Body -> Links.Link
 blogIdEditGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Get.Route)
 
+-- | Route: POST /blog/:id/edit
 blogIdEditPostLink :: BlogPosts.Id -> Links.Link
 blogIdEditPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.Id.Edit.Post.Route)
 
+-- | Route: GET /blog/new
 blogNewGetLink :: Links.Link
 blogNewGetLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Get.Route)
 
+-- | Route: POST /blog/new
 blogNewPostLink :: Links.Link
 blogNewPostLink = Links.safeLink (Proxy @API) (Proxy @Blog.New.Post.Route)
 
+-- | Route: POST /image
 imagePostLink :: Links.Link
 imagePostLink = Links.safeLink (Proxy @API) (Proxy @Image.Post.Route)
 
+-- | Route: POST /markdown
 markdownPostLink :: Links.Link
 markdownPostLink = Links.safeLink (Proxy @API) (Proxy @Markdown.Post.Route)
 
+-- | Route: GET /about
 aboutGetLink :: Links.Link
 aboutGetLink = Links.safeLink (Proxy @API) (Proxy @About.Get.Route)
 
+-- | Route: GET /user
 userGetLink :: Links.Link
 userGetLink = Links.safeLink (Proxy @API) (Proxy @User.Get.Route)
 
+-- | Route: GET /user/:id
 userIdGetLink :: User.Id -> Links.Link
 userIdGetLink = Links.safeLink (Proxy @API) (Proxy @User.Id.Get.Route)
 
+-- | Route: GET /user/register
 userRegisterGetLink :: Maybe EmailAddress -> Maybe DisplayName -> Maybe FullName -> Links.Link
 userRegisterGetLink = Links.safeLink (Proxy @API) (Proxy @User.Register.Get.Route)
 
+-- | Route: POST /user/register
 userRegisterPostLink :: Links.Link
 userRegisterPostLink = Links.safeLink (Proxy @API) (Proxy @User.Register.Post.Route)
 
+-- | Route: POST /user/login
 userLoginPostLink :: Maybe Text -> Links.Link
 userLoginPostLink = Links.safeLink (Proxy @API) (Proxy @User.Login.Post.Route)
 
+-- | Route: GET /user/login
 userLoginGetLink :: Maybe Text -> Maybe EmailAddress -> Links.Link
 userLoginGetLink = Links.safeLink (Proxy @API) (Proxy @User.Login.Get.Route)
 
+-- | Route: GET /user/login
 userCurrentGetLink :: Links.Link
 userCurrentGetLink = Links.safeLink (Proxy @API) (Proxy @User.Current.Get.Route)
 
+-- | Route: GET /user/logout
 userLogoutGetLink :: Links.Link
 userLogoutGetLink = Links.safeLink (Proxy @API) (Proxy @User.Logout.Get.Route)
 
+-- | Route: POST /user/logout
 userLogoutPostLink :: Links.Link
 userLogoutPostLink = Links.safeLink (Proxy @API) (Proxy @User.Logout.Post.Route)
 
+-- | Route: DELETE /user/:id/delete
 userDeleteLink :: User.Id -> Links.Link
 userDeleteLink = Links.safeLink (Proxy @API) (Proxy @User.Delete.Route)
 
+-- | Route: POST /user/:id/password-rest
 userPasswordResetPostLink :: User.Id -> Links.Link
 userPasswordResetPostLink = Links.safeLink (Proxy @API) (Proxy @User.PasswordReset.Post.Route)
 
+-- | Route: GET /admin
 adminGetLink :: Links.Link
 adminGetLink = Links.safeLink (Proxy @API) (Proxy @Admin.Get.Route)
 
+-- | Route: PATCH /blog/:id/toggle-publish
 blogTogglePublish :: BlogPosts.Id -> Links.Link
 blogTogglePublish = Links.safeLink (Proxy @API) (Proxy @Blog.Id.TogglePublish.Patch.Route)
 
+-- | Route: GET /admin/blog
 adminBlogGetLink :: Links.Link
 adminBlogGetLink = Links.safeLink (Proxy @API) (Proxy @Admin.Blog.Get.Route) Nothing Nothing Nothing Nothing
 
+-- | Route: GET /admin/blog?searchQuery=:search
 adminBlogGetLinkSearch :: Admin.Blog.Get.SearchQuery -> Links.Link
-adminBlogGetLinkSearch x = Links.safeLink (Proxy @API) (Proxy @Admin.Blog.Get.Route) (Just x) Nothing Nothing Nothing
+adminBlogGetLinkSearch search = Links.safeLink (Proxy @API) (Proxy @Admin.Blog.Get.Route) (Just search) Nothing Nothing Nothing
