@@ -9,7 +9,6 @@ import Control.Monad (void)
 import Data.Foldable (traverse_)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.User qualified as User
-import Effects.Database.Tables.UserSpec (userInsertGen)
 import Hasql.Interpolate (interp, sql)
 import Hasql.Statement qualified as Hasql
 import Hasql.Transaction qualified as TRX
@@ -19,7 +18,8 @@ import Hedgehog.Internal.Property (forAllT, (===))
 import Hedgehog.Range qualified as Range
 import Test.Database.Monad (TestDBConfig, bracketConn, withTestDB)
 import Test.Database.Property (act, arrange, assert, runs)
-import Test.Hspec
+import Test.Gen.Tables.Users (userInsertGen)
+import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Hedgehog (PropertyT, hedgehog)
 
 --------------------------------------------------------------------------------

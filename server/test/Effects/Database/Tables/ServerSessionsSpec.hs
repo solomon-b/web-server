@@ -5,7 +5,6 @@ module Effects.Database.Tables.ServerSessionsSpec where
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.ServerSessions qualified as UUT
 import Effects.Database.Tables.User (insertUser)
-import Effects.Database.Tables.UserSpec (userInsertGen)
 import Hasql.Interpolate
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX
@@ -18,6 +17,7 @@ import Test.Database.Monad (TestDBConfig, bracketConn, withTestDB)
 import Test.Database.Property
 import Test.Database.Property.Assert
 import Test.Gen.Network (genNetAddrIP)
+import Test.Gen.Tables.Users
 import Test.Gen.Time (futureTimeGen)
 import Test.Hspec
 import Test.Hspec.Hedgehog (hedgehog)

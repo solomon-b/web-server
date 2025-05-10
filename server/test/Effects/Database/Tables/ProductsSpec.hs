@@ -6,7 +6,7 @@ module Effects.Database.Tables.ProductsSpec where
 
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.Products qualified as UUT
-import Hasql.Interpolate
+import Hasql.Interpolate (OneRow (..))
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX
 import Hedgehog (PropertyT, (===))
