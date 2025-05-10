@@ -6,16 +6,16 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.List ((\\))
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.MailingList qualified as UUT
-import Hasql.Interpolate
+import Hasql.Interpolate (OneRow (..))
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX
 import Hedgehog (MonadGen (..), PropertyT, (===))
 import Hedgehog.Internal.Property (forAllT)
-import Test.Database.Monad
-import Test.Database.Property
-import Test.Database.Property.Assert
-import Test.Gen.EmailAddress
-import Test.Hspec
+import Test.Database.Monad (TestDBConfig, bracketConn, withTestDB)
+import Test.Database.Property (act, arrange, assert, runs)
+import Test.Database.Property.Assert (assertRight)
+import Test.Gen.EmailAddress (genEmail)
+import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Hedgehog (hedgehog)
 
 --------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ spec =
 prop_insertSelect :: TestDBConfig -> PropertyT IO ()
 prop_insertSelect cfg = do
   arrange (bracketConn cfg) $ do
-    userInsert <- forAllT userInsertGen
+    userInsert <- forAllT mailingListInsertGen
 
     act $ do
       result <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
@@ -43,7 +43,7 @@ prop_insertSelect cfg = do
         length newSelected - length oldSelected === 1
         [inserted] === (newSelected \\ oldSelected)
 
-userInsertGen :: (MonadIO m, MonadGen m) => m UUT.ModelInsert
-userInsertGen = do
+mailingListInsertGen :: (MonadIO m, MonadGen m) => m UUT.ModelInsert
+mailingListInsertGen = do
   miEmail <- genEmail
   pure UUT.ModelInsert {..}

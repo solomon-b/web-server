@@ -265,7 +265,10 @@ test-suite tests
      Test.Gen.FullName
      Test.Gen.Network
      Test.Gen.Password
+     Test.Gen.Tables.BlogPosts
+     Test.Gen.Tables.Images
      Test.Gen.Tables.Products
+     Test.Gen.Tables.Users
      Test.Gen.Time
      Test.Database.Monad
      Test.Database.Property

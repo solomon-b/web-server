@@ -2,26 +2,20 @@ module Effects.Database.Tables.ImagesSpec where
 
 --------------------------------------------------------------------------------
 
-import Control.Monad.IO.Class (MonadIO (..))
-import Data.Text (Text)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.Images qualified as UUT
 import Effects.Database.Tables.User qualified as User
-import Hasql.Interpolate
+import Hasql.Interpolate (OneRow (OneRow))
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX
-import Hedgehog (MonadGen (..), PropertyT, (===))
-import Hedgehog.Gen qualified as Gen
+import Hedgehog (PropertyT, (===))
 import Hedgehog.Internal.Property (forAllT)
-import Hedgehog.Range qualified as Range
-import Test.Database.Monad
-import Test.Database.Property
-import Test.Database.Property.Assert
-import Test.Gen.DisplayName
-import Test.Gen.EmailAddress
-import Test.Gen.FullName
-import Test.Gen.Password
-import Test.Hspec
+import Test.Database.Monad (TestDBConfig, bracketConn, withTestDB)
+import Test.Database.Property (act, arrange, assert, runs)
+import Test.Database.Property.Assert (assertJust, assertRight)
+import Test.Gen.Tables.Images (imageInsertGen, imageUpdateGen)
+import Test.Gen.Tables.Users (userInsertGen)
+import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Hedgehog (hedgehog)
 
 --------------------------------------------------------------------------------
@@ -78,27 +72,3 @@ prop_insertUpdateSelect cfg = do
         muFilePath === UUT.mFilePath selected
         userId === UUT.mUserId selected
         insertedId === UUT.mId selected
-
---------------------------------------------------------------------------------
-
-imageInsertGen :: (MonadIO m, MonadGen m) => m (Text, Text)
-imageInsertGen = do
-  iTitle <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  miFilePath <- Gen.text (Range.linear 1 100) Gen.alphaNum
-  pure (iTitle, miFilePath)
-
-userInsertGen :: (MonadIO m, MonadGen m) => m User.ModelInsert
-userInsertGen = do
-  miEmail <- genEmail
-  miDisplayName <- genDisplayName
-  miFullName <- genFullName
-  miPassword <- genPassword
-  miAvatarUrl <- Gen.maybe $ Gen.text (Range.linear 1 10) Gen.alphaNum
-  miIsAdmin <- Gen.bool
-  pure User.ModelInsert {..}
-
-imageUpdateGen :: (MonadIO m, MonadGen m) => m (Text, Text)
-imageUpdateGen = do
-  muTitle <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  muFilePath <- Gen.text (Range.linear 1 100) Gen.alphaNum
-  pure (muTitle, muFilePath)

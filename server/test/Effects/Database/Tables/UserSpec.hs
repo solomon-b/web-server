@@ -2,24 +2,22 @@ module Effects.Database.Tables.UserSpec where
 
 --------------------------------------------------------------------------------
 
-import Control.Monad.IO.Class (MonadIO (..))
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.User qualified as UUT
-import Hasql.Interpolate
+import Hasql.Interpolate (OneRow (OneRow))
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX
-import Hedgehog (MonadGen (..), PropertyT, (===))
-import Hedgehog.Gen qualified as Gen
+import Hedgehog (PropertyT, (===))
 import Hedgehog.Internal.Property (forAllT)
-import Hedgehog.Range qualified as Range
-import Test.Database.Monad
-import Test.Database.Property
-import Test.Database.Property.Assert
-import Test.Gen.DisplayName
-import Test.Gen.EmailAddress
-import Test.Gen.FullName
-import Test.Gen.Password
-import Test.Hspec
+import Test.Database.Monad (TestDBConfig, bracketConn, withTestDB)
+import Test.Database.Property (act, arrange, assert, runs)
+import Test.Database.Property.Assert (assertJust, assertRight)
+import Test.Gen.DisplayName ()
+import Test.Gen.EmailAddress ()
+import Test.Gen.FullName ()
+import Test.Gen.Password ()
+import Test.Gen.Tables.Users (userInsertGen)
+import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Hedgehog (hedgehog)
 
 --------------------------------------------------------------------------------
@@ -50,13 +48,3 @@ prop_insertSelect cfg = do
         UUT.miAvatarUrl userInsert === UUT.mAvatarUrl selected
         UUT.miIsAdmin userInsert === UUT.mIsAdmin selected
         insertedId === UUT.mId selected
-
-userInsertGen :: (MonadIO m, MonadGen m) => m UUT.ModelInsert
-userInsertGen = do
-  miEmail <- genEmail
-  miDisplayName <- genDisplayName
-  miFullName <- genFullName
-  miPassword <- genPassword
-  miAvatarUrl <- Gen.maybe $ Gen.text (Range.linear 1 10) Gen.alphaNum
-  miIsAdmin <- Gen.bool
-  pure UUT.ModelInsert {..}

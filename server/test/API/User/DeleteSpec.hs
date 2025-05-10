@@ -12,7 +12,6 @@ import Data.List ((\\))
 import Data.Maybe (fromMaybe)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.User qualified as User
-import Effects.Database.Tables.UserSpec (userInsertGen)
 import Hasql.Interpolate (OneRow (..), interp, sql)
 import Hasql.Statement qualified as Hasql
 import Hasql.Transaction qualified as TRX
@@ -20,7 +19,8 @@ import Hasql.Transaction.Sessions qualified as TRX
 import Hedgehog.Internal.Property (forAllT, (===))
 import Test.Database.Monad (TestDBConfig, bracketConn, withAuth, withTestDB)
 import Test.Database.Property (act, arrange, assert, runs)
-import Test.Hspec
+import Test.Gen.Tables.Users (userInsertGen)
+import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Hedgehog (PropertyT, hedgehog)
 
 --------------------------------------------------------------------------------
