@@ -2,7 +2,6 @@ module App.Monad where
 
 --------------------------------------------------------------------------------
 
-import App.Config
 import App.Context
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
@@ -13,12 +12,7 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
 import Data.Has qualified as Has
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Time (getCurrentTime)
-import Effects.Clock (MonadClock (..))
-import Effects.Database.Class
-import Hasql.Pool qualified as HSQL.Pool
-import Hasql.Session qualified as HSQL
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Monad (MonadTracer (..))
@@ -30,15 +24,6 @@ newtype AppM ctx a = AppM {runAppM :: AppContext ctx -> IO a}
     (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO)
     via ReaderT (AppContext ctx) IO
 
-instance MonadClock (AppM ctx) where
-  currentSystemTime = liftIO getCurrentTime
-
-instance MonadDB (AppM ctx) where
-  runDB :: HSQL.Session a -> AppM ctx (Either HSQL.Pool.UsageError a)
-  runDB s = do
-    pool <- Reader.asks Has.getter
-    liftIO $ HSQL.Pool.use pool s
-
 instance MonadTracer (AppM ctx) where
   getTracer :: AppM ctx OTEL.Tracer
   getTracer = Reader.asks Has.getter
@@ -47,7 +32,7 @@ instance Log.MonadLog (AppM ctx) where
   logMessage :: Log.LogLevel -> Text -> Aeson.Value -> AppM ctx ()
   logMessage level message json = do
     appLoggerEnv <- Reader.asks Has.getter
-    time <- currentSystemTime
+    time <- liftIO getCurrentTime
     liftIO $ Log.logMessageIO appLoggerEnv time level message json
 
   localData :: [Aeson.Pair] -> AppM ctx a -> AppM ctx a
