@@ -1,7 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module App where
 
@@ -21,6 +21,7 @@ import App.Auth (authHandler, execStatement, healthCheck)
 import App.Config
 import App.Context
 import App.Monad
+import App.Observability qualified as Observability
 import Control.Error (isLeft)
 import Control.Exception (catch)
 import Control.Monad (void, when)
@@ -38,7 +39,6 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text.Display (display)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (getCurrentTime)
-import App.Observability qualified as Observability
 import Hasql.Connection qualified as HSQL
 import Hasql.Pool qualified as HSQL.Pool
 import Hasql.Pool.Config as HSQL.Pool.Config
@@ -49,7 +49,7 @@ import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
 import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
 import OpenTelemetry.Trace qualified as OTEL
-import Servant (Context ((:.)))
+import Servant (Context ((:.)), type (.++))
 import Servant qualified
 import System.Posix.Signals qualified as Posix
 
@@ -57,7 +57,7 @@ import System.Posix.Signals qualified as Posix
 
 runApp ::
   forall api ctx.
-  Servant.HasServer api ServantContext =>
+  (Servant.HasServer api ServantContext) =>
   (Environment -> Servant.ServerT api (AppM ctx)) ->
   ctx ->
   IO ()
@@ -146,16 +146,19 @@ interpret ctx (AppM appM) =
         \e -> pure $ Left e
 
 mkApp ::
-  forall api ctx.
-  Servant.HasServer api ServantContext =>
+  forall api ctx servantContext.
+  ( Servant.HasServer api servantContext,
+    Servant.HasContextEntry servantContext AuthContext,
+    Servant.HasContextEntry (servantContext .++ Servant.DefaultErrorFormatters) Servant.ErrorFormatters
+  ) =>
   (Environment -> Servant.ServerT api (AppM ctx)) ->
-  Servant.Context ServantContext ->
+  Servant.Context servantContext ->
   AppContext ctx ->
   Servant.Application
-mkApp server cfg ctx =
-  Servant.serveWithContext (Proxy @api) cfg $
+mkApp server fullCtx appCtx =
+  Servant.serveWithContext (Proxy @api) fullCtx $
     Servant.hoistServerWithContext
       (Proxy @api)
-      (Proxy @ServantContext)
-      (interpret ctx)
-      (server $ appEnvironment ctx)
+      (Proxy @servantContext)
+      (interpret appCtx)
+      (server $ appEnvironment appCtx)

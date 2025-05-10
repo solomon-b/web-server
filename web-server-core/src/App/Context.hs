@@ -1,3 +1,6 @@
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module App.Context where
 
 --------------------------------------------------------------------------------
@@ -5,10 +8,15 @@ module App.Context where
 import App.Auth (Authz)
 import App.Config
 import Data.Has qualified as Has
+import Data.Kind (Constraint, Type)
+import GHC.TypeError (ErrorMessage (Text))
+import GHC.TypeLits (TypeError)
 import Hasql.Pool qualified as HSQL (Pool)
 import Log qualified
 import Network.Wai qualified as Wai
 import OpenTelemetry.Trace qualified as OTEL
+import Servant qualified
+import Servant.Server (Context ((:.)))
 import Servant.Server.Experimental.Auth (AuthHandler)
 
 --------------------------------------------------------------------------------
@@ -42,4 +50,20 @@ instance Has.Has Log.LoggerEnv (AppContext ctx) where
   getter = appLoggerEnv
   modifier f ctx@AppContext {appLoggerEnv} = ctx {appLoggerEnv = f appLoggerEnv}
 
-type ServantContext = '[AuthHandler Wai.Request Authz]
+type family EndsWith (xs :: [Type]) (needle :: Type) :: Constraint where
+  EndsWith '[needle] needle = ()
+  EndsWith (_ ': xs) needle = EndsWith xs needle
+  EndsWith '[] needle = TypeError ('Text "Context does not end with the required AuthHandler")
+
+appendContext :: Servant.Context xs -> Servant.Context ys -> Servant.Context (Append xs ys)
+appendContext Servant.EmptyContext ys = ys
+appendContext (x :. xs) ys = x :. appendContext xs ys
+
+-- type family to reflect ++ at the type level
+type family Append (xs :: [k]) (ys :: [k]) :: [k] where
+  Append '[] ys = ys
+  Append (x ': xs) ys = x ': Append xs ys
+
+type AuthContext = AuthHandler Wai.Request Authz
+
+type ServantContext = '[AuthContext]
