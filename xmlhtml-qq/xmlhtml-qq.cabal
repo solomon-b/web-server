@@ -20,7 +20,7 @@ common common-options
 library
     import:           common-options
     exposed-modules:  Text.XmlHtml.QQ
-    build-depends:    base ^>=4.18.1.0
+    build-depends:    base >=4.19.2.0
                     , bytestring
                     , haskell-src-meta
                     , template-haskell
