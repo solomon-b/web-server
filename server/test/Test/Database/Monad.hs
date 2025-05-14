@@ -30,16 +30,14 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import Control.Monad.Reader (MonadReader (..), ReaderT (..), asks)
 import Data.Bifunctor (first)
-import Data.ByteString (ByteString, toStrict)
-import Data.Foldable
+import Data.ByteString (toStrict)
 import Data.Has qualified as Has
 import Data.Maybe (fromMaybe)
 import Data.Password.Argon2
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8)
-import Data.Text.Lazy qualified as TL
-import Data.Text.Lazy.Encoding (encodeUtf8)
 import Data.UUID (toString)
 import Data.UUID.V4 (nextRandom)
 import Domain.Types.DisplayName (mkDisplayNameUnsafe)
@@ -50,7 +48,10 @@ import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
 import GHC.IO (unsafePerformIO)
 import GHC.IO.Exception (ExitCode (..))
-import Hasql.Connection (Connection, Settings, acquire, release)
+import Hasql.Connection (Connection, acquire, release)
+import Hasql.Connection.Setting qualified as HSQL.Setting
+import Hasql.Connection.Setting.Connection qualified as HSQL.Connection
+import Hasql.Connection.Setting.Connection.Param qualified as HSQL.Params
 import Hasql.Interpolate (getOneRow)
 import Hasql.Pool (UsageError (..))
 import Hasql.Session (Session, run)
@@ -120,24 +121,16 @@ mkPerTestConfig dbName TestDBInitConfig {..} =
       testDBConfigDBname = dbName
     }
 
-toSettingString :: TestDBConfig -> Settings
+toSettingString :: TestDBConfig -> [HSQL.Setting.Setting]
 toSettingString TestDBConfig {..} =
-  fold
-    [ "host=",
-      fmt testDBConfigHost,
-      " ",
-      "port=",
-      fmt testDBConfigPort,
-      " ",
-      "dbname=",
-      fmt testDBConfigDBname,
-      " ",
-      "user=",
-      fmt testDBConfigUser
-    ]
-  where
-    fmt :: String -> ByteString
-    fmt = toStrict . encodeUtf8 . TL.pack
+  pure $
+    HSQL.Setting.connection $
+      HSQL.Connection.params
+        [ HSQL.Params.host $ Text.pack testDBConfigHost,
+          HSQL.Params.port $ read testDBConfigPort,
+          HSQL.Params.dbname $ Text.pack testDBConfigDBname,
+          HSQL.Params.user $ Text.pack testDBConfigUser
+        ]
 
 --------------------------------------------------------------------------------
 
