@@ -7,7 +7,7 @@ module App where
 
 --------------------------------------------------------------------------------
 
-import App.Auth (authHandler, execStatement, healthCheck)
+import App.Auth (Authz, authHandler, execStatement, healthCheck)
 import App.Config
 import App.Context
 import App.Monad
@@ -15,10 +15,7 @@ import App.Observability qualified as Observability
 import Control.Error (isLeft)
 import Control.Exception (catch)
 import Control.Monad (void, when)
-import Control.Monad.Catch (MonadCatch, MonadThrow)
-import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Control.Monad.Reader (MonadReader, runReaderT)
+import Control.Monad.Reader (runReaderT)
 import Control.Monad.Trans.Except (ExceptT (..))
 import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson
@@ -27,10 +24,8 @@ import Data.Bifunctor (bimap)
 import Data.CaseInsensitive qualified as CI
 import Data.Data (Proxy (..))
 import Data.Function ((&))
-import Data.Has (Has)
 import Data.Maybe (catMaybes, fromMaybe)
-import Data.Text (Text)
-import Data.Text.Display (Display, display)
+import Data.Text.Display (display)
 import Data.Text.Encoding qualified as TE
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (getCurrentTime)
@@ -42,20 +37,21 @@ import Hasql.Pool.Config as HSQL.Pool.Config
 import Log qualified
 import Log.Backend.StandardOutput qualified as Log
 import Network.HTTP.Types.Status qualified as Status
+import Network.Wai (Request)
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
 import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
-import OpenTelemetry.Trace (Tracer)
 import OpenTelemetry.Trace qualified as OTEL
-import Servant (Context ((:.)), type (.++))
+import Servant (Context ((:.)))
 import Servant qualified
+import Servant.Server.Experimental.Auth (AuthHandler)
 import System.Posix.Signals qualified as Posix
 
 --------------------------------------------------------------------------------
 
 runApp ::
   forall api ctx.
-  (Servant.HasServer api ServantContext) =>
+  (Servant.HasServer api ServerContext) =>
   (Environment -> Servant.ServerT api (AppM ctx)) ->
   ctx ->
   IO ()
@@ -87,7 +83,7 @@ runApp server ctx = do
           let tracer = mkTracer OTEL.tracerOptions
           let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
 
-          let servantContext = authHandler pgPool :. Servant.EmptyContext
+          let servantContext = tracer :. authHandler pgPool :. Servant.EmptyContext
               appContext = AppContext pgPool tracer hostname appConfigEnvironment logEnv ctx
               warpSettings = mkWarpSettings logEnv appConfigWarpSettings
           Warp.runSettings warpSettings (otelMiddleware $ mkApp @api server servantContext appContext)
@@ -146,6 +142,8 @@ shutdownHandler closeSocket =
 
 --------------------------------------------------------------------------------
 
+type ServerContext = '[OTEL.Tracer, AuthHandler Request Authz]
+
 interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
 interpret ctx (AppM appM) =
   Servant.Handler $
@@ -154,19 +152,16 @@ interpret ctx (AppM appM) =
         \e -> pure $ Left e
 
 mkApp ::
-  forall api ctx servantContext.
-  ( Servant.HasServer api servantContext,
-    Servant.HasContextEntry servantContext AuthContext,
-    Servant.HasContextEntry (servantContext .++ Servant.DefaultErrorFormatters) Servant.ErrorFormatters
-  ) =>
+  forall api ctx.
+  (Servant.HasServer api ServerContext) =>
   (Environment -> Servant.ServerT api (AppM ctx)) ->
-  Servant.Context servantContext ->
+  Context ServerContext ->
   AppContext ctx ->
   Servant.Application
 mkApp server fullCtx appCtx =
   Servant.serveWithContext (Proxy @api) fullCtx $
     Servant.hoistServerWithContext
       (Proxy @api)
-      (Proxy @servantContext)
+      (Proxy @ServerContext)
       (interpret appCtx)
       (server $ appEnvironment appCtx)
