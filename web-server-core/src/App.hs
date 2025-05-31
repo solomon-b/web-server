@@ -25,7 +25,10 @@ import App.Observability qualified as Observability
 import Control.Error (isLeft)
 import Control.Exception (catch)
 import Control.Monad (void, when)
-import Control.Monad.Reader (runReaderT)
+import Control.Monad.Catch (MonadCatch, MonadThrow)
+import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Unlift (MonadUnliftIO)
+import Control.Monad.Reader (MonadReader, runReaderT)
 import Control.Monad.Trans.Except (ExceptT (..))
 import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson
@@ -34,8 +37,10 @@ import Data.Bifunctor (bimap)
 import Data.CaseInsensitive qualified as CI
 import Data.Data (Proxy (..))
 import Data.Function ((&))
+import Data.Has (Has)
 import Data.Maybe (catMaybes, fromMaybe)
-import Data.Text.Display (display)
+import Data.Text (Text)
+import Data.Text.Display (Display, display)
 import Data.Text.Encoding qualified as TE
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (getCurrentTime)
@@ -50,6 +55,7 @@ import Network.HTTP.Types.Status qualified as Status
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
 import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
+import OpenTelemetry.Trace (Tracer)
 import OpenTelemetry.Trace qualified as OTEL
 import Servant (Context ((:.)), type (.++))
 import Servant qualified
