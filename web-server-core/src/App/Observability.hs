@@ -1,3 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module App.Observability where
 
 --------------------------------------------------------------------------------
@@ -8,20 +14,19 @@ import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
 import Control.Monad.IO.Unlift
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Reader qualified as Reader
-import Data.Aeson ((.=))
-import Data.Aeson qualified as Aeson
+import Data.Data (Proxy (..))
 import Data.Fixed (Pico)
+import Data.Has (Has)
 import Data.Has qualified as Has
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (sortOn)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Display
 import Data.Text.Lazy qualified as Lazy
 import Data.Time.Clock (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX qualified as Time
 import Data.Time.Format.ISO8601 (iso8601Show)
-import Log qualified
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import OpenTelemetry.Attributes (getAttributes)
 import OpenTelemetry.Exporter.Handle.Span (stdoutExporter')
 import OpenTelemetry.Exporter.Span (ExportResult (..), SpanExporter (..))
@@ -30,6 +35,13 @@ import OpenTelemetry.Trace (ImmutableSpan (..))
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Core qualified as Trace
 import OpenTelemetry.Util (appendOnlyBoundedCollectionValues)
+import Servant qualified
+import Servant.Server.Internal.Delayed (Delayed (..), addMethodCheck)
+import Servant.Server.Internal.DelayedIO (withRequest)
+import Servant.Server.Internal.Router (Router)
+import Data.Text.Display (display, Display)
+import Network.Wai (Request (..))
+import Control.Monad.Except (ExceptT(..))
 
 --------------------------------------------------------------------------------
 
@@ -111,28 +123,22 @@ handlerSpan ::
     Has.Has OTEL.Tracer env,
     MonadIO m,
     MonadCatch m,
-    MonadUnliftIO m,
-    Log.MonadLog m,
-    Aeson.ToJSON req,
-    Aeson.ToJSON res,
-    Display req,
-    Display res
+    MonadUnliftIO m
+    -- Log.MonadLog m,
   ) =>
   Text ->
-  req ->
-  (a -> res) ->
   m a ->
   m a
-handlerSpan handlerName req getRes handlerAction = do
+handlerSpan handlerName handlerAction = do
   -- TODO: Disambiguate Response data from rendered Response
   tracer <- Reader.asks Has.getter
   OTEL.inSpan' tracer ("handler " <> handlerName) OTEL.defaultSpanArguments $ \reqSpan -> do
-    OTEL.addEvent reqSpan $
-      OTEL.NewEvent
-        { newEventName = "handler request",
-          newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . display $ req)],
-          newEventTimestamp = Nothing
-        }
+    -- OTEL.addEvent reqSpan $
+    --   OTEL.NewEvent
+    --     { newEventName = "handler request",
+    --       newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . display $ req)],
+    --       newEventTimestamp = Nothing
+    --     }
 
     handlerResult <-
       handlerAction `catchAll` \exception -> do
@@ -144,13 +150,100 @@ handlerSpan handlerName req getRes handlerAction = do
             }
         throwM exception
 
-    OTEL.addEvent reqSpan $
-      OTEL.NewEvent
-        { newEventName = "handler success",
-          newEventAttributes = HashMap.fromList [("response", OTEL.toAttribute . display . getRes $ handlerResult)],
-          newEventTimestamp = Nothing
-        }
+    -- OTEL.addEvent reqSpan $
+    --   OTEL.NewEvent
+    --     { newEventName = "handler success",
+    --       newEventAttributes = HashMap.fromList [("response", OTEL.toAttribute . display . getRes $ handlerResult)],
+    --       newEventTimestamp = Nothing
+    --     }
 
     -- TODO: Disambiguate Response data from rendered Response
-    Log.logInfo handlerName $ Aeson.object ["request-data" .= req, "response-data" .= ("getRes handlerResult" :: Text)]
+    -- Log.logInfo handlerName $ Aeson.object ["request-data" .= req, "response-data" .= ("getRes handlerResult" :: Text)]
     pure handlerResult
+
+--------------------------------------------------------------------------------
+
+newtype Print api = Print api
+
+instance (Servant.HasServer api ctx) => Servant.HasServer (Print api) ctx where
+  type ServerT (Print api) m = Servant.ServerT api m
+
+  route ::
+    Proxy (Print api) ->
+    Servant.Context ctx ->
+    Delayed env (Servant.ServerT api Servant.Handler) ->
+    Router env
+  route _ context delayed =
+    Servant.route (Proxy :: Proxy api) context $
+      addMethodCheck delayed $
+        withRequest (\_req -> liftIO $ putStrLn "HELLO WORLD !!!!!!!!!!!!!!!!!!!!")
+
+  hoistServerWithContext _ = Servant.hoistServerWithContext (Proxy :: Proxy api)
+
+--------------------------------------------------------------------------------
+
+data WithSpan (label :: Symbol) api
+
+instance
+  ( KnownSymbol label,
+    Servant.HasServer api context,
+    MonadReader env m,
+    Has Trace.Tracer env,
+    MonadCatch m,
+    MonadUnliftIO m,
+    Servant.HasContextEntry context OTEL.Tracer
+  ) =>
+  Servant.HasServer (WithSpan label api) context
+  where
+  type ServerT (WithSpan label api) m = OTEL.Tracer -> Servant.ServerT api m
+
+  route _ ctx delayed =
+    let tracer :: OTEL.Tracer  = Servant.getContextEntry ctx
+        handlerName = "Handler: " <> Text.pack (symbolVal (Proxy @label))
+
+     in Servant.route (Proxy @api) ctx $
+        addMethodCheck (fmap ($ tracer) delayed) $
+          withRequest $ \req ->
+            liftIO $
+              OTEL.inSpan' tracer handlerName OTEL.defaultSpanArguments $ \reqSpan -> do
+                OTEL.addEvent reqSpan $
+                  OTEL.NewEvent
+                    { newEventName = "handler request",
+                      newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack $ show req)],
+                      newEventTimestamp = Nothing
+                    }
+
+  hoistServerWithContext _ pc nt handler tracer = Servant.hoistServerWithContext (Proxy :: Proxy api) pc nt (handler tracer)
+
+
+wrapInSpan :: (Display a) => OTEL.Tracer -> Text -> Request -> Servant.Handler a -> Servant.Handler a
+wrapInSpan tracer handlerName req (Servant.Handler (ExceptT action)) =
+  Servant.Handler . ExceptT $
+    withRunInIO $ \runInIO ->
+      OTEL.inSpan' tracer handlerName OTEL.defaultSpanArguments $ \reqSpan -> do
+        OTEL.addEvent reqSpan $
+          OTEL.NewEvent
+            { newEventName = "handler request",
+              newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack $ show req)],
+              newEventTimestamp = Nothing
+            }
+
+        response <- runInIO action
+
+        case response of
+          Left err -> do
+            OTEL.addEvent reqSpan $
+              OTEL.NewEvent
+                { newEventName = "handler error",
+                  newEventAttributes = HashMap.fromList [("error", OTEL.toAttribute . Text.pack $ show err)],
+                  newEventTimestamp = Nothing
+                }
+            pure response
+          Right success -> do
+            OTEL.addEvent reqSpan $ OTEL.NewEvent
+              { newEventName = "handler result"
+              , newEventAttributes = HashMap.fromList
+                  [ ("result", OTEL.toAttribute (display success)) ]
+              , newEventTimestamp = Nothing
+              }
+            pure response
