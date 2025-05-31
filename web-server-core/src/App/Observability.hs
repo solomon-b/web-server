@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -11,22 +10,24 @@ module App.Observability where
 import App.Config (AppExporter (..), ObservabilityConfig (..), Verbosity (..))
 import Control.Exception (bracket)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
+import Control.Monad.Except (ExceptT (..))
 import Control.Monad.IO.Unlift
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Reader qualified as Reader
 import Data.Data (Proxy (..))
 import Data.Fixed (Pico)
-import Data.Has (Has)
 import Data.Has qualified as Has
 import Data.HashMap.Strict qualified as HashMap
 import Data.List (sortOn)
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.Display (Display, display)
 import Data.Text.Lazy qualified as Lazy
 import Data.Time.Clock (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX qualified as Time
 import Data.Time.Format.ISO8601 (iso8601Show)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import Network.Wai (Request (..))
 import OpenTelemetry.Attributes (getAttributes)
 import OpenTelemetry.Exporter.Handle.Span (stdoutExporter')
 import OpenTelemetry.Exporter.Span (ExportResult (..), SpanExporter (..))
@@ -39,9 +40,6 @@ import Servant qualified
 import Servant.Server.Internal.Delayed (Delayed (..), addMethodCheck)
 import Servant.Server.Internal.DelayedIO (withRequest)
 import Servant.Server.Internal.Router (Router)
-import Data.Text.Display (display, Display)
-import Network.Wai (Request (..))
-import Control.Monad.Except (ExceptT(..))
 
 --------------------------------------------------------------------------------
 
@@ -187,10 +185,6 @@ data WithSpan (label :: Symbol) api
 instance
   ( KnownSymbol label,
     Servant.HasServer api context,
-    MonadReader env m,
-    Has Trace.Tracer env,
-    MonadCatch m,
-    MonadUnliftIO m,
     Servant.HasContextEntry context OTEL.Tracer
   ) =>
   Servant.HasServer (WithSpan label api) context
@@ -198,23 +192,21 @@ instance
   type ServerT (WithSpan label api) m = OTEL.Tracer -> Servant.ServerT api m
 
   route _ ctx delayed =
-    let tracer :: OTEL.Tracer  = Servant.getContextEntry ctx
+    let tracer :: OTEL.Tracer = Servant.getContextEntry ctx
         handlerName = "Handler: " <> Text.pack (symbolVal (Proxy @label))
-
      in Servant.route (Proxy @api) ctx $
-        addMethodCheck (fmap ($ tracer) delayed) $
-          withRequest $ \req ->
-            liftIO $
-              OTEL.inSpan' tracer handlerName OTEL.defaultSpanArguments $ \reqSpan -> do
-                OTEL.addEvent reqSpan $
-                  OTEL.NewEvent
-                    { newEventName = "handler request",
-                      newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack $ show req)],
-                      newEventTimestamp = Nothing
-                    }
+          addMethodCheck (fmap ($ tracer) delayed) $
+            withRequest $ \req ->
+              liftIO $
+                OTEL.inSpan' tracer handlerName OTEL.defaultSpanArguments $ \reqSpan -> do
+                  OTEL.addEvent reqSpan $
+                    OTEL.NewEvent
+                      { newEventName = "handler request",
+                        newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack $ show req)],
+                        newEventTimestamp = Nothing
+                      }
 
   hoistServerWithContext _ pc nt handler tracer = Servant.hoistServerWithContext (Proxy :: Proxy api) pc nt (handler tracer)
-
 
 wrapInSpan :: (Display a) => OTEL.Tracer -> Text -> Request -> Servant.Handler a -> Servant.Handler a
 wrapInSpan tracer handlerName req (Servant.Handler (ExceptT action)) =
@@ -240,10 +232,12 @@ wrapInSpan tracer handlerName req (Servant.Handler (ExceptT action)) =
                 }
             pure response
           Right success -> do
-            OTEL.addEvent reqSpan $ OTEL.NewEvent
-              { newEventName = "handler result"
-              , newEventAttributes = HashMap.fromList
-                  [ ("result", OTEL.toAttribute (display success)) ]
-              , newEventTimestamp = Nothing
-              }
+            OTEL.addEvent reqSpan $
+              OTEL.NewEvent
+                { newEventName = "handler result",
+                  newEventAttributes =
+                    HashMap.fromList
+                      [("result", OTEL.toAttribute (display success))],
+                  newEventTimestamp = Nothing
+                }
             pure response
