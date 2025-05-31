@@ -5,16 +5,6 @@
 
 module App where
 
-{-
-TODO:
-- Basic HTMX Widgets
-  - Login
-  - Register
-  - Navbar
-  - Mailing List Signup
-- HTML/HTMX Starter Template
--}
-
 --------------------------------------------------------------------------------
 
 import App.Auth (authHandler, execStatement, healthCheck)
