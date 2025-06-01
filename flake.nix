@@ -27,30 +27,23 @@
           pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
           hsPkgs = pkgs.haskellPackages.override {
             overrides = hfinal: hprev: {
-              base64 = hfinal.base64_1_0;
+              hasql = pkgs.haskell.lib.dontCheck pkgs.haskellPackages.hasql_1_9_1_1;
 
-              hasql = pkgs.haskell.lib.dontCheck (
-                hfinal.callCabal2nix
-                  "hasql"
-                  "${hasql-src}"
-                  { }
-              );
-
-              hasql-pool = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
+              hasql-pool = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
                 {
                   pkg = "hasql-pool";
-                  ver = "1.2.0.2";
-                  sha256 = "sha256-YBPHmeIb8PlmjtsHCjsRzH+H/1V8UjA1U2Fw48b8a4w=";
+                  ver = "1.3.0.2";
+                  sha256 = "sha256-3tADBDSR7MErgVLzIZdivVqyU99/A7jsRV3qUS7wWns=";
                 }
-                { });
+                { }));
 
-              hasql-transaction = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
+              hasql-transaction = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
                 {
                   pkg = "hasql-transaction";
-                  ver = "1.1.1.2";
-                  sha256 = "sha256-MDP41k6QlRHoHUY1pT3fCQyvjS6XkVUlMge6NvxsluM=";
+                  ver = "1.2.0.1";
+                  sha256 = "sha256-gXLDMlD6E3degEUJOtFCiZf9EAsWEBJqsOfZK54iBSA=";
                 }
-                { });
+                { }));
 
               hasql-interpolate = pkgs.haskell.lib.dontCheck (
                 hfinal.callCabal2nix
@@ -67,24 +60,11 @@
                 }
                 { });
 
-              postgresql-binary = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
-                {
-                  pkg = "postgresql-binary";
-                  ver = "0.14";
-                  sha256 = "sha256-ldXhe3JpdOXQvB7LE+5D4SUpNuwRjfw7zceV9BTVcUA=";
-                }
-                { });
-
-              postgresql-libpq = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
-                {
-                  pkg = "postgresql-libpq";
-                  ver = "0.10.1.0";
-                  sha256 = "sha256-tXOMqCO8opMilI9rx0D+njqjIjbZsH168Bzb8Aq8Ff4=";
-                }
-                { });
-
               # TODO: Figure out how to run effectful integration tests in the nix build. Nix Shell
               web-server = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./server { });
+              #
+              # TODO: Figure out how to run effectful integration tests in the nix build. Nix Shell
+              web-server-core = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./web-server-core { });
 
               xmlhtml-lens = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./xmlhtml-lens { });
 
@@ -137,6 +117,7 @@
 
           packages = flake-utils.lib.flattenTree rec {
             web-server = hsPkgs.web-server;
+            web-server-core = hsPkgs.web-server-core;
             ngrok-runner = pkgs.writeShellScriptBin "ngrok-runner.sh" ''
               ${pkgs.ngrok}/bin/ngrok http http://localhost:2000
 
