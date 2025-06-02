@@ -20,59 +20,19 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, hasql-interpolate-src, hasql-src, tmp-postgres-src }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, hasql-interpolate-src, hasql-src, tmp-postgres-src }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ]
       (system:
         let
-          pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
-          hsPkgs = pkgs.haskellPackages.override {
-            overrides = hfinal: hprev: {
-              hasql = pkgs.haskell.lib.dontCheck pkgs.haskellPackages.hasql_1_9_1_1;
-
-              hasql-pool = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
-                {
-                  pkg = "hasql-pool";
-                  ver = "1.3.0.2";
-                  sha256 = "sha256-3tADBDSR7MErgVLzIZdivVqyU99/A7jsRV3qUS7wWns=";
-                }
-                { }));
-
-              hasql-transaction = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
-                {
-                  pkg = "hasql-transaction";
-                  ver = "1.2.0.1";
-                  sha256 = "sha256-gXLDMlD6E3degEUJOtFCiZf9EAsWEBJqsOfZK54iBSA=";
-                }
-                { }));
-
-              hasql-interpolate = pkgs.haskell.lib.dontCheck (
-                hfinal.callCabal2nix
-                  "hasql-interpolate"
-                  "${hasql-interpolate-src}"
-                  { }
-              );
-
-              htmx = pkgs.haskell.lib.dontCheck (hfinal.callHackageDirect
-                {
-                  pkg = "htmx";
-                  ver = "0.1.0.0";
-                  sha256 = "sha256-RHpdjcqHBwA0u18h3TDNslhxsz0HXdy1pO5YYykc/jk=";
-                }
-                { });
-
-              # TODO: Figure out how to run effectful integration tests in the nix build. Nix Shell
-              web-server = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./server { });
-              #
-              # TODO: Figure out how to run effectful integration tests in the nix build. Nix Shell
-              web-server-core = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./web-server-core { });
-
-              xmlhtml-lens = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./xmlhtml-lens { });
-
-              xmlhtml-qq = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ./xmlhtml-qq { });
-
-              tmp-postgres = pkgs.haskell.lib.dontCheck (hfinal.callCabal2nix "tmp-postgres" tmp-postgres-src { });
-            };
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+            overlays = [
+              (import ./overlays/web-server-core.nix)
+              (import ./overlays/server.nix { inherit inputs; })
+            ];
           };
+          hsPkgs = pkgs.haskellPackages;
         in
         rec {
           devShell = pkgs.mkShell {
@@ -130,5 +90,7 @@
             ngrok = flake-utils.lib.mkApp { drv = self.packages.${system}.ngrok-runner; };
             default = self.apps.${system}.web-server;
           };
-        });
+        }) // {
+      overlays.web-server-core = import ./overlay.nix;
+    };
 }
