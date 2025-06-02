@@ -106,9 +106,15 @@ mkAcquire exporter = do
 withTracer :: ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
 withTracer (ObservabilityConfig verbosity exporter) f =
   let acquire = case exporter of
-        Otel -> OTEL.initializeGlobalTracerProvider
-        StdOut -> mkAcquire $ stdoutExporter' (pure . stdoutFormatter verbosity)
-        None -> mkAcquire noOpExporter
+        Otel -> do
+          putStrLn "Using StdOut Exporter"
+          OTEL.initializeGlobalTracerProvider
+        StdOut -> do
+          putStrLn "Using StdOut Exporter"
+          mkAcquire $ stdoutExporter' (pure . stdoutFormatter verbosity)
+        None -> do
+          putStrLn "Open Telemetry Exporter Disabled"
+          mkAcquire noOpExporter
       release = case exporter of
         None -> \_ -> pure ()
         _ -> OTEL.shutdownTracerProvider
