@@ -48,6 +48,7 @@ library
                     , case-insensitive
                     , cookie
                     , data-has
+                    , email-validate
                     , errors
                     , exceptions
                     , hasql
@@ -64,6 +65,7 @@ library
                     , lucid2
                     , mtl
                     , network
+                    , non-empty-text
                     , password
                     , servant
                     , servant-server
@@ -89,7 +91,14 @@ library
       App.Errors
       App.Monad
       App.Observability
+      Domain.Types.AdminStatus
+      Domain.Types.DisplayName
+      Domain.Types.EmailAddress
+      Domain.Types.FullName
+      Domain.Types.OptionalField
+      OrphanInstances.CaseInsensitive
       OrphanInstances.IPRange
+      OrphanInstances.NonEmptyText
       OrphanInstances.UUID
       OrphanInstances.UTCTime
       OrphanInstances.Password
