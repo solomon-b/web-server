@@ -96,6 +96,9 @@ library
       Domain.Types.EmailAddress
       Domain.Types.FullName
       Domain.Types.OptionalField
+      Effects.Database.Class
+      Effects.Database.Execute
+      Effects.Database.SerializedStatement
       OrphanInstances.CaseInsensitive
       OrphanInstances.IPRange
       OrphanInstances.NonEmptyText
