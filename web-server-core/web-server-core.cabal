@@ -43,6 +43,7 @@ library
     build-depends:    base >=4.19.2.0
                     , aeson
                     , barbies
+                    , binary
                     , bytestring
                     , case-insensitive
                     , cookie
@@ -56,12 +57,15 @@ library
                     , hs-opentelemetry-exporter-handle
                     , hs-opentelemetry-instrumentation-wai
                     , hs-opentelemetry-sdk
+                    , http-media
                     , http-types
                     , iproute
                     , log-base
+                    , lucid2
                     , mtl
                     , network
                     , password
+                    , servant
                     , servant-server
                     , text
                     , text-display >= 1.0.0.0
@@ -73,6 +77,7 @@ library
                     , unix
                     , wai
                     , warp
+                    , xmlhtml
     hs-source-dirs:   src
     default-language: Haskell2010
     exposed-modules:
@@ -88,6 +93,7 @@ library
       OrphanInstances.UUID
       OrphanInstances.UTCTime
       OrphanInstances.Password
+      Text.HTML
 
 --------------------------------------------------------------------------------
 
