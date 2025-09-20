@@ -5,7 +5,7 @@ NIX_FILES := "$(git ls-files '*.nix' 'nix/*.nix')"
 SHELL_FILES := "$(git ls-files '*.sh')"
 CHANGED_SHELL_FILES := '$(git diff --diff-filter=d --name-only `git merge-base HEAD origin/main` | grep ".*\.sh$$")'
 
-NIX_FMT := "nixpkgs-fmt"
+NIX_FMT := "nixfmt"
 ORMOLU := "ormolu"
 ORMOLU_VERSION := "$(" + ORMOLU + " --version | awk 'NR==1 { print $2 }')"
 ORMOLU_CHECK_VERSION := "0.7.2.0"
@@ -29,11 +29,11 @@ clean:
   cabal clean
 
 # Run all test suites.
-test: 
+test:
   cabal test all --test-show-details=direct --test-option=--format=specdoc
 
 # Build docs
-haddock: 
+haddock:
   cabal haddock
 
 #-------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ jaeger-stop:
 #-------------------------------------------------------------------------------
 ## Deployment
 
-# Deploy 
+# Deploy
 deploy:
   nix run .#deploy
 
