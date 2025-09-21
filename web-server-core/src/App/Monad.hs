@@ -13,6 +13,9 @@ import Data.Aeson.Types qualified as Aeson
 import Data.Has qualified as Has
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
+import Effects.Database.Class
+import Hasql.Pool qualified as HSQL.Pool
+import Hasql.Session qualified as HSQL
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Monad (MonadTracer (..))
@@ -23,6 +26,12 @@ newtype AppM ctx a = AppM {runAppM :: AppContext ctx -> IO a}
   deriving
     (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO)
     via ReaderT (AppContext ctx) IO
+
+instance MonadDB (AppM ctx) where
+  runDB :: HSQL.Session a -> AppM ctx (Either HSQL.Pool.UsageError a)
+  runDB s = do
+    pool <- Reader.asks Has.getter
+    liftIO $ HSQL.Pool.use pool s
 
 instance MonadTracer (AppM ctx) where
   getTracer :: AppM ctx OTEL.Tracer
