@@ -19,7 +19,7 @@ where
 
 --------------------------------------------------------------------------------
 
-import App.Auth (Authz (..), ServerSessionInsert (..), insertServerSession)
+import App.Auth (Authz (..))
 import Control.Concurrent (MVar, newEmptyMVar)
 import Control.Concurrent.MVar (readMVar, tryPutMVar)
 import Control.Exception (Exception, throw, throwIO)
@@ -44,6 +44,7 @@ import Domain.Types.DisplayName (mkDisplayNameUnsafe)
 import Domain.Types.EmailAddress (mkEmailAddress)
 import Domain.Types.FullName (mkFullNameUnsafe)
 import Effects.Database.Class (MonadDB (..))
+import Effects.Database.Tables.ServerSessions qualified as ServerSessions
 import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
 import GHC.IO (unsafePerformIO)
@@ -211,7 +212,7 @@ withAuth = beforeWith getAuth
         auth <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
           uid <- TRX.statement () $ User.insertUser $ User.ModelInsert (mkEmailAddress "user@host.com") pass
           u <- TRX.statement () $ User.getUser $ getOneRow uid
-          sm <- TRX.statement () $ insertServerSession $ ServerSessionInsert (getOneRow uid) Nothing Nothing (read "2099-01-01 10:30:20 UTC")
+          sm <- TRX.statement () $ ServerSessions.insertServerSession $ ServerSessions.ServerSessionInsert (getOneRow uid) Nothing Nothing (read "2099-01-01 10:30:20 UTC")
           pure $ Authz (fromMaybe (error "withAuth failure: Failed to look up user") u) (getOneRow sm)
         case auth of
           Left err -> error $ "withAuth failure: " <> show err
