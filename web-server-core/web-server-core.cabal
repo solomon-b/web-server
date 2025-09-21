@@ -102,6 +102,7 @@ library
       Effects.Database.Tables.User
       Effects.Database.Tables.ServerSessions
       Effects.Observability
+      Lucid.Extras
       OrphanInstances.CaseInsensitive
       OrphanInstances.IPRange
       OrphanInstances.NonEmptyText
