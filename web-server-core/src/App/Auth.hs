@@ -28,6 +28,8 @@ import Data.Text.Display.Generic (RecordInstance (..))
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (UTCTime, addUTCTime, getCurrentTime, nominalDay)
 import Data.UUID (UUID, fromASCIIBytes)
+import Domain.Types.EmailAddress (EmailAddress)
+import Effects.Database.Tables.User qualified as User
 import GHC.Generics (Generic)
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, getOneRow, interp, sql)
 import Hasql.Pool qualified as HSQL
@@ -49,29 +51,6 @@ import Web.Cookie (parseCookies)
 
 --------------------------------------------------------------------------------
 
-newtype UserAuthId = UserAuthId Int64
-  deriving stock (Generic)
-  deriving anyclass (DecodeRow)
-  deriving newtype
-    ( Show,
-      Eq,
-      Ord,
-      Num,
-      Display,
-      DecodeValue,
-      EncodeValue
-    )
-
-data UserAuthModel = UserAuthModel
-  { mId :: UserAuthId,
-    mPassword :: PasswordHash Argon2
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (DecodeRow)
-  deriving (Display) via (RecordInstance UserAuthModel)
-
---------------------------------------------------------------------------------
-
 parseSessionId :: ByteString -> Maybe ServerSessionId
 parseSessionId = fmap ServerSessionId . fromASCIIBytes
 
@@ -89,7 +68,7 @@ newtype ServerSessionId = ServerSessionId UUID
 
 data ServerSessionModel = ServerSessionModel
   { mSessionId :: ServerSessionId,
-    mUserId :: UserAuthId,
+    mUserId :: User.Id,
     mIpAddress :: Maybe IPRange,
     mUserAgent :: Maybe Text,
     mExpiresAt :: UTCTime
@@ -123,14 +102,14 @@ execStatement = runDB . HSQL.statement ()
 healthCheck :: Statement () ()
 healthCheck = interp False [sql|select current_timestamp|]
 
-getSessionUser :: ServerSessionId -> Statement () (Maybe (UserAuthModel, ServerSessionModel))
+getSessionUser :: ServerSessionId -> Statement () (Maybe (User.Model, ServerSessionModel))
 getSessionUser sId =
   fmap fromRows
     <$> interp
       False
       [sql|
     SELECT
-      u.id as user_id, u.password
+      u.id as user_id, u.email, u.password,
       s.id as server_session_id, s.user_id as session_user_id, s.ip_address, s.user_agent, s.expires_at
     FROM server_sessions s
     JOIN users u ON u.id = s.user_id
@@ -139,27 +118,29 @@ getSessionUser sId =
   |]
   where
     fromRows ::
-      ( UserAuthId,
+      ( User.Id,
+        EmailAddress,
         PasswordHash Argon2,
         ServerSessionId,
-        UserAuthId,
+        User.Id,
         Maybe IPRange,
         Maybe Text,
         UTCTime
       ) ->
-      (UserAuthModel, ServerSessionModel)
+      (User.Model, ServerSessionModel)
     fromRows
       ( mId,
+        mEmail,
         mPassword,
         mSessionId,
         sessionUserId,
         mIpAddress,
         mUserAgent,
         mExpiresAt
-        ) = (UserAuthModel {..}, ServerSessionModel {mUserId = sessionUserId, ..})
+        ) = (User.Model {..}, ServerSessionModel {mUserId = sessionUserId, ..})
 
 data ServerSessionInsert = ServerSessionInsert
-  { ssiUserId :: UserAuthId,
+  { ssiUserId :: User.Id,
     ssiIpAddress :: Maybe IPRange,
     ssiUserAgent :: Maybe Text,
     ssiExpiresAt :: UTCTime
@@ -193,7 +174,7 @@ expireSession sessionId =
 type instance Servant.AuthServerData (Servant.AuthProtect "cookie-auth") = Authz
 
 data Authz = Authz
-  { authzUser :: UserAuthModel,
+  { authzUser :: User.Model,
     authzSession :: ServerSessionModel
   }
 
@@ -274,7 +255,7 @@ login ::
     Has HSQL.Pool.Pool env,
     Log.MonadLog m
   ) =>
-  UserAuthId ->
+  User.Id ->
   SockAddr ->
   Maybe Text ->
   m (Either HSQL.UsageError ServerSessionId)
@@ -304,7 +285,7 @@ lookupSessionId :: Text -> Maybe ServerSessionId
 lookupSessionId =
   lookup (Text.Encoding.encodeUtf8 "session-id") . parseCookies . Text.Encoding.encodeUtf8 >=> parseSessionId
 
-data LoggedIn = IsLoggedIn UserAuthModel | IsNotLoggedIn
+data LoggedIn = IsLoggedIn User.Model | IsNotLoggedIn
 
 isLoggedIn :: LoggedIn -> Bool
 isLoggedIn = \case

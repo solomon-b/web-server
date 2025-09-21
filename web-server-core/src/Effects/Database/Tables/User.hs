@@ -10,9 +10,7 @@ import Data.Int (Int64)
 import Data.Password.Argon2 (Argon2, PasswordHash)
 import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
-import Domain.Types.DisplayName (DisplayName)
 import Domain.Types.EmailAddress (EmailAddress)
-import Domain.Types.FullName (FullName)
 import GHC.Generics
 import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, interp, sql)
 import Hasql.Statement qualified as Hasql
@@ -43,11 +41,7 @@ newtype Id = Id Int64
 data Model = Model
   { mId :: Id,
     mEmail :: EmailAddress,
-    mPassword :: PasswordHash Argon2,
-    mDisplayName :: DisplayName,
-    mFullName :: FullName,
-    mAvatarUrl :: Maybe Text,
-    mIsAdmin :: Bool
+    mPassword :: PasswordHash Argon2
   }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (DecodeRow)
@@ -56,11 +50,7 @@ data Model = Model
 -- | API Domain Type for @Users@.
 data Domain = Domain
   { dId :: Id,
-    dEmail :: EmailAddress,
-    dDisplayName :: DisplayName,
-    dFullName :: FullName,
-    dAvatarUrl :: Maybe Text,
-    dIsAdmin :: Bool
+    dEmail :: EmailAddress
   }
   deriving stock (Show, Generic, Eq)
   deriving (Display) via (RecordInstance Domain)
@@ -70,11 +60,7 @@ toDomain :: Model -> Domain
 toDomain Model {..} =
   Domain
     { dId = mId,
-      dEmail = mEmail,
-      dDisplayName = mDisplayName,
-      dFullName = mFullName,
-      dAvatarUrl = mAvatarUrl,
-      dIsAdmin = mIsAdmin
+      dEmail = mEmail
     }
 
 --------------------------------------------------------------------------------
@@ -84,7 +70,7 @@ getUsers =
   interp
     False
     [sql|
-    SELECT id, email, password, display_name, full_name, avatar_url, is_admin
+    SELECT id, email, password
     FROM users
   |]
 
@@ -93,7 +79,7 @@ getUser userId =
   interp
     False
     [sql|
-    SELECT id, email, password, display_name, full_name, avatar_url, is_admin
+    SELECT id, email, password
     FROM users
     WHERE id = #{userId}
   |]
@@ -103,7 +89,7 @@ getUserByEmail email =
   interp
     False
     [sql|
-    SELECT id, email, password, display_name, full_name, avatar_url, is_admin
+    SELECT id, email, password
     FROM users
     WHERE email = #{email}
   |]
@@ -113,18 +99,14 @@ getUserByCredential email password =
   interp
     False
     [sql|
-      SELECT id, email, password, display_name, full_name, avatar_url, is_admin
+      SELECT id, email, password
       FROM users
-      WHERE email = #{email} && password = #{password}
+      WHERE email = #{email} AND password = #{password}
     |]
 
 data ModelInsert = ModelInsert
   { miEmail :: EmailAddress,
-    miPassword :: PasswordHash Argon2,
-    miDisplayName :: DisplayName,
-    miFullName :: FullName,
-    miAvatarUrl :: Maybe Text,
-    miIsAdmin :: Bool
+    miPassword :: PasswordHash Argon2
   }
   deriving stock (Generic, Show, Eq)
   deriving (EncodeRow) via ModelInsert
@@ -135,8 +117,8 @@ insertUser ModelInsert {..} =
   interp
     False
     [sql|
-    INSERT INTO users(email, password, display_name, full_name, avatar_url, is_admin)
-    VALUES (#{miEmail}, #{miPassword}, #{miDisplayName}, #{miFullName}, #{miAvatarUrl}, #{miIsAdmin})
+    INSERT INTO users(email, password, created_at, updated_at)
+    VALUES (#{miEmail}, #{miPassword}, NOW(), NOW())
     RETURNING id
   |]
 
@@ -155,6 +137,7 @@ changeUserPassword userId oldPassword newPassword =
     False
     [sql|
       UPDATE users
-      SET (password = #{newPassword})
-      WHERE id = #{userId} && password = #{oldPassword}
+      SET password = #{newPassword}, updated_at = NOW()
+      WHERE id = #{userId} AND password = #{oldPassword}
+      RETURNING id
   |]
