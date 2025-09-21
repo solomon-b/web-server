@@ -19,20 +19,17 @@ import Data.Functor ((<&>))
 import Data.Has (Has)
 import Data.Has qualified as Has
 import Data.IP (IP (..), IPRange (..), fromSockAddr, makeAddrRange)
-import Data.Int (Int64)
 import Data.Password.Argon2 (Argon2, PasswordHash)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Display (Display, display)
-import Data.Text.Display.Generic (RecordInstance (..))
+import Data.Text.Display (display)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (UTCTime, addUTCTime, getCurrentTime, nominalDay)
-import Data.UUID (UUID, fromASCIIBytes)
+import Data.UUID (fromASCIIBytes)
 import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Tables.ServerSessions qualified as ServerSessions
 import Effects.Database.Tables.User qualified as User
-import GHC.Generics (Generic)
-import Hasql.Interpolate (DecodeRow, DecodeValue, EncodeRow, EncodeValue, OneRow, getOneRow, interp, sql)
+import Hasql.Interpolate (getOneRow, interp, sql)
 import Hasql.Pool qualified as HSQL
 import Hasql.Pool qualified as HSQL.Pool
 import Hasql.Session qualified as HSQL
@@ -98,7 +95,7 @@ getSessionUser sId =
     fromRows ::
       ( User.Id,
         EmailAddress,
-        PasswordHash Argon2,
+        Data.Password.Argon2.PasswordHash Data.Password.Argon2.Argon2,
         ServerSessions.Id,
         User.Id,
         Maybe IPRange,
