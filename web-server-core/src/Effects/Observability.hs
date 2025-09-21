@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module App.Observability where
+module Effects.Observability where
 
 --------------------------------------------------------------------------------
 

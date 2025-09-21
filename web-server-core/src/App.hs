@@ -11,7 +11,6 @@ import App.Auth (Authz, authHandler, execStatement, healthCheck)
 import App.Config
 import App.Context
 import App.Monad
-import App.Observability qualified as Observability
 import Control.Error (isLeft)
 import Control.Exception (catch)
 import Control.Monad (void, when)
@@ -29,6 +28,7 @@ import Data.Text.Display (display)
 import Data.Text.Encoding qualified as TE
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (getCurrentTime)
+import Effects.Observability qualified as Observability
 import Hasql.Connection.Setting qualified as HSQL.Setting
 import Hasql.Connection.Setting.Connection qualified as HSQL.Connection
 import Hasql.Connection.Setting.Connection.Param qualified as HSQL.Params

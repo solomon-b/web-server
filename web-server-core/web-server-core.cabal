@@ -90,15 +90,18 @@ library
       App.Context
       App.Errors
       App.Monad
-      App.Observability
       Domain.Types.AdminStatus
       Domain.Types.DisplayName
       Domain.Types.EmailAddress
       Domain.Types.FullName
       Domain.Types.OptionalField
+      Effects.Clock
       Effects.Database.Class
       Effects.Database.Execute
       Effects.Database.SerializedStatement
+      Effects.Database.Tables.User
+      Effects.Database.Tables.ServerSessions
+      Effects.Observability
       OrphanInstances.CaseInsensitive
       OrphanInstances.IPRange
       OrphanInstances.NonEmptyText
