@@ -105,6 +105,7 @@ library
       OrphanInstances.CaseInsensitive
       OrphanInstances.IPRange
       OrphanInstances.NonEmptyText
+      OrphanInstances.OneRow
       OrphanInstances.UUID
       OrphanInstances.UTCTime
       OrphanInstances.Password
