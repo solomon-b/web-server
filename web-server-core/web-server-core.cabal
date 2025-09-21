@@ -105,6 +105,7 @@ library
       OrphanInstances.UUID
       OrphanInstances.UTCTime
       OrphanInstances.Password
+      OrphanInstances.Servant
       Text.HTML
 
 --------------------------------------------------------------------------------
