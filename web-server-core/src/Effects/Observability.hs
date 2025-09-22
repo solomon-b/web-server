@@ -40,6 +40,7 @@ import Servant qualified
 import Servant.Server.Internal.Delayed (Delayed (..), addMethodCheck)
 import Servant.Server.Internal.DelayedIO (withRequest)
 import Servant.Server.Internal.Router (Router)
+import qualified Servant.API as Links
 
 --------------------------------------------------------------------------------
 
@@ -213,6 +214,10 @@ instance
                       }
 
   hoistServerWithContext _ pc nt handler tracer = Servant.hoistServerWithContext (Proxy :: Proxy api) pc nt (handler tracer)
+
+instance forall label sub. (Links.HasLink sub) => Links.HasLink (WithSpan label sub) where
+  type MkLink (WithSpan label sub) a = Links.MkLink sub a
+  toLink toA _ = Links.toLink toA (Proxy @sub)
 
 wrapInSpan :: (Display a) => OTEL.Tracer -> Text -> Request -> Servant.Handler a -> Servant.Handler a
 wrapInSpan tracer handlerName req (Servant.Handler (ExceptT action)) =
