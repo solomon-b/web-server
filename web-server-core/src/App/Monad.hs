@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneDeriving #-}
 module App.Monad where
 
 --------------------------------------------------------------------------------
@@ -15,8 +16,6 @@ import Data.Text (Text)
 import Data.Time (getCurrentTime)
 import Effects.Clock (MonadClock (..))
 import Effects.Database.Class
-import Hasql.Pool qualified as HSQL.Pool
-import Hasql.Session qualified as HSQL
 import Log qualified
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Monad (MonadTracer (..))
@@ -31,11 +30,7 @@ newtype AppM ctx a = AppM {runAppM :: AppContext ctx -> IO a}
 instance MonadClock (AppM ctx) where
   currentSystemTime = liftIO getCurrentTime
 
-instance MonadDB (AppM ctx) where
-  runDB :: HSQL.Session a -> AppM ctx (Either HSQL.Pool.UsageError a)
-  runDB s = do
-    pool <- Reader.asks Has.getter
-    liftIO $ HSQL.Pool.use pool s
+deriving via (ReaderT (AppContext ctx) IO) instance MonadDB (AppM ctx)
 
 instance MonadTracer (AppM ctx) where
   getTracer :: AppM ctx OTEL.Tracer

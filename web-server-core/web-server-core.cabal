@@ -54,6 +54,7 @@ library
                     , hasql
                     , hasql-interpolate
                     , hasql-pool
+                    , hasql-transaction
                     , hs-opentelemetry-api
                     , hs-opentelemetry-exporter-handle
                     , hs-opentelemetry-instrumentation-wai

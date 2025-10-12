@@ -27,9 +27,63 @@ import Log qualified
 import OpenTelemetry.Attributes (Attribute)
 import OpenTelemetry.Trace.Core qualified as Trace
 import Servant qualified
+import qualified Hasql.Transaction as HT
 
 --------------------------------------------------------------------------------
 -- Query Execution
+
+execTransactionSpan ::
+  ( Log.MonadLog m,
+    MonadDB m,
+    Reader.MonadReader env m,
+    Has.Has Trace.Tracer env,
+    MonadUnliftIO m,
+    Display result
+  ) =>
+  HT.Transaction result ->
+  m (Either HSQL.UsageError result)
+execTransactionSpan transaction = do
+  tracer <- Reader.asks Has.getter
+  Trace.inSpan' tracer "database_transaction" Trace.defaultSpanArguments $ \reqSpan -> do
+    Log.logInfo "db transaction" $ KeyMap.singleton "type" ("transaction" :: Text)
+
+    Trace.addEvent reqSpan $
+      Trace.NewEvent
+        { newEventName = "transaction_start",
+          newEventAttributes = HMS.fromList [("isolation", Trace.toAttribute ("serializable" :: Text))],
+          newEventTimestamp = Nothing
+        }
+
+    eQueryResult <- execTransaction transaction
+
+    case eQueryResult of
+      Left (HSQL.SessionUsageError (QueryError _ params cmdError)) ->
+        Trace.addEvent reqSpan $
+          Trace.NewEvent
+            { newEventName = "logical_query_error",
+              newEventAttributes =
+                HMS.fromList
+                  [ ("cmd-error", Trace.toAttribute . Text.pack . show $ cmdError),
+                    ("params", Trace.toAttribute . fold . intersperse " " $ params)
+                  ],
+              newEventTimestamp = Nothing
+            }
+      Left err ->
+        Trace.addEvent reqSpan $
+          Trace.NewEvent
+            { newEventName = "unexpected_query_error",
+              newEventAttributes = HMS.fromList [("error", Trace.toAttribute . Text.pack . show $ err)],
+              newEventTimestamp = Nothing
+            }
+      Right result ->
+        Trace.addEvent reqSpan $
+          Trace.NewEvent
+            { newEventName = "execution_result",
+              newEventAttributes = HMS.fromList [("result", Trace.toAttribute . display $ result)],
+              newEventTimestamp = Nothing
+            }
+
+    pure eQueryResult
 
 execQuerySpan ::
   ( Log.MonadLog m,
