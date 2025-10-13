@@ -74,12 +74,12 @@
         formatter = pkgs.nixpkgs-fmt;
 
         packages = flake-utils.lib.flattenTree rec {
-          web-server = hsPkgs.web-server;
+          web-server-example = hsPkgs.web-server;
           web-server-core = hsPkgs.web-server-core;
           ngrok-runner = pkgs.writeShellScriptBin "ngrok-runner.sh" ''
             ${pkgs.ngrok}/bin/ngrok http http://localhost:2000
           '';
-          default = hsPkgs.web-server;
+          default = hsPkgs.web-server-core;
         };
 
         apps = {
