@@ -8,7 +8,6 @@ module Effects.Database.Tables.User where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
 import Data.Password.Argon2 (Argon2, PasswordHash)
-import Data.Text (Text)
 import Data.Text.Display (Display, RecordInstance (..))
 import Domain.Types.EmailAddress (EmailAddress)
 import GHC.Generics

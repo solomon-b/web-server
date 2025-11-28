@@ -12,7 +12,6 @@ import App.Config.Fetchers (FetchHKD (..), packText, parseEnvDefault, parseEnvDe
 import Barbies
 import Data.Aeson (ToJSON)
 import Data.ByteString (ByteString)
-import Data.Functor.Classes (Show1)
 import Data.Functor.Compose (Compose (..))
 import Data.String (IsString)
 import Data.Text (Text)
