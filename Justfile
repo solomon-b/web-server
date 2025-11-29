@@ -16,9 +16,9 @@ SHELLCHECK := "$(shellcheck --external-sources --source-path=SCRIPTDIR)"
 #-------------------------------------------------------------------------------
 ## Cabal
 
-# Run the backend service
+# Run the example service
 run:
-  cabal run exe:server
+  cabal run exe:example-server
 
 # Build all haskell packages.
 build:
@@ -111,6 +111,19 @@ lint-shell-changed:
   	{{SHELLCHECK}} {{CHANGED_SHELL_FILES}}; \
   fi
 
+
+# Lint Haskell source code using hlint.
+hlint:
+  @echo running hlint
+  @hlint {{HS_FILES}}
+
+# Lint Haskell source code using hlint (changed files only).
+hlint-changed:
+  @echo running hlint
+  @if [ -n "{{CHANGED_HS_FILES}}" ]; then \
+  	hlint {{CHANGED_HS_FILES}}; \
+  fi
+
 #-------------------------------------------------------------------------------
 ## Key Gen
 # https://ruleoftech.com/2020/generating-jwt-and-jwk-for-information-exchange-between-services
@@ -132,15 +145,15 @@ psql-dev:
 
 # Create a new SQL migration.
 migrations-add MIGRATION:
-  sqlx migrate add {{MIGRATION}} --source server/migrations
+  sqlx migrate add {{MIGRATION}} --source example/migrations
 
 # Run SQL migrations.
 migrations-run:
-  sqlx migrate run --source server/migrations
+  sqlx migrate run --source example/migrations
 
 # Reset PG Database.
 migrations-reset:
-  sqlx database reset --source server/migrations
+  sqlx database reset --source example/migrations
 
 # List all SQL migrations.
 migrations-list:

@@ -1,0 +1,279 @@
+cabal-version:      3.4
+name:               example-server
+version:            0.1.0.0
+homepage:           http://www.github.com/solomon-b/web-server
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Solomon Bothwell
+maintainer:         ssbothwell@gmail.com
+build-type:         Simple
+
+--------------------------------------------------------------------------------
+
+common common-extensions
+  default-extensions:
+      DataKinds
+      DerivingStrategies
+      DeriveAnyClass
+      DerivingVia
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      InstanceSigs
+      LambdaCase
+      MultiParamTypeClasses
+      NamedFieldPuns
+      OverloadedStrings
+      RankNTypes
+      RecordWildCards
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+
+--------------------------------------------------------------------------------
+
+executable example-server
+  import:           common-extensions
+  main-is:          Main.hs
+  build-depends:    base >=4.19.2.0
+                  , example-server
+  hs-source-dirs:   app
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded -rtsopts -with-rtsopts=-N
+
+--------------------------------------------------------------------------------
+
+library
+  import: common-extensions
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded
+  build-depends:  , aeson
+                  , barbies
+                  , base >=4.19.2.0
+                  , base64
+                  , binary
+                  , bytestring
+                  , case-insensitive
+                  , cookie
+                  , clock
+                  , cmark
+                  , containers
+                  , cryptohash-sha256
+                  , data-has
+                  , deriving-aeson
+                  , directory
+                  , exceptions
+                  , fuzzy
+                  , email-validate
+                  , errors
+                  , filepath
+                  , hasql
+                  , hasql-pool
+                  , hasql-interpolate
+                  , hasql-transaction
+                  , hs-opentelemetry-api
+                  , hs-opentelemetry-exporter-handle
+                  , hs-opentelemetry-instrumentation-wai
+                  , hs-opentelemetry-sdk
+                  , hs-opentelemetry-utils-exceptions
+                  , http-api-data
+                  , http-media
+                  , http-types
+                  , iproute
+                  , lens
+                  , log-base
+                  , lucid2
+                  , mtl
+                  , mime-mail
+                  , network
+                  , network-ip
+                  , network-uri
+                  , non-empty-text
+                  , pandoc == 3.6
+                  , pandoc-types
+                  , password
+                  , servant
+                  , servant-multipart
+                  , servant-server
+                  , smtp-mail
+                  , string-conversions
+                  , string-interpolate
+                  , text
+                  , text-display >= 1.0.0.0
+                  , time
+                  , transformers
+                  , uuid
+                  , unix
+                  , unliftio-core
+                  , unordered-containers
+                  , validation
+                  , wai
+                  , warp
+                  , xmlhtml
+                  , xmlhtml-lens
+  exposed-modules:
+    App
+    App.Auth
+    App.Auth.Network
+    App.Config
+    App.Config.Fetchers
+    App.Context
+    App.Errors
+    App.Errors.HTML
+    App.Monad
+    API
+    API.About.Get
+    API.Admin.Get
+    API.Admin.Blog.Get
+    API.Blog.Delete
+    API.Blog.Get
+    API.Blog.New.Get
+    API.Blog.New.Post
+    API.Blog.Id.Get
+    API.Blog.Id.Delete
+    API.Blog.Id.Edit.Get
+    API.Blog.Id.Edit.Post
+    API.Blog.Id.TogglePublish.Patch
+    API.Get
+    API.MailingList.Post
+    API.Store.Delete
+    API.Store.Get
+    API.Store.New.Get
+    API.Store.New.Post
+    API.Store.Id.Delete
+    API.Store.Id.Edit.Get
+    API.Store.Id.Edit.Post
+    API.Store.Id.Get
+    API.Store.Id.TogglePublish.Patch
+    API.Image.Post
+    API.Markdown.Post
+    API.Static.Get
+    API.User.Get
+    API.User.Current.Get
+    API.User.Delete
+    API.User.Id.Get
+    API.User.Login.Get
+    API.User.Login.Post
+    API.User.Logout.Get
+    API.User.Logout.Post
+    API.User.PasswordReset.Post
+    API.User.Register.Get
+    API.User.Register.Post
+    Component.Frame
+    Component.NavBar
+    Component.Forms.BlogPost
+    Component.Forms.Login
+    Component.Forms.Product
+    Component.Forms.Register
+    Domain.Types.AdminStatus
+    Domain.Types.Amount
+    Domain.Types.DisplayName
+    Domain.Types.EmailAddress
+    Domain.Types.FullName
+    Domain.Types.OptionalField
+    Domain.Types.ProductName
+    Effects.Clock
+    Effects.Database.Class
+    Effects.Database.Execute
+    Effects.Database.SerializedStatement
+    Effects.Database.Tables.BlogPosts
+    Effects.Database.Tables.Images
+    Effects.Database.Tables.MailingList
+    Effects.Database.Tables.Products
+    Effects.Database.Tables.ServerSessions
+    Effects.Database.Tables.User
+    Effects.Database.Tables.UserMetadata
+    Effects.Database.Queries.UserWithMetadata
+    Effects.MailSender
+    Effects.Observability
+    Lucid.Extras
+    OrphanInstances.Day
+    OrphanInstances.CaseInsensitive
+    OrphanInstances.IPRange
+    OrphanInstances.MultipartData
+    OrphanInstances.NonEmptyText
+    OrphanInstances.OneRow
+    OrphanInstances.Password
+    OrphanInstances.Servant
+    OrphanInstances.UTCTime
+    OrphanInstances.UUID
+    Utils
+    Text.HTML
+
+--------------------------------------------------------------------------------
+
+test-suite tests
+  import: common-extensions
+  type:
+    exitcode-stdio-1.0
+  main-is:
+    Spec.hs
+  hs-source-dirs:
+    test
+  ghc-options:
+    -Wall -threaded -rtsopts -with-rtsopts=-N -O0
+  build-depends:
+      base
+    , bytestring
+    , containers
+    , exceptions
+    , data-has
+    , hasql
+    , hasql-interpolate
+    , hasql-pool
+    , hasql-transaction
+    , hedgehog
+    , hs-opentelemetry-api
+    , hs-opentelemetry-sdk
+    , hspec
+    , hspec-api
+    , hspec-core
+    , hspec-discover
+    , hspec-expectations
+    , hspec-hedgehog
+    , HUnit
+    , iproute
+    , lens
+    , log-base
+    , mtl
+    , password
+    , postgres-options
+    , string-interpolate
+    , text
+    , time
+    , tmp-postgres
+    , typed-process
+    , unliftio-core
+    , uuid
+    , xmlhtml
+    , example-server
+  other-modules:
+     API.Blog.Id.DeleteSpec
+     API.User.DeleteSpec
+     API.User.GetSpec
+     API.User.Id.GetSpec
+     Effects.Database.Tables.BlogPostsSpec
+     Effects.Database.Tables.MailingListSpec
+     Effects.Database.Tables.ProductsSpec
+     Effects.Database.Tables.ImagesSpec
+     Effects.Database.Tables.UserSpec
+     Effects.Database.Tables.ServerSessionsSpec
+     Test.Database.Expectation
+     Test.Gen.DisplayName
+     Test.Gen.EmailAddress
+     Test.Gen.FullName
+     Test.Gen.Network
+     Test.Gen.Password
+     Test.Gen.Tables.BlogPosts
+     Test.Gen.Tables.Images
+     Test.Gen.Tables.Products
+     Test.Gen.Tables.Users
+     Test.Gen.Time
+     Test.Database.Monad
+     Test.Database.Property
+     Test.Database.Property.Assert
+     Test.Database.Setup
