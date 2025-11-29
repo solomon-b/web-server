@@ -37,7 +37,7 @@
           config.allowUnfree = true;
           overlays = [
             (import ./overlays/web-server-core.nix self)
-            (import ./overlays/server.nix { inherit inputs; })
+            (import ./overlays/web-server-example.nix { inherit inputs; })
           ];
         };
         hsPkgs = pkgs.haskellPackages;
@@ -46,7 +46,7 @@
         devShell = hsPkgs.shellFor {
           packages = p: [
             p.web-server-core
-            p.web-server
+            p.web-server-example
           ];
           buildInputs = [
             pkgs.bzip2
@@ -74,7 +74,7 @@
         formatter = pkgs.nixpkgs-fmt;
 
         packages = flake-utils.lib.flattenTree rec {
-          web-server-example = hsPkgs.web-server;
+          web-server-example = hsPkgs.web-server-example;
           web-server-core = hsPkgs.web-server-core;
           ngrok-runner = pkgs.writeShellScriptBin "ngrok-runner.sh" ''
             ${pkgs.ngrok}/bin/ngrok http http://localhost:2000

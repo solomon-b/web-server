@@ -37,7 +37,7 @@ final: prev: {
         hfinal.callCabal2nix "web-server-core" ../web-server-core { }
       );
 
-      web-server = final.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ../server { });
+      web-server-example = final.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server-example" ../example { });
 
       xmlhtml-lens = final.haskell.lib.dontCheck (hfinal.callCabal2nix "web-server" ../xmlhtml-lens { });
 

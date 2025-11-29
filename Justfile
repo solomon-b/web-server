@@ -16,9 +16,9 @@ SHELLCHECK := "$(shellcheck --external-sources --source-path=SCRIPTDIR)"
 #-------------------------------------------------------------------------------
 ## Cabal
 
-# Run the backend service
+# Run the example service
 run:
-  cabal run exe:server
+  cabal run exe:example-server
 
 # Build all haskell packages.
 build:
@@ -132,15 +132,15 @@ psql-dev:
 
 # Create a new SQL migration.
 migrations-add MIGRATION:
-  sqlx migrate add {{MIGRATION}} --source server/migrations
+  sqlx migrate add {{MIGRATION}} --source example/migrations
 
 # Run SQL migrations.
 migrations-run:
-  sqlx migrate run --source server/migrations
+  sqlx migrate run --source example/migrations
 
 # Reset PG Database.
 migrations-reset:
-  sqlx database reset --source server/migrations
+  sqlx database reset --source example/migrations
 
 # List all SQL migrations.
 migrations-list:
