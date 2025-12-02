@@ -124,7 +124,7 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent req@Register {..} = do
-  Observability.handlerSpan "POST /user/register" req display $ do
+  Observability.handlerSpan "POST /user/register" $ do
     validateRequest req >>= \case
       Failure errors ->
         logValidationFailure "POST /user/register Request validation failure" req errors

@@ -53,7 +53,7 @@ handler ::
   Maybe Bool ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler cookie hxTrigger =
-  Observability.handlerSpan "GET /" () (display . Servant.getResponse) $ do
+  Observability.handlerSpan "GET /about" $ do
     loginState <- Auth.userLoginState cookie
 
     page <- loadFrameWithNav loginState "about-tab" template

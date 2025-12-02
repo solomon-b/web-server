@@ -39,8 +39,6 @@ import Web.Cookie (parseCookies)
 
 --------------------------------------------------------------------------------
 
-type instance Servant.AuthServerData (Servant.AuthProtect "cookie-auth") = Authz
-
 -- | Authorization data containing the authenticated user and their session.
 -- Uses FullUser which includes metadata (display_name, full_name, etc.)
 data Authz = Authz

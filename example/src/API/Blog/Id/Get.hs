@@ -75,7 +75,7 @@ handler ::
   BlogPosts.Id ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler cookie hxTrigger bid =
-  Observability.handlerSpan "GET /blog/:id" bid (display . Servant.getResponse) $ do
+  Observability.handlerSpan "GET /blog/:id" $ do
     loginState <- Auth.userLoginState cookie
     post <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     bodyNodes <- Markdown.processInput (BlogPosts.getBody $ dContent post)

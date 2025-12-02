@@ -68,6 +68,6 @@ handler ::
   Maybe Text ->
   m (Lucid.Html ())
 handler cookie =
-  Observability.handlerSpan "GET /" () display $ do
+  Observability.handlerSpan "GET /" $ do
     loginState <- Auth.userLoginState cookie
     loadFrameWithNav loginState "home-tab" template

@@ -57,7 +57,7 @@ handler ::
         Servant.NoContent
     )
 handler (Auth.Authz FullUser {fuId = userId, fuIsAdmin} _) mReferer bid = do
-  Observability.handlerSpan "PATCH /blog/:id/toggle-publish" bid display $ do
+  Observability.handlerSpan "PATCH /blog/:id/toggle-publish" $ do
     BlogPosts.Domain {dAuthorId} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     unless (fuIsAdmin || userId == dAuthorId) $ throwErr Unauthorized
     void $ execQuerySpanThrow $ BlogPosts.togglePublished bid

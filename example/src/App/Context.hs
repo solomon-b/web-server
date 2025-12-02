@@ -1,51 +1,43 @@
-module App.Context where
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+module App.Context
+  ( -- * Re-exports from web-server-core
+    AppContext (..),
+    -- * Example-specific custom context
+    ExampleCustomCtx (..),
+    ServantContext,
+  )
+where
 
 --------------------------------------------------------------------------------
 
 import App.Auth (Authz)
-import App.Config
+import App.Config (SmtpConfig)
 import Data.Has qualified as Has
-import Hasql.Pool qualified as HSQL (Pool)
-import Log qualified
 import Network.Wai qualified as Wai
-import OpenTelemetry.Trace qualified as OTEL
 import Servant qualified
 import Servant.Server.Experimental.Auth (AuthHandler)
 
---------------------------------------------------------------------------------
+-- Re-export AppContext from web-server-core
+import "web-server-core" App.Context (AppContext (..))
 
-data AppContext context = AppContext
-  { appDbPool :: HSQL.Pool,
-    appTracer :: OTEL.Tracer,
-    appSmtpConfig :: Maybe SmtpConfig,
-    appHostname :: Hostname,
-    appEnvironment :: Environment,
-    appLoggerEnv :: Log.LoggerEnv,
-    appCustom :: context
+--------------------------------------------------------------------------------
+-- Example-specific custom context
+
+newtype ExampleCustomCtx = ExampleCustomCtx
+  { exampleSmtpConfig :: Maybe SmtpConfig
   }
 
-instance Has.Has HSQL.Pool (AppContext ctx) where
-  getter = appDbPool
-  modifier f ctx@AppContext {appDbPool} = ctx {appDbPool = f appDbPool}
+instance Has.Has (Maybe SmtpConfig) ExampleCustomCtx where
+  getter = exampleSmtpConfig
+  modifier f ctx = ctx {exampleSmtpConfig = f (exampleSmtpConfig ctx)}
 
-instance Has.Has OTEL.Tracer (AppContext ctx) where
-  getter = appTracer
-  modifier f ctx@AppContext {appTracer} = ctx {appTracer = f appTracer}
+-- Forward Has lookups from AppContext to the custom context
+-- This allows MonadEmail and other effects to access app-specific config
+instance (Has.Has (Maybe SmtpConfig) ctx) => Has.Has (Maybe SmtpConfig) (AppContext ctx) where
+  getter = Has.getter . appCustom
+  modifier f ctx@AppContext {appCustom} = ctx {appCustom = Has.modifier f appCustom}
 
-instance Has.Has (Maybe SmtpConfig) (AppContext ctx) where
-  getter = appSmtpConfig
-  modifier f ctx@AppContext {appSmtpConfig} = ctx {appSmtpConfig = f appSmtpConfig}
-
-instance Has.Has Hostname (AppContext ctx) where
-  getter = appHostname
-  modifier f ctx@AppContext {appHostname} = ctx {appHostname = f appHostname}
-
-instance Has.Has Environment (AppContext ctx) where
-  getter = appEnvironment
-  modifier f ctx@AppContext {appEnvironment} = ctx {appEnvironment = f appEnvironment}
-
-instance Has.Has Log.LoggerEnv (AppContext ctx) where
-  getter = appLoggerEnv
-  modifier f ctx@AppContext {appLoggerEnv} = ctx {appLoggerEnv = f appLoggerEnv}
-
+-- | Example's ServantContext includes ErrorFormatters
 type ServantContext = '[Servant.ErrorFormatters, AuthHandler Wai.Request Authz]

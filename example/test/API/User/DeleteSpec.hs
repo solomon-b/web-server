@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -6,12 +7,12 @@ module API.User.DeleteSpec where
 --------------------------------------------------------------------------------
 
 import API.User.Delete qualified as UUT
-import App.Auth (Authz)
+import "example-server" App.Auth (Authz)
 import Data.Foldable (traverse_)
 import Data.List ((\\))
 import Data.Maybe (fromMaybe)
 import Effects.Database.Class (MonadDB (..))
-import Effects.Database.Tables.User qualified as User
+import "example-server" Effects.Database.Tables.User qualified as User
 import Hasql.Interpolate (OneRow (..), interp, sql)
 import Hasql.Statement qualified as Hasql
 import Hasql.Transaction qualified as TRX

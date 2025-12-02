@@ -32,4 +32,4 @@ handler ::
   Authz ->
   m FullUser
 handler (Authz user _) =
-  Observability.handlerSpan "GET /user/current" () display $ pure user
+  Observability.handlerSpan "GET /user/current" $ pure user

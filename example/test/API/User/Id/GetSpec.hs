@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module API.User.Id.GetSpec where
 
 --------------------------------------------------------------------------------
@@ -5,7 +7,7 @@ module API.User.Id.GetSpec where
 import API.User.Id.Get qualified as UUT
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Queries.UserWithMetadata (FullUser (..))
-import Effects.Database.Tables.User qualified as User
+import "example-server" Effects.Database.Tables.User qualified as User
 import Effects.Database.Tables.UserMetadata qualified as UserMetadata
 import Hasql.Interpolate (OneRow (..))
 import Hasql.Transaction qualified as TRX

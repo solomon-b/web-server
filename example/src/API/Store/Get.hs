@@ -67,7 +67,7 @@ handler ::
   Maybe Text ->
   m (Lucid.Html ())
 handler cookie =
-  Observability.handlerSpan "GET /blog" () display $ do
+  Observability.handlerSpan "GET /store" $ do
     loginState <- Auth.userLoginState cookie
 
     products <- fmap Products.toDomain <$> execQuerySpanThrow Products.gets

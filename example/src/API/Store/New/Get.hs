@@ -45,7 +45,7 @@ handler ::
   Maybe Bool ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler (Auth.Authz user@FullUser {..} _) hxTrigger =
-  Observability.handlerSpan "GET /store/new" () (display . Servant.getResponse) $ do
+  Observability.handlerSpan "GET /store/new" $ do
     unless fuIsAdmin $ throwErr Unauthorized
 
     let formFragment = template Nothing Nothing Nothing Nothing Nothing Nothing Nothing False

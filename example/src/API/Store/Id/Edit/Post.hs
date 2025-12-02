@@ -106,7 +106,7 @@ handler ::
         Servant.NoContent
     )
 handler (Auth.Authz FullUser {fuId = userId, fuIsAdmin} _) pid req@EditProduct {..} = do
-  Observability.handlerSpan "POST /store/edit" req display $ do
+  Observability.handlerSpan "POST /store/:id/edit" $ do
     Products.Domain {dHeroImage} <- maybe (throwErr NotFound) (pure . Products.toDomain) =<< execQuerySpanThrow (Products.get pid)
     unless fuIsAdmin $ throwErr Unauthorized
     let oldHeroImageId = fmap Images.dId dHeroImage

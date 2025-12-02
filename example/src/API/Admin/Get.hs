@@ -113,7 +113,7 @@ handler ::
   Maybe Bool ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler (Auth.Authz user@FullUser {..} _) hxTrigger = do
-  Observability.handlerSpan "GET /admin" () (display . Servant.getResponse) $
+  Observability.handlerSpan "GET /admin" $
     if fuIsAdmin
       then do
         users <- execQuerySpanThrow UserQuery.getFullUsers

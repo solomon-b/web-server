@@ -45,6 +45,6 @@ handler ::
   Maybe FullName ->
   m (Lucid.Html ())
 handler emailAddress displayName fullName =
-  Observability.handlerSpan "GET /user/register" (emailAddress, displayName, fullName) display $ do
+  Observability.handlerSpan "GET /user/register" $ do
     let registerForm = template displayName fullName emailAddress Nothing
     loadFrame registerForm

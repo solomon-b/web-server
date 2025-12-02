@@ -250,7 +250,7 @@ handler ::
   Maybe (OptionalField DisplayName) ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler (Auth.Authz user@FullUser {..} _) hxTrigger searchQuery (flatten -> startDate) (flatten -> endDate) (flatten -> author) = do
-  Observability.handlerSpan "GET /admin/blog" () (display . Servant.getResponse) $
+  Observability.handlerSpan "GET /admin/blog" $
     if fuIsAdmin
       then do
         postsWithAuthors <- do

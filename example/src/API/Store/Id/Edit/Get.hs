@@ -55,7 +55,7 @@ handler ::
   Maybe Text ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler (Auth.Authz user@FullUser {fuIsAdmin} _) hxTrigger pid descriptionParam =
-  Observability.handlerSpan "GET /store/new" () (display . Servant.getResponse) $ do
+  Observability.handlerSpan "GET /store/:id/edit" $ do
     Products.Domain {..} <- maybe (throwErr NotFound) (pure . Products.toDomain) =<< execQuerySpanThrow (Products.get pid)
     unless fuIsAdmin $ throwErr Unauthorized
 

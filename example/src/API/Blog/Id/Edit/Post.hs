@@ -102,7 +102,7 @@ handler ::
         Servant.NoContent
     )
 handler (Auth.Authz FullUser {fuId = userId, fuIsAdmin} _) bid req@EditPost {..} = do
-  Observability.handlerSpan "POST /blog/new" req display $ do
+  Observability.handlerSpan "POST /blog/:id/edit" $ do
     BlogPosts.Domain {dAuthorId, dHeroImage} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     unless (fuIsAdmin || userId == dAuthorId) $ throwErr Unauthorized
     let oldHeroImageId = fmap Images.dId dHeroImage
