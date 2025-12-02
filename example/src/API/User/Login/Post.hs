@@ -91,7 +91,7 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent req@Login {..} redirectQueryParam = do
-  Observability.handlerSpan "POST /user/login" req display $ do
+  Observability.handlerSpan "POST /user/login" $ do
     execQuerySpanThrow (User.getUserByEmail ulEmail) >>= \case
       Just user -> do
         Log.logInfo "Login Attempt" ulEmail

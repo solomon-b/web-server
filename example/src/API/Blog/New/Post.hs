@@ -105,7 +105,7 @@ handler ::
         Servant.NoContent
     )
 handler (Auth.Authz FullUser {fuId = userId, fuIsAdmin} _) req@CreatePost {..} = do
-  Observability.handlerSpan "POST /blog/new" req display $ do
+  Observability.handlerSpan "POST /blog/new" $ do
     unless fuIsAdmin $ throwErr Unauthorized
     case validateRequest req of
       Failure err -> do

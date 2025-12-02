@@ -48,7 +48,7 @@ handler ::
   Deletions ->
   m (Servant.Headers '[Servant.Header "HX-Redirect" Text] ())
 handler (Auth.Authz FullUser {fuIsAdmin} _) (Deletions pids) =
-  Observability.handlerSpan "GET /blog/:id" pids (display . Servant.getResponse) $ do
+  Observability.handlerSpan "DELETE /blog" $ do
     unless fuIsAdmin (throwErr Unauthorized)
 
     forM_ pids $ execQuerySpanThrow . BlogPosts.deleteBlogPost

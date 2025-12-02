@@ -1,15 +1,17 @@
+{-# LANGUAGE PackageImports #-}
+
 module API.Blog.Id.DeleteSpec where
 
 --------------------------------------------------------------------------------
 
 import API.Blog.Id.Delete qualified as UUT
-import App.Auth (Authz)
+import "example-server" App.Auth (Authz)
 import Data.Foldable (traverse_)
 import Data.List ((\\))
 import Data.Maybe (fromMaybe)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.BlogPosts qualified as BlogPosts
-import Effects.Database.Tables.User qualified as User
+import "example-server" Effects.Database.Tables.User qualified as User
 import Hasql.Interpolate (OneRow (..))
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX

@@ -44,7 +44,7 @@ handler ::
   BlogPosts.Id ->
   m ()
 handler (Auth.Authz FullUser {fuId, fuIsAdmin} _) pid =
-  Observability.handlerSpan "GET /blog/:id" pid display $ do
+  Observability.handlerSpan "DELETE /blog/:id" $ do
     BlogPosts.Domain {dAuthorId} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost pid)
 
     unless (fuId == dAuthorId || fuIsAdmin) (throwErr Unauthorized)

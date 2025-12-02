@@ -1,8 +1,11 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Effects.MailSender where
 
 --------------------------------------------------------------------------------
 
 import App.Config
+import App.Context () -- Import for orphan Has instance
 import App.Monad (AppM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader qualified as Reader
@@ -16,7 +19,7 @@ import Network.Mail.SMTP qualified as SMTP
 class MonadEmail m where
   sendEmail :: Mime.Mail -> m ()
 
-instance MonadEmail (AppM ctx) where
+instance (Has.Has (Maybe SmtpConfig) ctx) => MonadEmail (AppM ctx) where
   sendEmail :: Mime.Mail -> AppM ctx ()
   sendEmail mail = do
     Reader.asks Has.getter >>= \case

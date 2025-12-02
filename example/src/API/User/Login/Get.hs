@@ -45,6 +45,6 @@ handler ::
   Maybe EmailAddress ->
   m (Lucid.Html ())
 handler hxCurrentUrl redirectQueryParam emailQueryParam =
-  Observability.handlerSpan "GET /user/login" () display $ do
+  Observability.handlerSpan "GET /user/login" $ do
     let loginForm = template emailQueryParam $ hxCurrentUrl <|> redirectQueryParam
     loadFrame loginForm

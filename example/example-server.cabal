@@ -113,6 +113,7 @@ library
                   , validation
                   , wai
                   , warp
+                  , web-server-core
                   , xmlhtml
                   , xmlhtml-lens
   exposed-modules:
@@ -120,11 +121,8 @@ library
     App.Auth
     App.Auth.Network
     App.Config
-    App.Config.Fetchers
     App.Context
-    App.Errors
     App.Errors.HTML
-    App.Monad
     API
     API.About.Get
     API.Admin.Get
@@ -169,17 +167,8 @@ library
     Component.Forms.Login
     Component.Forms.Product
     Component.Forms.Register
-    Domain.Types.AdminStatus
     Domain.Types.Amount
-    Domain.Types.DisplayName
-    Domain.Types.EmailAddress
-    Domain.Types.FullName
-    Domain.Types.OptionalField
     Domain.Types.ProductName
-    Effects.Clock
-    Effects.Database.Class
-    Effects.Database.Execute
-    Effects.Database.SerializedStatement
     Effects.Database.Tables.BlogPosts
     Effects.Database.Tables.Images
     Effects.Database.Tables.MailingList
@@ -189,20 +178,9 @@ library
     Effects.Database.Tables.UserMetadata
     Effects.Database.Queries.UserWithMetadata
     Effects.MailSender
-    Effects.Observability
-    Lucid.Extras
     OrphanInstances.Day
-    OrphanInstances.CaseInsensitive
-    OrphanInstances.IPRange
     OrphanInstances.MultipartData
-    OrphanInstances.NonEmptyText
-    OrphanInstances.OneRow
-    OrphanInstances.Password
-    OrphanInstances.Servant
-    OrphanInstances.UTCTime
-    OrphanInstances.UUID
     Utils
-    Text.HTML
 
 --------------------------------------------------------------------------------
 
@@ -250,6 +228,7 @@ test-suite tests
     , unliftio-core
     , uuid
     , xmlhtml
+    , web-server-core
     , example-server
   other-modules:
      API.Blog.Id.DeleteSpec

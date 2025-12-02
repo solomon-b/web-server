@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Database.Monad
@@ -19,7 +20,7 @@ where
 
 --------------------------------------------------------------------------------
 
-import App.Auth (Authz (..))
+import "example-server" App.Auth (Authz (..))
 import Control.Concurrent (MVar, newEmptyMVar)
 import Control.Concurrent.MVar (readMVar, tryPutMVar)
 import Control.Exception (Exception, throw, throwIO)
@@ -45,8 +46,8 @@ import Domain.Types.EmailAddress (mkEmailAddress)
 import Domain.Types.FullName (mkFullNameUnsafe)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Queries.UserWithMetadata (FullUser (..))
-import Effects.Database.Tables.ServerSessions qualified as Session
-import Effects.Database.Tables.User qualified as User
+import "example-server" Effects.Database.Tables.ServerSessions qualified as Session
+import "example-server" Effects.Database.Tables.User qualified as User
 import Effects.Database.Tables.UserMetadata qualified as UserMetadata
 import GHC.IO (unsafePerformIO)
 import GHC.IO.Exception (ExitCode (..))

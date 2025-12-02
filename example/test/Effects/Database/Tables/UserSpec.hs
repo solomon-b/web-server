@@ -1,9 +1,11 @@
+{-# LANGUAGE PackageImports #-}
+
 module Effects.Database.Tables.UserSpec where
 
 --------------------------------------------------------------------------------
 
 import Effects.Database.Class (MonadDB (..))
-import Effects.Database.Tables.User qualified as UUT
+import "example-server" Effects.Database.Tables.User qualified as UUT
 import Hasql.Interpolate (OneRow (OneRow))
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX

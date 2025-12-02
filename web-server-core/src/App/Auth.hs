@@ -116,6 +116,8 @@ getSessionUser sId =
 
 --------------------------------------------------------------------------------
 
+-- NOTE: If we remove this we could allow downstream consumers of the library to
+-- define their own Authz type.
 type instance Servant.AuthServerData (Servant.AuthProtect "cookie-auth") = Authz
 
 data Authz = Authz

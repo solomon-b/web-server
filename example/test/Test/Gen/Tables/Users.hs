@@ -1,10 +1,12 @@
+{-# LANGUAGE PackageImports #-}
+
 module Test.Gen.Tables.Users where
 
 --------------------------------------------------------------------------------
 
 import Control.Monad.IO.Class (MonadIO (..))
-import Effects.Database.Tables.User qualified as User
-import Effects.Database.Tables.UserMetadata qualified as UserMetadata
+import "example-server" Effects.Database.Tables.User qualified as User
+import "example-server" Effects.Database.Tables.UserMetadata qualified as UserMetadata
 import Hedgehog (MonadGen (..))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range

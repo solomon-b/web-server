@@ -44,6 +44,6 @@ handler ::
   Products.Id ->
   m ()
 handler (Auth.Authz FullUser {fuIsAdmin} _) pid =
-  Observability.handlerSpan "GET /blog/:id" pid display $ do
+  Observability.handlerSpan "DELETE /store/:id" $ do
     unless fuIsAdmin (throwErr Unauthorized)
     execQuerySpanThrow $ Products.delete pid

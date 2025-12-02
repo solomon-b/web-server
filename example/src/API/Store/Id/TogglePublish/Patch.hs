@@ -56,7 +56,7 @@ handler ::
         Servant.NoContent
     )
 handler (Auth.Authz FullUser {fuIsAdmin} _) mReferer pid = do
-  Observability.handlerSpan "PATCH /store/:id/toggle-publish" pid display $ do
+  Observability.handlerSpan "PATCH /store/:id/toggle-publish" $ do
     unless fuIsAdmin $ throwErr Unauthorized
     void $ execQuerySpanThrow $ Products.togglePublished pid
 

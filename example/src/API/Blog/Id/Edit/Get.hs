@@ -55,7 +55,7 @@ handler ::
   Maybe BlogPosts.Body ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler (Auth.Authz user@FullUser {fuId = uid, ..} _) hxTrigger bid contentParam =
-  Observability.handlerSpan "GET /post/new" () (display . Servant.getResponse) $ do
+  Observability.handlerSpan "GET /blog/:id/edit" $ do
     BlogPosts.Domain {..} <- maybe (throwErr NotFound) (pure . BlogPosts.toDomain) =<< execQuerySpanThrow (BlogPosts.getBlogPost bid)
     unless (fuIsAdmin || uid == dAuthorId) $ throwErr Unauthorized
 

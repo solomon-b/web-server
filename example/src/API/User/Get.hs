@@ -36,5 +36,5 @@ handler ::
   ) =>
   m [FullUser]
 handler =
-  Observability.handlerSpan "GET /user" () display $ do
+  Observability.handlerSpan "GET /user" $
     (execQuerySpanThrow @_ @_ @env) getFullUsers

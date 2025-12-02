@@ -37,7 +37,7 @@ handler ::
   User.Id ->
   m FullUser
 handler uid =
-  Observability.handlerSpan "GET /user/:id" uid display $ do
+  Observability.handlerSpan "GET /user/:id" $ do
     Execute.execQuerySpan (UserQuery.getFullUser uid) >>= \case
       Right (Just user) -> pure user
       _ -> throwErr Forbidden

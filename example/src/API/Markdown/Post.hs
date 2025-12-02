@@ -46,7 +46,7 @@ handler ::
   Text ->
   m (Lucid.Html ())
 handler markdown = do
-  Observability.handlerSpan "GET /markdown" markdown display $ do
+  Observability.handlerSpan "GET /markdown" $
     processInput markdown
 
 processInput ::

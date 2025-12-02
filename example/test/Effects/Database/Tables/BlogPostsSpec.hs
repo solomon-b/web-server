@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module Effects.Database.Tables.BlogPostsSpec where
 
 --------------------------------------------------------------------------------
@@ -5,7 +7,7 @@ module Effects.Database.Tables.BlogPostsSpec where
 import Control.Monad.IO.Class (MonadIO (..))
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.BlogPosts qualified as UUT
-import Effects.Database.Tables.User qualified as User
+import "example-server" Effects.Database.Tables.User qualified as User
 import Hasql.Interpolate
 import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX

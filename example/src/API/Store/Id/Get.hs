@@ -80,7 +80,7 @@ handler ::
   Products.Id ->
   m (Servant.Headers '[Servant.Header "Vary" Text] (Lucid.Html ()))
 handler cookie hxTrigger bid =
-  Observability.handlerSpan "GET /store/:id" bid (display . Servant.getResponse) $ do
+  Observability.handlerSpan "GET /store/:id" $ do
     loginState <- Auth.userLoginState cookie
     post <- maybe (throwErr NotFound) (pure . Products.toDomain) =<< execQuerySpanThrow (Products.get bid)
     bodyNodes <- Markdown.processInput (dDescription post)

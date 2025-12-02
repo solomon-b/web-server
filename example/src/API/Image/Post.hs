@@ -91,7 +91,7 @@ handler ::
   NewImage ->
   m NewImageResponse
 handler (Auth.Authz FullUser {fuId = userId, fuIsAdmin} _) NewImage {..} = do
-  Observability.handlerSpan "POST /blog/new" () display $ do
+  Observability.handlerSpan "POST /image" $ do
     unless fuIsAdmin $ throwErr Unauthorized
     filePath' <- copyFile filePath
     _ <- execQuerySpanThrow $ Images.insertImage $ Images.ModelInsert userId title (Text.pack filePath')

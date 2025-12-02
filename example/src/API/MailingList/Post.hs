@@ -62,7 +62,7 @@ handler ::
   MailingListForm ->
   m (Lucid.Html ())
 handler req@(MailingListForm emailAddress) = do
-  Observability.handlerSpan "POST /mailing-list" req Lucid.renderText $ do
+  Observability.handlerSpan "POST /mailing-list" $ do
     unless (isValid emailAddress) $ throwErr Unauthorized
 
     _pid <- execQuerySpanThrow $ MailingList.insertEmailAddress $ MailingList.ModelInsert emailAddress
