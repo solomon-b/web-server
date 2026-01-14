@@ -4,7 +4,7 @@ module App.Monad where
 --------------------------------------------------------------------------------
 
 import App.Context
-import Control.Monad.Catch (MonadCatch, MonadThrow)
+import Control.Monad.Catch (MonadCatch, MonadMask, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import Control.Monad.Reader (MonadReader, ReaderT (..))
@@ -24,7 +24,7 @@ import OpenTelemetry.Trace.Monad (MonadTracer (..))
 
 newtype AppM ctx a = AppM {runAppM :: AppContext ctx -> IO a}
   deriving
-    (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO)
+    (Functor, Applicative, Monad, MonadReader (AppContext ctx), MonadIO, MonadThrow, MonadCatch, MonadMask, MonadUnliftIO)
     via ReaderT (AppContext ctx) IO
 
 instance MonadClock (AppM ctx) where
