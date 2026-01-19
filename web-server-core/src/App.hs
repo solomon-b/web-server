@@ -113,6 +113,7 @@ mkWarpSettings logEnv WarpConfig {..} =
   Warp.defaultSettings
     & Warp.setServerName warpConfigServerName
     & Warp.setLogger (mkWarpLogger logEnv)
+    & Warp.setHost "0.0.0.0"
     & Warp.setPort warpConfigPort
     & Warp.setGracefulShutdownTimeout (Just warpConfigTimeout)
     & Warp.setInstallShutdownHandler shutdownHandler
