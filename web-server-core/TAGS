@@ -1,0 +1,648 @@
+
+./test/Effects/Database/Tables/UserSpec.hs,158
+module Effects.Database.Tables.UserSpec Effects.Database.Tables.UserSpec0,1
+import import9,10
+spec spec22,23
+prop_insertSelect prop_insertSelect28,29
+
+./test/Effects/Database/Tables/ServerSessionsSpec.hs,179
+module Effects.Database.Tables.ServerSessionsSpec Effects.Database.Tables.ServerSessionsSpec0,1
+import import10,11
+spec spec27,28
+prop_insertSelect prop_insertSelect32,33
+
+./test/Test/Gen/Network.hs,161
+module Test.Gen.Network Test.Gen.Network2,3
+genW32 genW3215,16
+genIP4 genIP418,19
+genIP6 genIP621,22
+genIP genIP29,30
+genNetAddrIP genNetAddrIP32,33
+
+./test/Test/Gen/Time.hs,106
+module Test.Gen.Time Test.Gen.Time3,4
+futureTimeGen futureTimeGen15,16
+pastTimeGen pastTimeGen22,23
+
+./test/Test/Gen/EmailAddress.hs,81
+module Test.Gen.EmailAddress Test.Gen.EmailAddress0,1
+genEmail genEmail13,14
+
+./test/Test/Gen/Tables/Users.hs,91
+module Test.Gen.Tables.Users Test.Gen.Tables.Users0,1
+userInsertGen userInsertGen12,13
+
+./test/Test/Gen/Password.hs,79
+module Test.Gen.Password Test.Gen.Password0,1
+genPassword genPassword12,13
+
+./test/Test/Database/Property.hs,134
+module Test.Database.Property Test.Database.Property2,3
+arrange arrange15,16
+act act23,24
+assert assert26,27
+runs runs29,30
+
+./test/Test/Database/Monad.hs,1828
+module Test.Database.MonadTest.Database.Monad2,3
+newtype ReadOnly ReadOnly80,81
+newtype ReadOnly a = ReadOnly {untouchable untouchable80,81
+onlyRead onlyRead82,83
+data WriteStatus WriteStatus85,86
+data WriteStatus = AlreadyWritten AlreadyWritten85,86
+data WriteStatus = AlreadyWritten | WriteSuccessWriteSuccess85,86
+writeOnce writeOnce87,88
+dbTestConfigVar dbTestConfigVar93,94
+readOnlyTestDBConfig readOnlyTestDBConfig96,97
+data TestDBInitConfig TestDBInitConfig99,100
+data TestDBInitConfig = TestDBInitConfigTestDBInitConfig99,100
+  { testDBInitConfigTemplateName testDBInitConfigTemplateName100,101
+    testDBInitConfigHost testDBInitConfigHost101,102
+    testDBInitConfigPort testDBInitConfigPort102,103
+    testDBInitConfigUser testDBInitConfigUser103,104
+data TestDBConfig TestDBConfig106,107
+data TestDBConfig = TestDBConfigTestDBConfig106,107
+  { testDBConfigTemplateName testDBConfigTemplateName107,108
+    testDBConfigHost testDBConfigHost108,109
+    testDBConfigPort testDBConfigPort109,110
+    testDBConfigUser testDBConfigUser110,111
+    testDBConfigDBname testDBConfigDBname111,112
+mkPerTestConfig mkPerTestConfig114,115
+toSettingString toSettingString124,125
+newtype TestDB TestDB137,138
+newtype TestDB a = TestDB {runTestDB runTestDB137,138
+instance MonadDB MonadDB TestDB142,143
+  runDB runDB143,144
+newtype TestSetupException TestSetupException148,149
+instance Exception Exception TestSetupException150,151
+instance Example Example (TestDB a)152,153
+  type Arg Arg153,154
+  evaluateExample evaluateExample155,156
+noOpExporter noOpExporter166,167
+withTracer withTracer169,170
+logger logger182,183
+loggerEnv loggerEnv185,186
+bracketConn bracketConn190,191
+withAuth withAuth204,205
+withTestDB withTestDB220,221
+dbit dbit274,275
+
+./test/Test/Database/Expectation.hs,254
+module Test.Database.Expectation Test.Database.Expectation2,3
+expectTrue expectTrue16,17
+assertRight assertRight19,20
+assertJust assertJust24,25
+assertCloseTo assertCloseTo29,30
+isCloseTo isCloseTo34,35
+hasSameElements hasSameElements39,40
+
+./test/Test/Database/Property/Assert.hs,238
+module Test.Database.Property.Assert Test.Database.Property.Assert0,1
+assertRight assertRight12,13
+assertJust assertJust20,21
+(<(<==)25,26
+(=(==>)45,46
+(-(-<-)48,49
+(-(->-)53,54
+(=(=>=)58,59
+(=(=<=)63,64
+(=(=\\=)68,69
+
+./test/Test/Database/Setup.hs,196
+module Test.Database.Setup Test.Database.Setup0,1
+tmpDbUsername tmpDbUsername28,29
+tmpDbConfig tmpDbConfig31,32
+withTmpPG withTmpPG49,50
+readProcessHandleErr readProcessHandleErr107,108
+
+./test/Main.hs,39
+module Main Main0,1
+main main17,18
+
+./src/Domain/Types/DisplayName.hs,248
+module Domain.Types.DisplayNameDomain.Types.DisplayName0,1
+newtype DisplayName DisplayName23,24
+newtype DisplayName = DisplayName {displayName displayName23,24
+mkDisplayName mkDisplayName27,28
+mkDisplayNameUnsafe mkDisplayNameUnsafe30,31
+
+./src/Domain/Types/FullName.hs,212
+module Domain.Types.FullNameDomain.Types.FullName0,1
+newtype FullName FullName22,23
+newtype FullName = FullName {fullName fullName22,23
+mkFullName mkFullName26,27
+mkFullNameUnsafe mkFullNameUnsafe29,30
+
+./src/Domain/Types/AdminStatus.hs,295
+module Domain.Types.AdminStatus Domain.Types.AdminStatus0,1
+data AdminStatus AdminStatus10,11
+data AdminStatus = IsAdmin IsAdmin10,11
+data AdminStatus = IsAdmin | IsNotAdminIsNotAdmin10,11
+instance FromJSON FromJSON AdminStatus13,14
+  parseJSON parseJSON14,15
+isAdmin isAdmin18,19
+
+./src/Domain/Types/OptionalField.hs,482
+module Domain.Types.OptionalFieldDomain.Types.OptionalField2,3
+newtype OptionalField OptionalField14,15
+newtype OptionalField a = OptionalField {getOptionalField getOptionalField14,15
+instance forall forall a- (Servant-FromHttpApiData a) => Servant-FromHttpApiData (OptionalField a)16,17
+  parseQueryParam parseQueryParam17,18
+instance (S(Servant-ToHttpApiData a) => Servant-ToHttpApiData (OptionalField a)20,21
+  toQueryParam toQueryParam21,22
+flatten flatten24,25
+
+./src/Domain/Types/EmailAddress.hs,948
+module Domain.Types.EmailAddressDomain.Types.EmailAddress1,2
+newtype EmailAddress EmailAddress27,28
+newtype EmailAddress = EmailAddress {emailAddress emailAddress27,28
+instance FromJSON FromJSON EmailAddress31,32
+  parseJSON parseJSON32,33
+instance ToJSON ToJSON EmailAddress34,35
+  toJSON toJSON35,36
+instance Display Display EmailAddress37,38
+  displayBuilder displayBuilder38,39
+instance Servant.ToHttpApiData Servant-ToHttpApiData EmailAddress40,41
+  toUrlPiece toUrlPiece41,42
+instance Servant.FromHttpApiData Servant-FromHttpApiData EmailAddress43,44
+  parseUrlPiece parseUrlPiece44,45
+  parseQueryParam parseQueryParam45,46
+mkEmailAddress mkEmailAddress47,48
+isValid isValid50,51
+data ValidationFailure ValidationFailure53,54
+data ValidationFailure = ValidationFailureValidationFailure53,54
+instance Display Display ValidationFailure55,56
+  displayBuilder displayBuilder56,57
+validate validate59,60
+
+./src/OrphanInstances/OneRow.hs,149
+module OrphanInstances.OneRow OrphanInstances.OneRow2,3
+instance (D(Display a) => Display (OneRow a)11,12
+  displayBuilder displayBuilder12,13
+
+./src/OrphanInstances/IPRange.hs,60
+module OrphanInstances.IPRange OrphanInstances.IPRange3,4
+
+./src/OrphanInstances/UTCTime.hs,60
+module OrphanInstances.UTCTime OrphanInstances.UTCTime3,4
+
+./src/OrphanInstances/NonEmptyText.hs,893
+module OrphanInstances.NonEmptyText OrphanInstances.NonEmptyText3,4
+instance Aeson.ToJSON Aeson-ToJSON NonEmptyText19,20
+  toJSON toJSON20,21
+instance Aeson.FromJSON Aeson-FromJSON NonEmptyText22,23
+  parseJSON parseJSON23,24
+instance Display Display NonEmptyText25,26
+  displayBuilder displayBuilder26,27
+instance DecodeValue DecodeValue NonEmptyText28,29
+  decodeValue decodeValue29,30
+instance EncodeValue EncodeValue NonEmptyText31,32
+  encodeValue encodeValue32,33
+instance Servant.ToHttpApiData Servant-ToHttpApiData NonEmptyText34,35
+  toUrlPiece toUrlPiece35,36
+  toQueryParam toQueryParam36,37
+instance Servant.FromHttpApiData Servant-FromHttpApiData NonEmptyText38,39
+  parseUrlPiece parseUrlPiece39,40
+  parseQueryParam parseQueryParam40,41
+instance Lucid.ToHtml Lucid-ToHtml NonEmptyText42,43
+  toHtml toHtml43,44
+  toHtmlRaw toHtmlRaw44,45
+
+./src/OrphanInstances/Password.hs,562
+module OrphanInstances.Password OrphanInstances.Password3,4
+instance Aeson.ToJSON Aeson-ToJSON Password17,18
+  toJSON toJSON18,19
+instance Aeson.FromJSON Aeson-FromJSON Password20,21
+  parseJSON parseJSON21,22
+instance Display Display Password23,24
+  displayBuilder displayBuilder24,25
+instance Display Display (PasswordHash x)26,27
+  displayBuilder displayBuilder27,28
+instance Display Display CharacterCategory33,34
+  displayBuilder displayBuilder34,35
+instance Display Display InvalidReason40,41
+  displayBuilder displayBuilder41,42
+
+./src/OrphanInstances/CaseInsensitive.hs,269
+module OrphanInstances.CaseInsensitive OrphanInstances.CaseInsensitive2,3
+instance (E(EncodeValue a) => EncodeValue (CI a)13,14
+  encodeValue encodeValue14,15
+instance (C(CI-FoldCase a, DecodeValue a) => DecodeValue (CI a)16,17
+  decodeValue decodeValue17,18
+
+./src/OrphanInstances/UUID.hs,54
+module OrphanInstances.UUID OrphanInstances.UUID3,4
+
+./src/OrphanInstances/Servant.hs,251
+module OrphanInstances.Servant OrphanInstances.Servant2,3
+instance (D(Display a) => Display (Servant-Headers x a)11,12
+  displayBuilder displayBuilder12,13
+instance Display Display Servant-NoContent14,15
+  displayBuilder displayBuilder15,16
+
+./src/Text/HTML.hs,427
+module Text.HTMLText.HTML2,3
+data HTML HTML25,26
+data HTML = HTMLHTML25,26
+instance Accept Accept HTML27,28
+  contentType contentType28,29
+instance MimeRender MimeRender HTML (Lucid-Html ())30,31
+  mimeRender mimeRender31,32
+instance Display Display (Lucid-Html ())33,34
+  displayBuilder displayBuilder34,35
+renderNodes renderNodes39,40
+parseDocument parseDocument47,48
+parseFragment parseFragment51,52
+
+./src/Effects/Clock.hs,119
+module Effects.ClockEffects.Clock0,1
+class MonadClock MonadClock15,16
+  currentSystemTime currentSystemTime16,17
+
+./src/Effects/Log/Class.hs,661
+module Effects.Log.ClassEffects.Log.Class0,1
+data LogLevel LogLevel24,25
+data LogLevel = Debug Debug24,25
+data LogLevel = Debug | Info Info24,25
+data LogLevel = Debug | Info | Warn Warn24,25
+data LogLevel = Debug | Info | Warn | ErrorError24,25
+data LogEnv LogEnv27,28
+data LogEnv = LogEnvLogEnv27,28
+  { logLogger logLogger28,29
+    logMinLevel logMinLevel29,30
+class (MonadIO m) => MonadLog MonadLog32,33
+  logMessage logMessage33,34
+instance (H(Has LogEnv env, MonadIO m) => MonadLog (ReaderT env m)35,36
+  logMessage logMessage36,37
+logDebug logDebug43,44
+logInfo logInfo46,47
+logWarn logWarn49,50
+logError logError52,53
+
+./src/Effects/Observability.hs,791
+module Effects.Observability Effects.Observability5,6
+printPrimitiveAttribute printPrimitiveAttribute46,47
+printAttribute printAttribute52,53
+stdoutFormatter stdoutFormatter56,57
+noOpExporter noOpExporter97,98
+mkAcquire mkAcquire100,101
+withTracer withTracer106,107
+handlerSpan handlerSpan125,126
+handlerSpan handlerSpan136,137
+newtype Print Print170,171
+instance (S(Servant-HasServer api ctx) => Servant-HasServer (Print api) ctx172,173
+  type ServerT ServerT173,174
+  route route175,176
+  hoistServerWithContext hoistServerWithContext185,186
+data WithSpan WithSpan189,190
+instance forall forall label sub- (Links-HasLink sub) => Links-HasLink (WithSpan label sub)217,218
+  type MkLink MkLink218,219
+  toLink toLink219,220
+wrapInSpan wrapInSpan221,222
+
+./src/Effects/Database/Tables/ServerSessions.hs,1104
+module Effects.Database.Tables.ServerSessions Effects.Database.Tables.ServerSessions2,3
+parseSessionId parseSessionId29,30
+newtype Id Id32,33
+data Model Model46,47
+data Model = ModelModel46,47
+  { mSessionId mSessionId47,48
+    mUserId mUserId48,49
+    mIpAddress mIpAddress49,50
+    mUserAgent mUserAgent50,51
+    mExpiresAt mExpiresAt51,52
+data Domain Domain57,58
+data Domain = DomainDomain57,58
+  { dSessionId dSessionId58,59
+    dUserId dUserId59,60
+    dIpAddress dIpAddress60,61
+    dUserAgent dUserAgent61,62
+    dExpiresAt dExpiresAt62,63
+toDomain toDomain67,68
+getServerSession getServerSession79,80
+getServerSessionByUser getServerSessionByUser90,91
+getSessionUser getSessionUser101,102
+data ServerSessionInsert ServerSessionInsert146,147
+data ServerSessionInsert = ServerSessionInsertServerSessionInsert146,147
+  { ssiUserId ssiUserId147,148
+    ssiIpAddress ssiIpAddress148,149
+    ssiUserAgent ssiUserAgent149,150
+    ssiExpiresAt ssiExpiresAt150,151
+insertServerSession insertServerSession156,157
+expireSession expireSession166,167
+
+./src/Effects/Database/Tables/User.hs,744
+module Effects.Database.Tables.User Effects.Database.Tables.User3,4
+newtype Id Id22,23
+data Model Model40,41
+data Model = ModelModel40,41
+  { mId mId41,42
+    mEmail mEmail42,43
+    mPassword mPassword43,44
+data Domain Domain50,51
+data Domain = DomainDomain50,51
+  { dId dId51,52
+    dEmail dEmail52,53
+toDomain toDomain58,59
+getUsers getUsers67,68
+getUser getUser76,77
+getUserByEmail getUserByEmail86,87
+getUserByCredential getUserByCredential96,97
+data ModelInsert ModelInsert106,107
+data ModelInsert = ModelInsertModelInsert106,107
+  { miEmail miEmail107,108
+    miPassword miPassword108,109
+insertUser insertUser114,115
+deleteUser deleteUser124,125
+changeUserPassword changeUserPassword133,134
+
+./src/Effects/Database/SerializedStatement.hs,300
+module Effects.Database.SerializedStatement Effects.Database.SerializedStatement0,1
+data SerializedStatement SerializedStatement10,11
+data SerializedStatement = SerializedStatementSerializedStatement10,11
+  { sql sql11,12
+    params params12,13
+serializeStatement serializeStatement15,16
+
+./src/Effects/Database/Class.hs,286
+module Effects.Database.Class Effects.Database.Class2,3
+class (MonadIO m) => MonadDB MonadDB22,23
+  runDB runDB23,24
+instance (H(Has HSQL-Pool env, MonadIO m) => MonadDB (ReaderT env m)25,26
+  runDB runDB26,27
+execStatement execStatement31,32
+healthCheck healthCheck34,35
+
+./src/Effects/Database/Execute.hs,398
+module Effects.Database.Execute Effects.Database.Execute0,1
+execQuerySpan execQuerySpan31,32
+execQuerySpan execQuerySpan41,42
+toStatementAttributes toStatementAttributes84,85
+execQuerySpanThrow execQuerySpanThrow99,100
+execQuerySpanThrow execQuerySpanThrow111,112
+execQuerySpanThrowMessage execQuerySpanThrowMessage118,119
+execQuerySpanThrowMessage execQuerySpanThrowMessage130,131
+
+./src/App/Errors.hs,1152
+module App.Errors App.Errors0,1
+import import5,6
+toErrorBody toErrorBody16,17
+class ToServerError ToServerError19,20
+  toServerError toServerError20,21
+  toServerLog toServerLog21,22
+instance ToServerError ToServerError Servant-ServerError23,24
+  toServerError toServerError24,25
+  toServerLog toServerLog25,26
+throwErr throwErr32,33
+data Unauthorized Unauthorized39,40
+data Unauthorized = UnauthorizedUnauthorized39,40
+instance ToServerError ToServerError Unauthorized41,42
+  toServerError toServerError42,43
+  toServerLog toServerLog43,44
+data Forbidden Forbidden45,46
+data Forbidden = ForbiddenForbidden45,46
+instance ToServerError ToServerError Forbidden47,48
+  toServerError toServerError48,49
+  toServerLog toServerLog49,50
+data NotFound NotFound51,52
+data NotFound = NotFoundNotFound51,52
+instance ToServerError ToServerError NotFound53,54
+  toServerError toServerError54,55
+  toServerLog toServerLog55,56
+newtype InternalServerError InternalServerError57,58
+instance ToServerError ToServerError InternalServerError59,60
+  toServerError toServerError60,61
+  toServerLog toServerLog61,62
+
+./src/App/Context.hs,1090
+module App.Context App.Context3,4
+data AppContext AppContext23,24
+data AppContext context = AppContextAppContext23,24
+  { appDbPool appDbPool24,25
+    appTracer appTracer25,26
+    appHostname appHostname26,27
+    appEnvironment appEnvironment27,28
+    appLoggerEnv appLoggerEnv28,29
+    appCustom appCustom29,30
+instance Has.Has Has-Has HSQL-Pool (AppContext ctx)32,33
+  getter getter33,34
+  modifier modifier34,35
+instance Has.Has Has-Has OTEL-Tracer (AppContext ctx)36,37
+  getter getter37,38
+  modifier modifier38,39
+instance Has.Has Has-Has Hostname (AppContext ctx)40,41
+  getter getter41,42
+  modifier modifier42,43
+instance Has.Has Has-Has Environment (AppContext ctx)44,45
+  getter getter45,46
+  modifier modifier46,47
+instance Has.Has Has-Has LogEnv (AppContext ctx)48,49
+  getter getter49,50
+  modifier modifier50,51
+type family family52,53
+  EndsWith EndsWith53,54
+appendContext appendContext57,58
+type family family62,63
+  Append Append63,64
+type AuthContext AuthContext66,67
+type ServantContext ServantContext68,69
+
+./src/App/Config/Fetchers.hs,927
+module App.Config.Fetchers App.Config.Fetchers6,7
+readText readText30,31
+packText packText33,34
+parseEnv :: (Text -> a) -> String -> (IO `Compose`Compose37,38
+parseEnv parseEnv37,38
+parseEnvOptional parseEnvOptional41,42
+parseEnvStr :: (IsString a) => String -> (IO `Compose`Compose48,49
+parseEnvStr parseEnvStr48,49
+parseEnvDefault :: a -> (Text -> Maybe a) -> String -> (IO `Compose`Compose56,57
+parseEnvDefault parseEnvDefault56,57
+parseEnvDefaultStr :: (IsString a) => a -> String -> (IO `Compose`Compose64,65
+parseEnvDefaultStr parseEnvDefaultStr64,65
+readEnv :: (Read a) => String -> (IO `Compose`Compose71,72
+readEnv readEnv71,72
+readEnvDefault :: (Read a) => a -> String -> (IO `Compose`Compose76,77
+readEnvDefault readEnvDefault76,77
+class FetchHKD FetchHKD84,85
+  type Concrete Concrete85,86
+  fromEnv fromEnv87,88
+  toConcrete toConcrete92,93
+fetchFromEnv fetchFromEnv94,95
+
+./src/App/Monad.hs,345
+module App.Monad App.Monad0,1
+newtype AppM AppM25,26
+newtype AppM ctx a = AppM {runAppM runAppM25,26
+instance MonadClock MonadClock (AppM ctx)30,31
+  currentSystemTime currentSystemTime31,32
+instance MonadDB MonadDB (AppM ctx)33,34
+  runDB runDB34,35
+instance MonadTracer MonadTracer (AppM ctx)39,40
+  getTracer getTracer40,41
+
+./src/App/Config.hs,3785
+module App.Config App.Config6,7
+data Environment Environment24,25
+data Environment = Development Development24,25
+data Environment = Development | ProductionProduction24,25
+isProduction isProduction28,29
+newtype Hostname Hostname35,36
+newtype Hostname = Hostname {getHostName getHostName35,36
+data WarpConfig WarpConfig41,42
+data WarpConfig = WarpConfigWarpConfig41,42
+  { warpConfigPort warpConfigPort42,43
+    warpConfigTimeout warpConfigTimeout43,44
+    warpConfigServerName warpConfigServerName44,45
+data WarpConfigF WarpConfigF48,49
+data WarpConfigF f = WarpConfigFWarpConfigF48,49
+  { warpConfigFPort warpConfigFPort49,50
+    warpConfigFTimeout warpConfigFTimeout50,51
+    warpConfigFServerName warpConfigFServerName51,52
+instance FetchHKD FetchHKD WarpConfigF56,57
+  type Concrete Concrete57,58
+  fromEnv fromEnv59,60
+  toConcrete toConcrete67,68
+data PostgresConfig PostgresConfig76,77
+data PostgresConfig = PostgresConfigPostgresConfig76,77
+  { postgresConfigHost postgresConfigHost77,78
+    postgresConfigPort postgresConfigPort78,79
+    postgresConfigDB postgresConfigDB79,80
+    postgresConfigUser postgresConfigUser80,81
+    postgresConfigPassword postgresConfigPassword81,82
+data PostgresConfigF PostgresConfigF85,86
+data PostgresConfigF f = PostgresConfigFPostgresConfigF85,86
+  { postgresConfigFHost postgresConfigFHost86,87
+    postgresConfigFPort postgresConfigFPort87,88
+    postgresConfigFDB postgresConfigFDB88,89
+    postgresConfigFUser postgresConfigFUser89,90
+    postgresConfigFPassword postgresConfigFPassword90,91
+instance FetchHKD FetchHKD PostgresConfigF95,96
+  type Concrete Concrete96,97
+  fromEnv fromEnv98,99
+  toConcrete toConcrete108,109
+data ObservabilityConfig ObservabilityConfig119,120
+data ObservabilityConfig = ObservabilityConfigObservabilityConfig119,120
+  { observabilityConfigVerbosity observabilityConfigVerbosity120,121
+    observabilityConfigExporter observabilityConfigExporter121,122
+data Verbosity Verbosity132,133
+data Verbosity = Quiet Quiet132,133
+data Verbosity = Quiet | Brief Brief132,133
+data Verbosity = Quiet | Brief | Verbose Verbose132,133
+data Verbosity = Quiet | Brief | Verbose | DebugDebug132,133
+data AppExporter AppExporter135,136
+data AppExporter = StdOut StdOut135,136
+data AppExporter = StdOut | Otel Otel135,136
+data AppExporter = StdOut | Otel | NoneNone135,136
+data ObservabilityConfigF ObservabilityConfigF138,139
+data ObservabilityConfigF f = ObservabilityConfigFObservabilityConfigF138,139
+  { observabilityConfigFVerbosity observabilityConfigFVerbosity139,140
+    observabilityConfigFExporter observabilityConfigFExporter140,141
+instance FetchHKD FetchHKD ObservabilityConfigF145,146
+  type Concrete Concrete146,147
+  fromEnv fromEnv148,149
+  toConcrete toConcrete156,157
+data AppConfig AppConfig164,165
+data AppConfig = AppConfigAppConfig164,165
+  { appConfigWarpSettings appConfigWarpSettings165,166
+    appConfigPostgresSettings appConfigPostgresSettings166,167
+    appConfigEnvironment appConfigEnvironment167,168
+    appConfigObservability appConfigObservability168,169
+    appConfigHostname appConfigHostname169,170
+data AppConfigF AppConfigF173,174
+data AppConfigF f = AppConfigFAppConfigF173,174
+  { appConfigFWarpSettings appConfigFWarpSettings174,175
+    appConfigFPostgresSettings appConfigFPostgresSettings175,176
+    appConfigFEnvironment appConfigFEnvironment176,177
+    appConfigFObservability appConfigFObservability177,178
+    appConfigFHostname appConfigFHostname178,179
+instance FetchHKD FetchHKD AppConfigF183,184
+  type Concrete Concrete184,185
+  fromEnv fromEnv186,187
+  toConcrete toConcrete196,197
+getConfig getConfig207,208
+
+./src/App/Auth.hs,1226
+module App.Auth App.Auth4,5
+parseSessionId parseSessionId49,50
+runDB runDB54,55
+execStatement execStatement65,66
+healthCheck healthCheck74,75
+getSessionUser getSessionUser77,78
+type instance instance116,117
+data Authz Authz118,119
+data Authz = AuthzAuthz118,119
+  { authzUser authzUser119,120
+    authzSession authzSession120,121
+data AuthErrAuthErr123,124
+  = MissingCookieHeaderMissingCookieHeader124,125
+  | MissingCookieValueMissingCookieValue125,126
+  | MalformedSessionIdMalformedSessionId126,127
+instance ToServerError ToServerError AuthErr129,130
+  toServerError toServerError130,131
+  toServerLog toServerLog134,135
+authHandler authHandler139,140
+mkRedirect mkRedirect172,173
+getAuth getAuth179,180
+login login198,199
+login login208,209
+mkIpRange mkIpRange214,215
+expireServerSession expireServerSession220,221
+expireServerSession expireServerSession228,229
+lookupSessionId lookupSessionId230,231
+data LoggedIn LoggedIn234,235
+data LoggedIn = IsLoggedIn IsLoggedIn234,235
+data LoggedIn = IsLoggedIn User.Model | IsNotLoggedInIsNotLoggedIn234,235
+isLoggedIn isLoggedIn236,237
+userLoginState userLoginState241,242
+mkCookieSession mkCookieSession256,257
+
+./src/App.hs,300
+module App App5,6
+import import18,19
+runApp runApp52,53
+acquirePool acquirePool92,93
+mkWarpSettings mkWarpSettings113,114
+mkWarpLogger mkWarpLogger123,124
+shutdownHandler shutdownHandler144,145
+type ServerContext ServerContext150,151
+interpret interpret152,153
+mkApp mkApp159,160
+
+./src/Lucid/Extras.hs,1091
+module Lucid.Extras Lucid.Extras0,1
+path_ path_10,11
+ariaHidden_ ariaHidden_13,14
+ariaLabelledby_ ariaLabelledby_16,17
+viewBox_ viewBox_19,20
+version_ version_22,23
+d_ d_25,26
+dataViewComponent_ dataViewComponent_28,29
+xData_ xData_34,35
+xModel_ xModel_37,38
+xBindHidden_ xBindHidden_40,41
+xOnBlur_ xOnBlur_43,44
+xOnInput_ xOnInput_46,47
+xOnChange_ xOnChange_49,50
+xOnClick_ xOnClick_52,53
+xBindClass_ xBindClass_55,56
+xBindDisabled_ xBindDisabled_58,59
+xRef_ xRef_61,62
+xHtml_ xHtml_64,65
+dataDropdownToggle_ dataDropdownToggle_67,68
+dataDropdownOffsetDistance_ dataDropdownOffsetDistance_70,71
+dataDropdownTrigger_ dataDropdownTrigger_73,74
+hxGet_ hxGet_79,80
+hxPatch_ hxPatch_82,83
+hxPost_ hxPost_85,86
+hxDelete_ hxDelete_88,89
+hxSwap_ hxSwap_91,92
+hxTarget_ hxTarget_94,95
+hxPushUrl_ hxPushUrl_97,98
+hxInclude_ hxInclude_100,101
+hxParams_ hxParams_103,104
+hxSelect_ hxSelect_106,107
+hxTrigger_ hxTrigger_109,110
+hxOn_ hxOn_112,113
+hxOnAfterRequest_ hxOnAfterRequest_115,116
+hxFollowDirects_ hxFollowDirects_118,119

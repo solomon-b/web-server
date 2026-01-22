@@ -3,7 +3,23 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module App where
+module App
+  ( -- * Application Entry Points
+    runApp,
+    withAppResources,
+    runServer,
+
+    -- * Server Configuration
+    ServerContext,
+    mkApp,
+    interpret,
+
+    -- * Utility Functions
+    acquirePool,
+    mkLogLevel,
+    mkWarpSettings,
+  )
+where
 
 --------------------------------------------------------------------------------
 
@@ -49,19 +65,19 @@ import System.Posix.Signals qualified as Posix
 
 --------------------------------------------------------------------------------
 
-runApp ::
-  forall api ctx.
-  (Servant.HasServer api ServerContext) =>
-  (Environment -> Servant.ServerT api (AppM ctx)) ->
-  ctx ->
-  IO ()
-runApp server ctx = do
+-- | Acquire application resources in a bracket pattern.
+-- This allows running code with access to the initialized AppContext
+-- without starting the HTTP server - useful for background jobs,
+-- testing, or custom resource coordination.
+withAppResources :: ctx -> (AppContext ctx -> IO a) -> IO a
+withAppResources ctx action = do
   time <- getCurrentTime
   Log.withJsonStdOutLogger $ \stdOutLogger -> do
     getConfig >>= \case
       Nothing -> do
         let logEnv = Log.LoggerEnv stdOutLogger "webserver-backend" [] [] Log.LogInfo
         Log.logMessageIO logEnv time Log.LogAttention "Config Failure" (Aeson.toJSON ())
+        error "Failed to load configuration"
       Just AppConfig {..} -> do
         let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname $ "localhost:" <> display (warpConfigPort appConfigWarpSettings)
 
@@ -78,15 +94,45 @@ runApp server ctx = do
         when (isLeft healthCheckResult) $
           Log.logMessageIO logEnv time Log.LogAttention "webserver-backend: Postres healthcheck failed" (Aeson.toJSON $ KeyMap.fromList ["error" .= show healthCheckResult])
 
-        -- Run App with tracing
+        -- Run action with tracing
         Observability.withTracer appConfigObservability $ \tracerProvider mkTracer -> do
           let tracer = mkTracer OTEL.tracerOptions
-          let otelMiddleware = newOpenTelemetryWaiMiddleware' tracerProvider
+              appContext = AppContext
+                { appDbPool = pgPool
+                , appTracer = tracer
+                , appTracerProvider = tracerProvider
+                , appHostname = hostname
+                , appEnvironment = appConfigEnvironment
+                , appLoggerEnv = logEnv
+                , appWarpConfig = appConfigWarpSettings
+                , appCustom = ctx
+                }
+          action appContext
 
-          let servantContext = tracer :. authHandler pgPool :. Servant.EmptyContext
-              appContext = AppContext pgPool tracer hostname appConfigEnvironment logEnv ctx
-              warpSettings = mkWarpSettings logEnv appConfigWarpSettings
-          Warp.runSettings warpSettings (otelMiddleware $ mkApp @api server servantContext appContext)
+-- | Run the HTTP server with an already-initialized AppContext.
+-- Useful when you need to coordinate the server with other subsystems
+-- or run it alongside background jobs.
+runServer ::
+  forall api ctx.
+  (Servant.HasServer api ServerContext) =>
+  (Environment -> Servant.ServerT api (AppM ctx)) ->
+  AppContext ctx ->
+  IO ()
+runServer server appCtx = do
+  let otelMiddleware = newOpenTelemetryWaiMiddleware' (appTracerProvider appCtx)
+      servantContext = appTracer appCtx :. authHandler (appDbPool appCtx) :. Servant.EmptyContext
+      warpSettings = mkWarpSettings (appLoggerEnv appCtx) (appWarpConfig appCtx)
+  Warp.runSettings warpSettings (otelMiddleware $ mkApp @api server servantContext appCtx)
+
+-- | Run the application server. This is the main entry point that combines
+-- resource acquisition with server execution.
+runApp ::
+  forall api ctx.
+  (Servant.HasServer api ServerContext) =>
+  (Environment -> Servant.ServerT api (AppM ctx)) ->
+  ctx ->
+  IO ()
+runApp server ctx = withAppResources ctx (runServer @api server)
 
 acquirePool :: PostgresConfig -> IO HSQL.Pool.Pool
 acquirePool PostgresConfig {..} = do
