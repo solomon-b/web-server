@@ -24,9 +24,11 @@ import Servant.Server.Experimental.Auth (AuthHandler)
 data AppContext context = AppContext
   { appDbPool :: HSQL.Pool,
     appTracer :: OTEL.Tracer,
+    appTracerProvider :: OTEL.TracerProvider,
     appHostname :: Hostname,
     appEnvironment :: Environment,
     appLoggerEnv :: Log.LoggerEnv,
+    appWarpConfig :: WarpConfig,
     appCustom :: context
   }
 
@@ -49,6 +51,14 @@ instance Has.Has Environment (AppContext ctx) where
 instance Has.Has Log.LoggerEnv (AppContext ctx) where
   getter = appLoggerEnv
   modifier f ctx@AppContext {appLoggerEnv} = ctx {appLoggerEnv = f appLoggerEnv}
+
+instance Has.Has OTEL.TracerProvider (AppContext ctx) where
+  getter = appTracerProvider
+  modifier f ctx@AppContext {appTracerProvider} = ctx {appTracerProvider = f appTracerProvider}
+
+instance Has.Has WarpConfig (AppContext ctx) where
+  getter = appWarpConfig
+  modifier f ctx@AppContext {appWarpConfig} = ctx {appWarpConfig = f appWarpConfig}
 
 type family EndsWith (xs :: [Type]) (needle :: Type) :: Constraint where
   EndsWith '[needle] needle = ()
