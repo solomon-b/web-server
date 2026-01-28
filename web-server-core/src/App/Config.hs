@@ -21,13 +21,14 @@ import GHC.Generics
 
 --------------------------------------------------------------------------------
 
-data Environment = Development | Production
+data Environment = Development | Staging | Production
   deriving (Generic, Show)
   deriving anyclass (ToJSON)
 
 isProduction :: Environment -> Bool
 isProduction = \case
   Development -> False
+  Staging -> False
   Production -> True
 
 --------------------------------------------------------------------------------
@@ -187,7 +188,7 @@ instance FetchHKD AppConfigF where
   fromEnv =
     AppConfigF
       { appConfigFWarpSettings = fromEnv,
-        appConfigFEnvironment = parseEnvDefault Development (\case "Development" -> Just Development; "Production" -> Just Production; _ -> Nothing) "APP_ENVIRONMENT",
+        appConfigFEnvironment = parseEnvDefault Development (\case "Development" -> Just Development; "Staging" -> Just Staging; "Production" -> Just Production; _ -> Nothing) "APP_ENVIRONMENT",
         appConfigFPostgresSettings = fromEnv,
         appConfigFObservability = fromEnv,
         appConfigFHostname = parseEnvStr "APP_HOSTNAME"
