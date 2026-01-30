@@ -96,6 +96,7 @@ withAppResources ctx action = do
                 { appDbPool = pgPool,
                   appHostname = hostname,
                   appEnvironment = appConfigEnvironment,
+                  appVerbosity = verbosityConfigVerbosity appConfigVerbosity,
                   appLoggerEnv = logEnv,
                   appWarpConfig = appConfigWarpSettings,
                   appCustom = ctx
