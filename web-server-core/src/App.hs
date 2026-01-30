@@ -44,7 +44,6 @@ import Data.Text.Display (display)
 import Data.Text.Encoding qualified as TE
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (getCurrentTime)
-import Effects.Observability qualified as Observability
 import Hasql.Connection.Setting qualified as HSQL.Setting
 import Hasql.Connection.Setting.Connection qualified as HSQL.Connection
 import Hasql.Connection.Setting.Connection.Param qualified as HSQL.Params
@@ -56,8 +55,6 @@ import Network.HTTP.Types.Status qualified as Status
 import Network.Wai (Request)
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
-import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
-import OpenTelemetry.Trace qualified as OTEL
 import Servant (Context ((:.)))
 import Servant qualified
 import Servant.Server.Experimental.Auth (AuthHandler)
@@ -82,7 +79,7 @@ withAppResources ctx action = do
         let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname $ "localhost:" <> display (warpConfigPort appConfigWarpSettings)
 
         -- Log Env
-        let maxLogLevel = mkLogLevel $ observabilityConfigVerbosity appConfigObservability
+        let maxLogLevel = mkLogLevel $ verbosityConfigVerbosity appConfigVerbosity
             logEnv = Log.LoggerEnv stdOutLogger "webserver-backend" [] [] maxLogLevel
         Log.logMessageIO logEnv time Log.LogInfo "Launching Service" (Aeson.toJSON $ KeyMap.fromList ["port" .= warpConfigPort appConfigWarpSettings, "environment" .= appConfigEnvironment, "log-level" .= maxLogLevel])
 
@@ -94,20 +91,16 @@ withAppResources ctx action = do
         when (isLeft healthCheckResult) $
           Log.logMessageIO logEnv time Log.LogAttention "webserver-backend: Postres healthcheck failed" (Aeson.toJSON $ KeyMap.fromList ["error" .= show healthCheckResult])
 
-        -- Run action with tracing
-        Observability.withTracer appConfigObservability $ \tracerProvider mkTracer -> do
-          let tracer = mkTracer OTEL.tracerOptions
-              appContext = AppContext
-                { appDbPool = pgPool
-                , appTracer = tracer
-                , appTracerProvider = tracerProvider
-                , appHostname = hostname
-                , appEnvironment = appConfigEnvironment
-                , appLoggerEnv = logEnv
-                , appWarpConfig = appConfigWarpSettings
-                , appCustom = ctx
+        let appContext =
+              AppContext
+                { appDbPool = pgPool,
+                  appHostname = hostname,
+                  appEnvironment = appConfigEnvironment,
+                  appLoggerEnv = logEnv,
+                  appWarpConfig = appConfigWarpSettings,
+                  appCustom = ctx
                 }
-          action appContext
+        action appContext
 
 -- | Run the HTTP server with an already-initialized AppContext.
 -- Useful when you need to coordinate the server with other subsystems
@@ -119,10 +112,9 @@ runServer ::
   AppContext ctx ->
   IO ()
 runServer server appCtx = do
-  let otelMiddleware = newOpenTelemetryWaiMiddleware' (appTracerProvider appCtx)
-      servantContext = appTracer appCtx :. authHandler (appDbPool appCtx) :. Servant.EmptyContext
+  let servantContext = authHandler (appDbPool appCtx) :. Servant.EmptyContext
       warpSettings = mkWarpSettings (appLoggerEnv appCtx) (appWarpConfig appCtx)
-  Warp.runSettings warpSettings (otelMiddleware $ mkApp @api server servantContext appCtx)
+  Warp.runSettings warpSettings (mkApp @api server servantContext appCtx)
 
 -- | Run the application server. This is the main entry point that combines
 -- resource acquisition with server execution.
@@ -189,7 +181,7 @@ shutdownHandler closeSocket =
 
 --------------------------------------------------------------------------------
 
-type ServerContext = '[OTEL.Tracer, AuthHandler Request Authz]
+type ServerContext = '[AuthHandler Request Authz]
 
 interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
 interpret ctx (AppM appM) =

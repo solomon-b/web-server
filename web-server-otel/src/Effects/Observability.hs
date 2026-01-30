@@ -3,11 +3,32 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Effects.Observability where
+module Effects.Observability
+  ( -- * Tracer initialization
+    withTracer,
+
+    -- * Span utilities
+    handlerSpan,
+
+    -- * Servant combinators
+    WithSpan,
+    wrapInSpan,
+
+    -- * Formatters
+    stdoutFormatter,
+
+    -- * Exporters
+    noOpExporter,
+    mkAcquire,
+  )
+where
 
 --------------------------------------------------------------------------------
 
-import App.Config (AppExporter (..), ObservabilityConfig (..), Verbosity (..))
+import App.Config (Verbosity (..))
+import Data.Time (getCurrentTime)
+import Config.Otel (AppExporter (..), ObservabilityConfig (..))
+import Data.Aeson qualified as Aeson
 import Control.Exception (bracket)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
 import Control.Monad.Except (ExceptT (..))
@@ -36,11 +57,11 @@ import OpenTelemetry.Trace (ImmutableSpan (..))
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Core qualified as Trace
 import OpenTelemetry.Util (appendOnlyBoundedCollectionValues)
+import Log qualified
 import Servant qualified
-import Servant.Server.Internal.Delayed (Delayed (..), addMethodCheck)
+import Servant.API qualified as Links
+import Servant.Server.Internal.Delayed (addMethodCheck)
 import Servant.Server.Internal.DelayedIO (withRequest)
-import Servant.Server.Internal.Router (Router)
-import qualified Servant.API as Links
 
 --------------------------------------------------------------------------------
 
@@ -104,17 +125,20 @@ mkAcquire exporter = do
   processor <- simpleProcessor . SimpleProcessorConfig $ exporter
   OTEL.createTracerProvider [processor] providerOpts
 
-withTracer :: ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
-withTracer (ObservabilityConfig verbosity exporter) f =
-  let acquire = case exporter of
+withTracer :: Log.LoggerEnv -> Verbosity -> ObservabilityConfig -> (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
+withTracer logEnv verbosity (ObservabilityConfig exporter) f =
+  let logInfo msg = do
+        time <- getCurrentTime
+        Log.logMessageIO logEnv time Log.LogInfo msg (Aeson.object [])
+      acquire = case exporter of
         Otel -> do
-          putStrLn "Using StdOut Exporter"
+          logInfo "OpenTelemetry: Using OTEL exporter"
           OTEL.initializeGlobalTracerProvider
         StdOut -> do
-          putStrLn "Using StdOut Exporter"
+          logInfo "OpenTelemetry: Using StdOut exporter"
           mkAcquire $ stdoutExporter' (pure . stdoutFormatter verbosity)
         None -> do
-          putStrLn "Open Telemetry Exporter Disabled"
+          logInfo "OpenTelemetry: Exporter disabled"
           mkAcquire noOpExporter
       release = case exporter of
         None -> \_ -> pure ()
@@ -145,45 +169,14 @@ handlerSpan handlerName handlerAction = do
     --       newEventTimestamp = Nothing
     --     }
 
-    handlerResult <-
-      handlerAction `catchAll` \exception -> do
-        OTEL.addEvent reqSpan $
-          OTEL.NewEvent
-            { newEventName = "handler error",
-              newEventAttributes = HashMap.fromList [("error", OTEL.toAttribute . Text.pack . show $ exception)],
-              newEventTimestamp = Nothing
-            }
-        throwM exception
-
-    -- OTEL.addEvent reqSpan $
-    --   OTEL.NewEvent
-    --     { newEventName = "handler success",
-    --       newEventAttributes = HashMap.fromList [("response", OTEL.toAttribute . display . getRes $ handlerResult)],
-    --       newEventTimestamp = Nothing
-    --     }
-
-    -- TODO: Disambiguate Response data from rendered Response
-    -- Log.logInfo handlerName $ Aeson.object ["request-data" .= req, "response-data" .= ("getRes handlerResult" :: Text)]
-    pure handlerResult
-
---------------------------------------------------------------------------------
-
-newtype Print api = Print api
-
-instance (Servant.HasServer api ctx) => Servant.HasServer (Print api) ctx where
-  type ServerT (Print api) m = Servant.ServerT api m
-
-  route ::
-    Proxy (Print api) ->
-    Servant.Context ctx ->
-    Delayed env (Servant.ServerT api Servant.Handler) ->
-    Router env
-  route _ context delayed =
-    Servant.route (Proxy :: Proxy api) context $
-      addMethodCheck delayed $
-        withRequest (\_req -> liftIO $ putStrLn "HELLO WORLD !!!!!!!!!!!!!!!!!!!!")
-
-  hoistServerWithContext _ = Servant.hoistServerWithContext (Proxy :: Proxy api)
+    handlerAction `catchAll` \exception -> do
+      OTEL.addEvent reqSpan $
+        OTEL.NewEvent
+          { newEventName = "handler error",
+            newEventAttributes = HashMap.fromList [("error", OTEL.toAttribute . Text.pack . show $ exception)],
+            newEventTimestamp = Nothing
+          }
+      throwM exception
 
 --------------------------------------------------------------------------------
 
