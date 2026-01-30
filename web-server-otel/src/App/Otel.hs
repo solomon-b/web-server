@@ -89,7 +89,7 @@ runServerWithOtel ::
 runServerWithOtel server appCtx = do
   let otelCtx = getOtelContext (appCustom appCtx)
       otelMiddleware = newOpenTelemetryWaiMiddleware' (otelTracerProvider otelCtx)
-      servantContext = otelTracer otelCtx :. authHandler (appDbPool appCtx) :. Servant.EmptyContext
+      servantContext = otelTracer otelCtx :. authHandler (appDbPool appCtx) (appEnvironment appCtx) :. Servant.EmptyContext
       warpSettings = mkWarpSettings (appLoggerEnv appCtx) (appWarpConfig appCtx)
   Warp.runSettings warpSettings (otelMiddleware $ mkAppWithOtel @api server servantContext appCtx)
 

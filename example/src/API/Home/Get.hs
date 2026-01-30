@@ -5,9 +5,12 @@ module API.Home.Get
 where
 
 import App.Auth qualified as Auth
+import App.Config (Environment)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Reader (MonadReader)
+import Control.Monad.Reader qualified as Reader
 import Data.Has (Has)
+import Data.Has qualified as Has
 import Data.Text (Text)
 import Hasql.Pool qualified as HSQL
 import Log qualified
@@ -29,10 +32,12 @@ handler ::
   ( MonadIO m,
     MonadReader env m,
     Has HSQL.Pool env,
+    Has Environment env,
     Log.MonadLog m
   ) =>
   Maybe Text ->
   m (Lucid.Html ())
 handler cookie = do
-  loginState <- Auth.userLoginState cookie
+  env <- Reader.asks Has.getter
+  loginState <- Auth.userLoginState env cookie
   pure $ homePage loginState

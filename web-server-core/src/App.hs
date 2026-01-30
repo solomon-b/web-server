@@ -112,7 +112,7 @@ runServer ::
   AppContext ctx ->
   IO ()
 runServer server appCtx = do
-  let servantContext = authHandler (appDbPool appCtx) :. Servant.EmptyContext
+  let servantContext = authHandler (appDbPool appCtx) (appEnvironment appCtx) :. Servant.EmptyContext
       warpSettings = mkWarpSettings (appLoggerEnv appCtx) (appWarpConfig appCtx)
   Warp.runSettings warpSettings (mkApp @api server servantContext appCtx)
 
