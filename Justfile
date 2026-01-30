@@ -18,7 +18,7 @@ SHELLCHECK := "$(shellcheck --external-sources --source-path=SCRIPTDIR)"
 
 # Run the example service
 run:
-  cabal run exe:example-server
+  cabal run example
 
 # Build all haskell packages.
 build:

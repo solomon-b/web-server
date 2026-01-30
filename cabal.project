@@ -1,4 +1,9 @@
-packages: *
+packages:
+  example/
+  web-server-core/
+  web-server-otel/
+  xmlhtml-lens/
+  xmlhtml-qq/
 
 source-repository-package
   type: git

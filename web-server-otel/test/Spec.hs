@@ -1,8 +1,7 @@
 module Main where
 
+import Effects.Database.Execute.OtelSpec qualified
 import Test.Hspec
-
-import qualified Effects.Database.Execute.OtelSpec
 
 main :: IO ()
 main = hspec $ do
