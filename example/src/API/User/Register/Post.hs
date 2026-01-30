@@ -5,11 +5,14 @@ module API.User.Register.Post
 where
 
 import App.Auth qualified as Auth
+import App.Config (Environment)
 import App.Errors (InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader)
+import Control.Monad.Reader qualified as Reader
 import Data.Has (Has)
+import Data.Has qualified as Has
 import Data.Password.Argon2 (Password, hashPassword, mkPassword)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -65,7 +68,8 @@ handler ::
     MonadDB m,
     MonadThrow m,
     MonadIO m,
-    Has HSQL.Pool env
+    Has HSQL.Pool env,
+    Has Environment env
   ) =>
   SockAddr ->
   Maybe Text ->
@@ -78,6 +82,7 @@ handler ::
         Servant.NoContent
     )
 handler sockAddr mUserAgent Register {..} = do
+  env <- Reader.asks Has.getter
   execStatement (User.getUserByEmail urEmail) >>= \case
     Left err -> throwErr $ InternalServerError $ Text.pack $ show err
     Right (Just _) -> do
@@ -96,5 +101,5 @@ handler sockAddr mUserAgent Register {..} = do
               throwErr $ InternalServerError $ Text.pack $ show err
             Right sessionId -> do
               pure $
-                Servant.addHeader (Auth.mkCookieSession sessionId) $
+                Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
                   Servant.addHeader "/" Servant.NoContent

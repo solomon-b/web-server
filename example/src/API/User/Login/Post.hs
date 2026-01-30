@@ -5,11 +5,14 @@ module API.User.Login.Post
 where
 
 import App.Auth qualified as Auth
+import App.Config (Environment)
 import App.Errors (InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader)
+import Control.Monad.Reader qualified as Reader
 import Data.Has (Has)
+import Data.Has qualified as Has
 import Data.Maybe (fromMaybe)
 import Data.Password.Argon2 (Password, PasswordCheck (..), checkPassword, mkPassword)
 import Data.Text (Text)
@@ -67,7 +70,8 @@ handler ::
     Log.MonadLog m,
     MonadDB m,
     MonadThrow m,
-    Has HSQL.Pool env
+    Has HSQL.Pool env,
+    Has Environment env
   ) =>
   SockAddr ->
   Maybe Text ->
@@ -97,7 +101,8 @@ attemptLogin ::
     MonadThrow m,
     MonadDB m,
     Log.MonadLog m,
-    Has HSQL.Pool env
+    Has HSQL.Pool env,
+    Has Environment env
   ) =>
   SockAddr ->
   Maybe Text ->
@@ -111,6 +116,7 @@ attemptLogin ::
         Servant.NoContent
     )
 attemptLogin sockAddr mUserAgent redirectLink user = do
+  env <- Reader.asks Has.getter
   execStatement (Session.getServerSessionByUser (User.mId user)) >>= \case
     Left err -> throwErr $ InternalServerError $ Text.pack $ show err
     Right Nothing -> do
@@ -119,12 +125,12 @@ attemptLogin sockAddr mUserAgent redirectLink user = do
           throwErr $ InternalServerError $ Text.pack $ show err
         Right sessionId -> do
           pure $
-            Servant.addHeader (Auth.mkCookieSession sessionId) $
+            Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
               Servant.addHeader redirectLink Servant.NoContent
     Right (Just session) ->
       let sessionId = Session.mSessionId session
        in pure $
-            Servant.addHeader (Auth.mkCookieSession sessionId) $
+            Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
               Servant.addHeader redirectLink Servant.NoContent
 
 invalidCredentialResponse ::

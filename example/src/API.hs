@@ -41,6 +41,7 @@ type API =
 server ::
   ( MonadReader env m,
     Has HSQL.Pool env,
+    Has Environment env,
     Log.MonadLog m,
     MonadDB m,
     MonadIO m,

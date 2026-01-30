@@ -2,10 +2,40 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module App.Auth where
+module App.Auth
+  ( -- * Cookie Session Management
+    sessionCookieName,
+    sessionCookieNameText,
+    mkCookieSession,
+
+    -- * Authentication
+    authHandler,
+    Authz (..),
+    AuthErr (..),
+    getAuth,
+    login,
+    expireServerSession,
+    lookupSessionId,
+    userLoginState,
+    LoggedIn (..),
+    isLoggedIn,
+
+    -- * Database Utilities
+    runDB,
+    execStatement,
+    healthCheck,
+    getSessionUser,
+
+    -- * Utilities
+    parseSessionId,
+    mkRedirect,
+    mkIpRange,
+  )
+where
 
 --------------------------------------------------------------------------------
 
+import App.Config (Environment (..))
 import App.Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)
 import Control.Error (note)
 import Control.Monad ((>=>))
@@ -51,6 +81,21 @@ import Web.Cookie (parseCookies)
 
 parseSessionId :: ByteString -> Maybe ServerSessions.Id
 parseSessionId = fmap ServerSessions.Id . fromASCIIBytes
+
+--------------------------------------------------------------------------------
+
+-- | Generate the session cookie name based on the environment.
+-- This prevents session conflicts when running multiple environments
+-- (dev/staging/prod) on the same domain or localhost.
+sessionCookieName :: Environment -> ByteString
+sessionCookieName = \case
+  Development -> "session-id-development"
+  Staging -> "session-id-staging"
+  Production -> "session-id-production"
+
+-- | Text version of 'sessionCookieName'.
+sessionCookieNameText :: Environment -> Text
+sessionCookieNameText = Text.Encoding.decodeUtf8 . sessionCookieName
 
 --------------------------------------------------------------------------------
 
@@ -141,11 +186,12 @@ instance ToServerError AuthErr where
     MissingCookieValue -> ("Missing Cookie Value", Just (Aeson.object [("details", "Invalid cookie")]))
     MalformedSessionId -> ("Malformed Session Id", Just (Aeson.object [("details", "Bad session data")]))
 
-authHandler :: HSQL.Pool -> Servant.AuthHandler Request Authz
-authHandler pool = mkAuthHandler $ \req ->
-  let eSession = do
+authHandler :: HSQL.Pool -> Environment -> Servant.AuthHandler Request Authz
+authHandler pool env = mkAuthHandler $ \req ->
+  let cookieName = sessionCookieName env
+      eSession = do
         cookie <- note MissingCookieHeader $ lookup "cookie" $ requestHeaders req
-        sessionId <- note MissingCookieValue $ lookup "session-id" $ parseCookies cookie
+        sessionId <- note MissingCookieValue $ lookup cookieName $ parseCookies cookie
         note MalformedSessionId $ parseSessionId sessionId
       redirect = mkRedirect req
    in do
@@ -228,9 +274,9 @@ expireServerSession ::
   m (Either HSQL.UsageError ())
 expireServerSession = execStatement . ServerSessions.expireSession
 
-lookupSessionId :: Text -> Maybe ServerSessions.Id
-lookupSessionId =
-  lookup (Text.Encoding.encodeUtf8 "session-id") . parseCookies . Text.Encoding.encodeUtf8 >=> parseSessionId
+lookupSessionId :: Environment -> Text -> Maybe ServerSessions.Id
+lookupSessionId env =
+  lookup (sessionCookieName env) . parseCookies . Text.Encoding.encodeUtf8 >=> parseSessionId
 
 data LoggedIn = IsLoggedIn User.Model | IsNotLoggedIn
 
@@ -244,20 +290,21 @@ userLoginState ::
     MonadReader r m,
     Has HSQL.Pool.Pool r
   ) =>
+  Environment ->
   Maybe Text ->
   m LoggedIn
-userLoginState cookie = do
-  let mSessionId = cookie >>= lookupSessionId
+userLoginState env cookie = do
+  let mSessionId = cookie >>= lookupSessionId env
   traverse getAuth mSessionId >>= \case
     Just (Right (Just Authz {..})) ->
       pure $ IsLoggedIn authzUser
     _ ->
       pure IsNotLoggedIn
 
-mkCookieSession :: ServerSessions.Id -> Text
-mkCookieSession sId =
-  fold
-    [ "session-id",
+mkCookieSession :: Environment -> Maybe Text -> ServerSessions.Id -> Text
+mkCookieSession env mDomain sId =
+  fold $
+    [ sessionCookieNameText env,
       "=",
       display sId,
       "; ",
@@ -274,3 +321,4 @@ mkCookieSession sId =
       "; ",
       "Secure"
     ]
+      <> maybe [] (\domain -> ["; ", "Domain=", domain]) mDomain
