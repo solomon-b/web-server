@@ -1,4 +1,5 @@
 {-# LANGUAGE StandaloneDeriving #-}
+
 module App.Monad where
 
 --------------------------------------------------------------------------------
@@ -17,8 +18,6 @@ import Data.Time (getCurrentTime)
 import Effects.Clock (MonadClock (..))
 import Effects.Database.Class
 import Log qualified
-import OpenTelemetry.Trace qualified as OTEL
-import OpenTelemetry.Trace.Monad (MonadTracer (..))
 
 --------------------------------------------------------------------------------
 
@@ -31,10 +30,6 @@ instance MonadClock (AppM ctx) where
   currentSystemTime = liftIO getCurrentTime
 
 deriving via (ReaderT (AppContext ctx) IO) instance MonadDB (AppM ctx)
-
-instance MonadTracer (AppM ctx) where
-  getTracer :: AppM ctx OTEL.Tracer
-  getTracer = Reader.asks Has.getter
 
 instance Log.MonadLog (AppM ctx) where
   logMessage :: Log.LogLevel -> Text -> Aeson.Value -> AppM ctx ()

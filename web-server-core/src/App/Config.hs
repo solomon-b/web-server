@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deriving-defaults #-}
@@ -117,12 +116,6 @@ instance FetchHKD PostgresConfigF where
 
 --------------------------------------------------------------------------------
 
-data ObservabilityConfig = ObservabilityConfig
-  { observabilityConfigVerbosity :: Verbosity,
-    observabilityConfigExporter :: AppExporter
-  }
-  deriving stock (Generic, Show)
-
 -- | https://discourse.ubuntu.com/t/cli-verbosity-levels/26973
 --
 -- These correspond to log-base log levels as follow:
@@ -133,32 +126,31 @@ data ObservabilityConfig = ObservabilityConfig
 data Verbosity = Quiet | Brief | Verbose | Debug
   deriving stock (Generic, Show)
 
-data AppExporter = StdOut | Otel | None
-  deriving (Generic, Show)
+newtype VerbosityConfig = VerbosityConfig
+  { verbosityConfigVerbosity :: Verbosity
+  }
+  deriving stock (Generic, Show)
 
-data ObservabilityConfigF f = ObservabilityConfigF
-  { observabilityConfigFVerbosity :: f Verbosity,
-    observabilityConfigFExporter :: f AppExporter
+newtype VerbosityConfigF f = VerbosityConfigF
+  { verbosityConfigFVerbosity :: f Verbosity
   }
   deriving stock (Generic)
   deriving anyclass (FunctorB, ApplicativeB, TraversableB, ConstraintsB)
 
-instance FetchHKD ObservabilityConfigF where
-  type Concrete ObservabilityConfigF = ObservabilityConfig
+instance FetchHKD VerbosityConfigF where
+  type Concrete VerbosityConfigF = VerbosityConfig
 
-  fromEnv :: ObservabilityConfigF (Compose IO Maybe)
+  fromEnv :: VerbosityConfigF (Compose IO Maybe)
   fromEnv =
     -- TODO: Case insensitive env parsing:
-    ObservabilityConfigF
-      { observabilityConfigFVerbosity = parseEnvDefault Brief (\case "Quiet" -> Just Quiet; "Brief" -> Just Brief; "Verbose" -> Just Verbose; "Debug" -> Just Debug; _ -> Just Brief) "APP_OBSERVABILITY_VERBOSITY",
-        observabilityConfigFExporter = parseEnvDefault None (\case "StdOut" -> Just StdOut; "Otel" -> Just Otel; _ -> Just None) "APP_OBSERVABILITY_EXPORTER"
+    VerbosityConfigF
+      { verbosityConfigFVerbosity = parseEnvDefault Brief (\case "Quiet" -> Just Quiet; "Brief" -> Just Brief; "Verbose" -> Just Verbose; "Debug" -> Just Debug; _ -> Just Brief) "APP_VERBOSITY"
       }
 
-  toConcrete :: ObservabilityConfigF (Compose IO Maybe) -> IO (Maybe (Concrete ObservabilityConfigF))
-  toConcrete ObservabilityConfigF {..} = do
-    observabilityConfigVerbosity <- getCompose observabilityConfigFVerbosity
-    observabilityConfigExporter <- getCompose observabilityConfigFExporter
-    pure $ ObservabilityConfig <$> observabilityConfigVerbosity <*> observabilityConfigExporter
+  toConcrete :: VerbosityConfigF (Compose IO Maybe) -> IO (Maybe (Concrete VerbosityConfigF))
+  toConcrete VerbosityConfigF {..} = do
+    verbosityConfigVerbosity <- getCompose verbosityConfigFVerbosity
+    pure $ VerbosityConfig <$> verbosityConfigVerbosity
 
 --------------------------------------------------------------------------------
 
@@ -166,7 +158,7 @@ data AppConfig = AppConfig
   { appConfigWarpSettings :: WarpConfig,
     appConfigPostgresSettings :: PostgresConfig,
     appConfigEnvironment :: Environment,
-    appConfigObservability :: ObservabilityConfig,
+    appConfigVerbosity :: VerbosityConfig,
     appConfigHostname :: Hostname
   }
   deriving stock (Generic, Show)
@@ -175,7 +167,7 @@ data AppConfigF f = AppConfigF
   { appConfigFWarpSettings :: WarpConfigF f,
     appConfigFPostgresSettings :: PostgresConfigF f,
     appConfigFEnvironment :: f Environment,
-    appConfigFObservability :: ObservabilityConfigF f,
+    appConfigFVerbosity :: VerbosityConfigF f,
     appConfigFHostname :: f Hostname
   }
   deriving stock (Generic)
@@ -190,7 +182,7 @@ instance FetchHKD AppConfigF where
       { appConfigFWarpSettings = fromEnv,
         appConfigFEnvironment = parseEnvDefault Development (\case "Development" -> Just Development; "Staging" -> Just Staging; "Production" -> Just Production; _ -> Nothing) "APP_ENVIRONMENT",
         appConfigFPostgresSettings = fromEnv,
-        appConfigFObservability = fromEnv,
+        appConfigFVerbosity = fromEnv,
         appConfigFHostname = parseEnvStr "APP_HOSTNAME"
       }
 
@@ -199,10 +191,10 @@ instance FetchHKD AppConfigF where
     appConfigWarpSettings <- toConcrete appConfigFWarpSettings
     appConfigEnvironment <- getCompose appConfigFEnvironment
     appConfigPostgresSettings <- toConcrete appConfigFPostgresSettings
-    appConfigObservability <- toConcrete appConfigFObservability
+    appConfigVerbosity <- toConcrete appConfigFVerbosity
     appConfigHostname <- getCompose appConfigFHostname
 
-    pure $ AppConfig <$> appConfigWarpSettings <*> appConfigPostgresSettings <*> appConfigEnvironment <*> appConfigObservability <*> appConfigHostname
+    pure $ AppConfig <$> appConfigWarpSettings <*> appConfigPostgresSettings <*> appConfigEnvironment <*> appConfigVerbosity <*> appConfigHostname
 
 -- TODO: Replace Maybe with Either
 getConfig :: IO (Maybe AppConfig)

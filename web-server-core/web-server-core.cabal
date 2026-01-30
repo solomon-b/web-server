@@ -55,10 +55,6 @@ library
                     , hasql-interpolate
                     , hasql-pool
                     , hasql-transaction
-                    , hs-opentelemetry-api
-                    , hs-opentelemetry-exporter-handle
-                    , hs-opentelemetry-instrumentation-wai
-                    , hs-opentelemetry-sdk
                     , http-media
                     , http-types
                     , iproute
@@ -102,7 +98,6 @@ library
       Effects.Database.SerializedStatement
       Effects.Database.Tables.User
       Effects.Database.Tables.ServerSessions
-      Effects.Observability
       Lucid.Extras
       OrphanInstances.CaseInsensitive
       OrphanInstances.IPRange
@@ -134,8 +129,6 @@ test-suite web-server-core-test
                     , hasql-pool
                     , hasql-transaction
                     , hedgehog
-                    , hs-opentelemetry-api
-                    , hs-opentelemetry-sdk
                     , hspec
                     , hspec-api
                     , hspec-core

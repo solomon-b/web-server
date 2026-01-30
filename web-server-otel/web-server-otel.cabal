@@ -1,0 +1,93 @@
+cabal-version:      3.4
+name:               web-server-otel
+version:            0.1.0.0
+homepage:           http://www.github.com/solomon-b/web-server
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Solomon Bothwell
+maintainer:         ssbothwell@gmail.com
+build-type:         Simple
+
+--------------------------------------------------------------------------------
+
+common common-extensions
+  default-extensions:
+      DataKinds
+      DerivingStrategies
+      DeriveAnyClass
+      DerivingVia
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      InstanceSigs
+      LambdaCase
+      MultiParamTypeClasses
+      NamedFieldPuns
+      OverloadedStrings
+      RankNTypes
+      RecordWildCards
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+
+common common-warnings
+    ghc-options:    -Wall -threaded
+
+--------------------------------------------------------------------------------
+
+library
+    import:           common-extensions, common-warnings
+    build-depends:    base >=4.19.2.0
+                    , aeson
+                    , barbies
+                    , bytestring
+                    , data-has
+                    , exceptions
+                    , hasql
+                    , hasql-pool
+                    , hasql-transaction
+                    , hs-opentelemetry-api
+                    , hs-opentelemetry-exporter-handle
+                    , hs-opentelemetry-instrumentation-wai
+                    , hs-opentelemetry-sdk
+                    , log-base
+                    , mtl
+                    , servant
+                    , servant-server
+                    , text
+                    , text-display
+                    , time
+                    , transformers
+                    , unliftio-core
+                    , unordered-containers
+                    , wai
+                    , warp
+                    , web-server-core
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    exposed-modules:
+      App.Otel
+      App.Context.Otel
+      Config.Otel
+      Effects.Observability
+      Effects.Database.Execute.Otel
+
+--------------------------------------------------------------------------------
+
+test-suite web-server-otel-test
+    import:           common-extensions, common-warnings
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    hs-source-dirs:   test
+    default-language: Haskell2010
+    build-depends:    base >=4.19.2.0
+                    , hspec
+                    , hs-opentelemetry-api
+                    , text
+                    , web-server-core
+                    , web-server-otel
+    other-modules:
+      Effects.Database.Execute.OtelSpec

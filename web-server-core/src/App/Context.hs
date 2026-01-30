@@ -14,7 +14,6 @@ import GHC.TypeLits (TypeError)
 import Hasql.Pool qualified as HSQL (Pool)
 import Log qualified
 import Network.Wai qualified as Wai
-import OpenTelemetry.Trace qualified as OTEL
 import Servant qualified
 import Servant.Server (Context ((:.)))
 import Servant.Server.Experimental.Auth (AuthHandler)
@@ -23,8 +22,6 @@ import Servant.Server.Experimental.Auth (AuthHandler)
 
 data AppContext context = AppContext
   { appDbPool :: HSQL.Pool,
-    appTracer :: OTEL.Tracer,
-    appTracerProvider :: OTEL.TracerProvider,
     appHostname :: Hostname,
     appEnvironment :: Environment,
     appLoggerEnv :: Log.LoggerEnv,
@@ -35,10 +32,6 @@ data AppContext context = AppContext
 instance Has.Has HSQL.Pool (AppContext ctx) where
   getter = appDbPool
   modifier f ctx@AppContext {appDbPool} = ctx {appDbPool = f appDbPool}
-
-instance Has.Has OTEL.Tracer (AppContext ctx) where
-  getter = appTracer
-  modifier f ctx@AppContext {appTracer} = ctx {appTracer = f appTracer}
 
 instance Has.Has Hostname (AppContext ctx) where
   getter = appHostname
@@ -51,10 +44,6 @@ instance Has.Has Environment (AppContext ctx) where
 instance Has.Has Log.LoggerEnv (AppContext ctx) where
   getter = appLoggerEnv
   modifier f ctx@AppContext {appLoggerEnv} = ctx {appLoggerEnv = f appLoggerEnv}
-
-instance Has.Has OTEL.TracerProvider (AppContext ctx) where
-  getter = appTracerProvider
-  modifier f ctx@AppContext {appTracerProvider} = ctx {appTracerProvider = f appTracerProvider}
 
 instance Has.Has WarpConfig (AppContext ctx) where
   getter = appWarpConfig

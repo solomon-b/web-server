@@ -9,7 +9,6 @@ module Test.Database.Monad
     withAuth,
     bracketConn,
     dbit,
-    withTracer,
     TestDBInitConfig (..),
     TestDBConfig (..),
     TestDB (..),
@@ -40,12 +39,9 @@ import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8)
 import Data.UUID (toString)
 import Data.UUID.V4 (nextRandom)
-import Domain.Types.DisplayName (mkDisplayNameUnsafe)
 import Domain.Types.EmailAddress (mkEmailAddress)
-import Domain.Types.FullName (mkFullNameUnsafe)
 import Effects.Database.Class (MonadDB (..))
 import Effects.Database.Tables.ServerSessions qualified as ServerSessions
-import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
 import GHC.IO (unsafePerformIO)
 import GHC.IO.Exception (ExitCode (..))
@@ -60,9 +56,6 @@ import Hasql.Transaction qualified as TRX
 import Hasql.Transaction.Sessions qualified as TRX
 import Log qualified
 import Log.Internal.Logger qualified as Log.Internal
-import OpenTelemetry.Exporter.Span (ExportResult (..), SpanExporter (..))
-import OpenTelemetry.Processor.Simple (SimpleProcessorConfig (..), simpleProcessor)
-import OpenTelemetry.Trace qualified as OTEL
 import System.Process.Typed (proc, readProcess)
 import Test.Hspec (Spec, SpecWith, it)
 import Test.Hspec.Core.Hooks (around, beforeWith)
@@ -135,16 +128,21 @@ toSettingString TestDBConfig {..} =
 
 --------------------------------------------------------------------------------
 
-newtype TestDB a = TestDB {runTestDB :: (Connection, OTEL.Tracer) -> Log.LoggerEnv -> IO a}
+newtype TestDB a = TestDB {runTestDB :: Connection -> Log.LoggerEnv -> IO a}
   deriving
-    (Functor, Applicative, Monad, MonadReader (Connection, OTEL.Tracer), MonadIO, MonadThrow, MonadCatch, MonadUnliftIO, Log.MonadLog)
-    via ReaderT (Connection, OTEL.Tracer) (Log.LogT IO)
+    (Functor, Applicative, Monad, MonadReader Connection, MonadIO, MonadThrow, MonadCatch, MonadUnliftIO, Log.MonadLog)
+    via ReaderT Connection (Log.LogT IO)
 
 instance MonadDB TestDB where
   runDB :: Session a -> TestDB (Either UsageError a)
   runDB session = do
     conn <- asks Has.getter
     first SessionUsageError <$> liftIO (run session conn)
+
+  runDBTransaction :: TRX.Transaction a -> TestDB (Either UsageError a)
+  runDBTransaction tx = do
+    conn <- asks Has.getter
+    first SessionUsageError <$> liftIO (run (TRX.transaction TRX.Serializable TRX.Write tx) conn)
 
 newtype TestSetupException = TestSetupException Text deriving (Show)
 
@@ -163,22 +161,6 @@ instance Example (TestDB a) where
 
 --------------------------------------------------------------------------------
 
--- No-Op Trace Exporter for test suite
-noOpExporter :: SpanExporter
-noOpExporter = SpanExporter (\_ -> pure Success) (pure ())
-
-withTracer :: (OTEL.TracerProvider -> (OTEL.TracerOptions -> OTEL.Tracer) -> IO c) -> IO c
-withTracer f =
-  let acquire' = do
-        providerOpts <- snd <$> OTEL.getTracerProviderInitializationOptions
-        processor <- simpleProcessor . SimpleProcessorConfig $ noOpExporter
-        OTEL.createTracerProvider [processor] providerOpts
-      release' _ = pure ()
-      work tracerProvider = f tracerProvider $ OTEL.makeTracer tracerProvider "test-suite"
-   in bracket acquire' release' work
-
---------------------------------------------------------------------------------
-
 -- No-Op Logger for test suite
 logger :: Log.Logger
 logger = Log.Internal.Logger (\_ -> pure ()) (pure ()) (pure ())
@@ -190,17 +172,15 @@ loggerEnv = Log.LoggerEnv logger "test-suite" [] [] Log.defaultLogLevel
 
 bracketConn :: TestDBConfig -> TestDB a -> IO a
 bracketConn perTestConfig actionTestDB =
-  withTracer $ \_tracerProvider mkTracer -> do
-    let tracer = mkTracer OTEL.tracerOptions
-    bracket
-      ( do
-          connection <- acquire $ toSettingString perTestConfig
-          case connection of
-            Left e -> throwIO (TestSetupException $ "Failed to connect to test database: \n" <> T.pack (show e))
-            Right conn -> pure conn
-      )
-      release
-      (\connection -> runTestDB actionTestDB (connection, tracer) loggerEnv)
+  bracket
+    ( do
+        connection <- acquire $ toSettingString perTestConfig
+        case connection of
+          Left e -> throwIO (TestSetupException $ "Failed to connect to test database: \n" <> T.pack (show e))
+          Right conn -> pure conn
+    )
+    release
+    (\connection -> runTestDB actionTestDB connection loggerEnv)
 
 withAuth :: SpecWith (Authz, TestDBConfig) -> SpecWith TestDBConfig
 withAuth = beforeWith getAuth
