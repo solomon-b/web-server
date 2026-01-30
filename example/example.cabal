@@ -1,0 +1,81 @@
+cabal-version:      3.4
+name:               example
+version:            0.1.0.0
+homepage:           http://www.github.com/solomon-b/web-server
+license:            Apache-2.0
+author:             Solomon Bothwell
+maintainer:         ssbothwell@gmail.com
+build-type:         Simple
+
+--------------------------------------------------------------------------------
+
+common common-extensions
+  default-extensions:
+      DataKinds
+      DerivingStrategies
+      DeriveAnyClass
+      DerivingVia
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      InstanceSigs
+      LambdaCase
+      MultiParamTypeClasses
+      NamedFieldPuns
+      OverloadedStrings
+      RankNTypes
+      RecordWildCards
+      TypeApplications
+      TypeOperators
+      TypeSynonymInstances
+
+--------------------------------------------------------------------------------
+
+executable example
+  import:           common-extensions
+  main-is:          Main.hs
+  build-depends:    base >=4.19.2.0
+                  , example
+  hs-source-dirs:   app
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded -rtsopts -with-rtsopts=-N
+
+--------------------------------------------------------------------------------
+
+library
+  import: common-extensions
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:    -Wall -threaded
+  build-depends:    base >=4.19.2.0
+                  , bytestring
+                  , data-has
+                  , exceptions
+                  , hasql-interpolate
+                  , hasql-pool
+                  , http-api-data
+                  , log-base
+                  , lucid2
+                  , mtl
+                  , network
+                  , password
+                  , servant
+                  , servant-server
+                  , text
+                  , text-display
+                  , unliftio-core
+                  , web-server-core
+  exposed-modules:
+    App
+    API
+    API.Home.Get
+    API.Dashboard.Get
+    API.User.Login.Get
+    API.User.Login.Post
+    API.User.Logout.Post
+    API.User.Register.Get
+    API.User.Register.Post
+    View

@@ -25,16 +25,16 @@ import App.Config (Verbosity)
 import App.Context (AppContext (..))
 import App.Context.Otel
 import App.Monad (AppM)
-import Control.Monad.Reader qualified as Reader
-import Log qualified
-import OpenTelemetry.Trace.Monad (MonadTracer (..))
 import Config.Otel
+import Control.Monad.Reader qualified as Reader
 import Data.Data (Proxy (..))
 import Effects.Observability
+import Log qualified
 import Network.Wai (Request)
 import Network.Wai.Handler.Warp qualified as Warp
 import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
 import OpenTelemetry.Trace qualified as OTEL
+import OpenTelemetry.Trace.Monad (MonadTracer (..))
 import Servant (Context ((:.)))
 import Servant qualified
 import Servant.Server.Experimental.Auth (AuthHandler)
@@ -115,4 +115,3 @@ mkAppWithOtel server fullCtx appCtx =
 -- This is an orphan instance since AppM is defined in web-server-core.
 instance (HasOtelContext ctx) => MonadTracer (AppM ctx) where
   getTracer = Reader.asks (otelTracer . getOtelContext . appCustom)
-

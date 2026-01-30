@@ -1,32 +1,28 @@
-module API.User.Login.Get
+module API.Dashboard.Get
   ( Route,
     handler,
   )
 where
 
-import Data.Text (Text)
-import Domain.Types.EmailAddress (EmailAddress)
+import App.Auth (Authz (..))
 import Lucid qualified
 import Servant ((:>))
 import Servant qualified
 import Text.HTML (HTML)
-import View (loginPage)
+import View (dashboardPage)
 
 --------------------------------------------------------------------------------
 
 type Route =
-  "user"
-    :> "login"
-    :> Servant.QueryParam "redirect" Text
-    :> Servant.QueryParam "email" EmailAddress
+  Servant.AuthProtect "cookie-auth"
+    :> "dashboard"
     :> Servant.Get '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
 handler ::
   (Applicative m) =>
-  Maybe Text ->
-  Maybe EmailAddress ->
+  Authz ->
   m (Lucid.Html ())
-handler redirectQueryParam emailQueryParam =
-  pure $ loginPage emailQueryParam redirectQueryParam
+handler Authz {authzUser} =
+  pure $ dashboardPage authzUser

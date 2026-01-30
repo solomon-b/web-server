@@ -26,15 +26,14 @@ where
 --------------------------------------------------------------------------------
 
 import App.Config (Verbosity (..))
-import Data.Time (getCurrentTime)
 import Config.Otel (AppExporter (..), ObservabilityConfig (..))
-import Data.Aeson qualified as Aeson
 import Control.Exception (bracket)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
 import Control.Monad.Except (ExceptT (..))
 import Control.Monad.IO.Unlift
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Reader qualified as Reader
+import Data.Aeson qualified as Aeson
 import Data.Data (Proxy (..))
 import Data.Fixed (Pico)
 import Data.Has qualified as Has
@@ -44,10 +43,12 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (Display, display)
 import Data.Text.Lazy qualified as Lazy
+import Data.Time (getCurrentTime)
 import Data.Time.Clock (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX qualified as Time
 import Data.Time.Format.ISO8601 (iso8601Show)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import Log qualified
 import Network.Wai (Request (..))
 import OpenTelemetry.Attributes (getAttributes)
 import OpenTelemetry.Exporter.Handle.Span (stdoutExporter')
@@ -57,7 +58,6 @@ import OpenTelemetry.Trace (ImmutableSpan (..))
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Core qualified as Trace
 import OpenTelemetry.Util (appendOnlyBoundedCollectionValues)
-import Log qualified
 import Servant qualified
 import Servant.API qualified as Links
 import Servant.Server.Internal.Delayed (addMethodCheck)
