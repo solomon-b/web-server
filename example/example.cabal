@@ -56,6 +56,7 @@ library
                   , exceptions
                   , hasql-interpolate
                   , hasql-pool
+                  , hs-opentelemetry-api
                   , http-api-data
                   , log-base
                   , lucid2
@@ -68,6 +69,7 @@ library
                   , text-display
                   , unliftio-core
                   , web-server-core
+                  , web-server-otel
   exposed-modules:
     App
     API

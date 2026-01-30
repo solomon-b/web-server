@@ -6,7 +6,7 @@ module App.Context where
 --------------------------------------------------------------------------------
 
 import App.Auth (Authz)
-import App.Config
+import App.Config (Environment, Hostname, Verbosity, WarpConfig)
 import Data.Has qualified as Has
 import Data.Kind (Constraint, Type)
 import GHC.TypeError (ErrorMessage (Text))
@@ -24,6 +24,7 @@ data AppContext context = AppContext
   { appDbPool :: HSQL.Pool,
     appHostname :: Hostname,
     appEnvironment :: Environment,
+    appVerbosity :: Verbosity,
     appLoggerEnv :: Log.LoggerEnv,
     appWarpConfig :: WarpConfig,
     appCustom :: context
@@ -40,6 +41,10 @@ instance Has.Has Hostname (AppContext ctx) where
 instance Has.Has Environment (AppContext ctx) where
   getter = appEnvironment
   modifier f ctx@AppContext {appEnvironment} = ctx {appEnvironment = f appEnvironment}
+
+instance Has.Has Verbosity (AppContext ctx) where
+  getter = appVerbosity
+  modifier f ctx@AppContext {appVerbosity} = ctx {appVerbosity = f appVerbosity}
 
 instance Has.Has Log.LoggerEnv (AppContext ctx) where
   getter = appLoggerEnv

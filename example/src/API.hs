@@ -12,6 +12,8 @@ import API.User.Logout.Post qualified as User.Logout.Post
 import API.User.Register.Get qualified as User.Register.Get
 import API.User.Register.Post qualified as User.Register.Post
 import App.Config (Environment)
+import App.Context (AppContext)
+import App.Otel (WithSpan)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -32,8 +34,8 @@ type API =
     :<|> User.Login.Post.Route
     :<|> User.Register.Get.Route
     :<|> User.Register.Post.Route
-    -- Protected routes
-    :<|> Dashboard.Get.Route
+    -- Protected routes (Dashboard is traced with WithSpan)
+    :<|> WithSpan "Dashboard" Dashboard.Get.Route
     :<|> User.Logout.Post.Route
 
 --------------------------------------------------------------------------------
@@ -49,13 +51,16 @@ server ::
     MonadUnliftIO m,
     MonadCatch m
   ) =>
-  Environment ->
+  AppContext ctx ->
   Servant.ServerT API m
-server _env =
+server _appCtx =
   Home.Get.handler
     :<|> User.Login.Get.handler
     :<|> User.Login.Post.handler
     :<|> User.Register.Get.handler
     :<|> User.Register.Post.handler
-    :<|> Dashboard.Get.handler
+    -- WithSpan provides the Tracer to the handler; we ignore it here
+    -- since Dashboard.Get.handler doesn't use tracing internally.
+    -- The span is automatically created by the WithSpan combinator.
+    :<|> (\_tracer -> Dashboard.Get.handler)
     :<|> User.Logout.Post.handler
