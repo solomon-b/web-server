@@ -1,7 +1,9 @@
 module Effects.Database.Execute
   ( -- * Query Execution
+    execQuery,
     execQueryThrow,
     execQueryThrowMessage,
+    execTransaction,
     execTransactionThrow,
 
     -- * Utilities
@@ -20,6 +22,7 @@ import Data.Text.Display (Display)
 import Data.Text.Encoding qualified as TE
 import Effects.Database.Class
 import Effects.Database.SerializedStatement (SerializedStatement (..), serializeStatement)
+import qualified Hasql.Pool as HSQL
 import Hasql.Statement qualified as HSQL
 import Hasql.Transaction qualified as HT
 import Log qualified
@@ -27,6 +30,18 @@ import Servant qualified
 
 --------------------------------------------------------------------------------
 -- Query Execution
+
+execQuery ::
+  ( Log.MonadLog m,
+    MonadDB m,
+    MonadThrow m,
+    Display result
+  ) =>
+  HSQL.Statement () result ->
+  m (Either HSQL.UsageError result)
+execQuery statement@(HSQL.Statement bs _ _ _) = do
+  Log.logInfo "db query" (TE.decodeUtf8 bs)
+  execStatement statement
 
 execQueryThrow ::
   ( Log.MonadLog m,
