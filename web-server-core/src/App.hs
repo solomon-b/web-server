@@ -156,6 +156,7 @@ mkWarpSettings logEnv WarpConfig {..} =
     & Warp.setPort warpConfigPort
     & Warp.setGracefulShutdownTimeout (Just warpConfigTimeout)
     & Warp.setInstallShutdownHandler shutdownHandler
+    & Warp.setTimeout warpConfigRequestTimeout
 
 mkWarpLogger :: Log.LoggerEnv -> Wai.Request -> Status.Status -> Maybe Integer -> IO ()
 mkWarpLogger logEnv req s sz = do

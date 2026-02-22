@@ -41,6 +41,7 @@ newtype Hostname = Hostname {getHostName :: Text}
 data WarpConfig = WarpConfig
   { warpConfigPort :: Int,
     warpConfigTimeout :: Int,
+    warpConfigRequestTimeout :: Int,
     warpConfigServerName :: ByteString
   }
   deriving stock (Generic, Show)
@@ -48,6 +49,7 @@ data WarpConfig = WarpConfig
 data WarpConfigF f = WarpConfigF
   { warpConfigFPort :: f Int,
     warpConfigFTimeout :: f Int,
+    warpConfigFRequestTimeout :: f Int,
     warpConfigFServerName :: f ByteString
   }
   deriving stock (Generic)
@@ -61,6 +63,7 @@ instance FetchHKD WarpConfigF where
     WarpConfigF
       { warpConfigFPort = readEnvDefault 3000 "APP_WARP_PORT",
         warpConfigFTimeout = readEnvDefault 30 "APP_WARP_TIMEOUT",
+        warpConfigFRequestTimeout = readEnvDefault 30 "APP_WARP_REQUEST_TIMEOUT",
         warpConfigFServerName = parseEnvDefaultStr "server" "APP_WARP_SERVERNAME"
       }
 
@@ -68,8 +71,9 @@ instance FetchHKD WarpConfigF where
   toConcrete WarpConfigF {..} = do
     warpConfigPort <- getCompose warpConfigFPort
     warpConfigTimeout <- getCompose warpConfigFTimeout
+    warpConfigRequestTimeout <- getCompose warpConfigFRequestTimeout
     warpConfigServerName <- getCompose warpConfigFServerName
-    pure $ WarpConfig <$> warpConfigPort <*> warpConfigTimeout <*> warpConfigServerName
+    pure $ WarpConfig <$> warpConfigPort <*> warpConfigTimeout <*> warpConfigRequestTimeout <*> warpConfigServerName
 
 --------------------------------------------------------------------------------
 
