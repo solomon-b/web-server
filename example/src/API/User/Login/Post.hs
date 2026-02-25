@@ -19,7 +19,6 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Class (MonadDB, execStatement)
-import Effects.Database.Tables.ServerSessions qualified as Session
 import Effects.Database.Tables.User qualified as User
 import GHC.Generics (Generic)
 import Hasql.Pool qualified as HSQL
@@ -117,21 +116,13 @@ attemptLogin ::
     )
 attemptLogin sockAddr mUserAgent redirectLink user = do
   env <- Reader.asks Has.getter
-  execStatement (Session.getServerSessionByUser (User.mId user)) >>= \case
-    Left err -> throwErr $ InternalServerError $ Text.pack $ show err
-    Right Nothing -> do
-      Auth.login (User.mId user) sockAddr mUserAgent >>= \case
-        Left err ->
-          throwErr $ InternalServerError $ Text.pack $ show err
-        Right sessionId -> do
-          pure $
-            Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
-              Servant.addHeader redirectLink Servant.NoContent
-    Right (Just session) ->
-      let sessionId = Session.mSessionId session
-       in pure $
-            Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
-              Servant.addHeader redirectLink Servant.NoContent
+  Auth.login (User.mId user) sockAddr mUserAgent >>= \case
+    Left err ->
+      throwErr $ InternalServerError $ Text.pack $ show err
+    Right sessionId ->
+      pure $
+        Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
+          Servant.addHeader redirectLink Servant.NoContent
 
 invalidCredentialResponse ::
   (Log.MonadLog m) =>

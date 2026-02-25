@@ -10,24 +10,3 @@ CREATE TABLE server_sessions
   , updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE OR REPLACE FUNCTION check_only_one_active_session()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    IF (SELECT COUNT(*)
-        FROM server_sessions s
-        WHERE s.user_id = NEW.user_id
-          AND s.expires_at > now()
-       ) <= 1
-    THEN
-      RETURN NEW;
-    ELSE
-      RAISE EXCEPTION 'Cannot insert multiple active sessions for user %', NEW.user_id;
-    END IF;
-  END
-  $$ LANGUAGE 'plpgsql';
-
-CREATE CONSTRAINT TRIGGER check_only_one_active_session
-  AFTER INSERT OR UPDATE
-  ON server_sessions
-  FOR EACH ROW
-  EXECUTE PROCEDURE check_only_one_active_session();

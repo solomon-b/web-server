@@ -86,17 +86,6 @@ getServerSession sid =
       AND NOW() < expires_at
   |]
 
-getServerSessionByUser :: User.Id -> Hasql.Statement () (Maybe Model)
-getServerSessionByUser userId =
-  interp
-    False
-    [sql|
-    SELECT id, user_id, ip_address, user_agent, expires_at
-    FROM server_sessions
-    WHERE user_id = #{userId}
-      AND NOW() < expires_at
-  |]
-
 getSessionUser :: Id -> Hasql.Statement () (Maybe (User.Model, Model))
 getSessionUser sId =
   fmap fromRows
@@ -149,6 +138,20 @@ insertServerSession ServerSessionInsert {..} =
   interp
     False
     [sql|
+    WITH expired AS (
+      UPDATE server_sessions
+      SET expires_at = NOW()
+      WHERE user_id = #{ssiUserId}
+        AND expires_at > NOW()
+        AND id NOT IN (
+          SELECT id FROM server_sessions
+          WHERE user_id = #{ssiUserId}
+            AND expires_at > NOW()
+          ORDER BY expires_at DESC
+          LIMIT 4
+          FOR UPDATE
+        )
+    )
     INSERT INTO server_sessions(user_id, ip_address, user_agent, expires_at)
     VALUES (#{ssiUserId}, #{ssiIpAddress}, #{ssiUserAgent}, #{ssiExpiresAt})
     RETURNING id, user_id, ip_address, user_agent, expires_at
