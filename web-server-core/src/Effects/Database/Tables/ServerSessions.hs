@@ -47,7 +47,8 @@ data Model = Model
     mUserId :: User.Id,
     mIpAddress :: Maybe IPRange,
     mUserAgent :: Maybe Text,
-    mExpiresAt :: UTCTime
+    mExpiresAt :: UTCTime,
+    mLastActivityAt :: UTCTime
   }
   deriving stock (Eq, Show, Generic)
   deriving (Display) via (RecordInstance Model)
@@ -58,7 +59,8 @@ data Domain = Domain
     dUserId :: User.Id,
     dIpAddress :: Maybe IPRange,
     dUserAgent :: Maybe Text,
-    dExpiresAt :: UTCTime
+    dExpiresAt :: UTCTime,
+    dLastActivityAt :: UTCTime
   }
   deriving stock (Show, Generic, Eq)
   deriving (Display) via (RecordInstance Domain)
@@ -70,7 +72,8 @@ toDomain Model {..} =
       dUserId = mUserId,
       dIpAddress = mIpAddress,
       dUserAgent = mUserAgent,
-      dExpiresAt = mExpiresAt
+      dExpiresAt = mExpiresAt,
+      dLastActivityAt = mLastActivityAt
     }
 
 --------------------------------------------------------------------------------
@@ -80,7 +83,7 @@ getServerSession sid =
   interp
     False
     [sql|
-    SELECT id, user_id, ip_address, user_agent, expires_at
+    SELECT id, user_id, ip_address, user_agent, expires_at, last_activity_at
     FROM server_sessions
     WHERE id = #{sid}
       AND NOW() < expires_at
@@ -94,7 +97,7 @@ getSessionUser sId =
       [sql|
     SELECT
       u.id as user_id, u.email, u.password,
-      s.id as server_session_id, s.user_id as session_user_id, s.ip_address, s.user_agent, s.expires_at
+      s.id as server_session_id, s.user_id as session_user_id, s.ip_address, s.user_agent, s.expires_at, s.last_activity_at
     FROM server_sessions s
     JOIN users u ON u.id = s.user_id
     WHERE s.id = #{sId}
@@ -109,6 +112,7 @@ getSessionUser sId =
         User.Id,
         Maybe IPRange,
         Maybe Text,
+        UTCTime,
         UTCTime
       ) ->
       (User.Model, Model)
@@ -120,7 +124,8 @@ getSessionUser sId =
         sessionUserId,
         mIpAddress,
         mUserAgent,
-        mExpiresAt
+        mExpiresAt,
+        mLastActivityAt
         ) = (User.Model {..}, Model {mUserId = sessionUserId, ..})
 
 data ServerSessionInsert = ServerSessionInsert
@@ -154,7 +159,18 @@ insertServerSession ServerSessionInsert {..} =
     )
     INSERT INTO server_sessions(user_id, ip_address, user_agent, expires_at)
     VALUES (#{ssiUserId}, #{ssiIpAddress}, #{ssiUserAgent}, #{ssiExpiresAt})
-    RETURNING id, user_id, ip_address, user_agent, expires_at
+    RETURNING id, user_id, ip_address, user_agent, expires_at, last_activity_at
+  |]
+
+touchSession :: Id -> Hasql.Statement () ()
+touchSession sessionId =
+  interp
+    False
+    [sql|
+    UPDATE server_sessions
+    SET last_activity_at = NOW()
+    WHERE id = #{sessionId}
+      AND NOW() < expires_at
   |]
 
 expireSession :: Id -> Hasql.Statement () ()

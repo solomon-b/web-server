@@ -12,7 +12,7 @@ import API.User.Logout.Post qualified as User.Logout.Post
 import API.User.Register.Get qualified as User.Register.Get
 import API.User.Register.Post qualified as User.Register.Post
 import App.Config (Environment)
-import App.Context (AppContext)
+import App.Context (AppContext, appEnvironment)
 import App.Otel (WithSpan)
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
@@ -53,7 +53,7 @@ server ::
   ) =>
   AppContext ctx ->
   Servant.ServerT API m
-server _appCtx =
+server appCtx =
   Home.Get.handler
     :<|> User.Login.Get.handler
     :<|> User.Login.Post.handler
@@ -63,4 +63,4 @@ server _appCtx =
     -- since Dashboard.Get.handler doesn't use tracing internally.
     -- The span is automatically created by the WithSpan combinator.
     :<|> (\_tracer -> Dashboard.Get.handler)
-    :<|> User.Logout.Post.handler
+    :<|> User.Logout.Post.handler (appEnvironment appCtx)

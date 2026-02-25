@@ -143,12 +143,14 @@ test-suite web-server-core-test
                     , postgres-options
                     , string-interpolate
                     , text
+                    , text-display >= 1.0.0.0
                     , time
                     , tmp-postgres
                     , typed-process
                     , unliftio-core
                     , uuid
     other-modules:
+       App.AuthSpec
        Effects.Database.Tables.ServerSessionsSpec
        Effects.Database.Tables.UserSpec
        Test.Database.Expectation

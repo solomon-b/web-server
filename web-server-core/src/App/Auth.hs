@@ -7,9 +7,14 @@ module App.Auth
     sessionCookieName,
     sessionCookieNameText,
     mkCookieSession,
+    mkCookieSessionExpired,
+    truncateSessionId,
 
     -- * Authentication
     authHandler,
+    authHandlerWith,
+    SessionConfig (..),
+    defaultSessionConfig,
     Authz (..),
     AuthErr (..),
     getAuth,
@@ -38,11 +43,13 @@ where
 import App.Config (Environment (..))
 import App.Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)
 import Control.Error (note)
-import Control.Monad ((>=>))
+import Control.Monad (void, when, (>=>))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Reader qualified as Reader
+import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteString (ByteString)
 import Data.Foldable (fold)
 import Data.Functor ((<&>))
@@ -54,7 +61,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (display)
 import Data.Text.Encoding qualified as Text.Encoding
-import Data.Time (UTCTime, addUTCTime, getCurrentTime, nominalDay)
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime, getCurrentTime, nominalDay)
 import Data.UUID (fromASCIIBytes)
 import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Tables.ServerSessions qualified as ServerSessions
@@ -81,6 +88,31 @@ import Web.Cookie (parseCookies)
 
 parseSessionId :: ByteString -> Maybe ServerSessions.Id
 parseSessionId = fmap ServerSessions.Id . fromASCIIBytes
+
+-- | First 8 characters of the session UUID for safe inclusion in logs.
+truncateSessionId :: ServerSessions.Id -> Text
+truncateSessionId = Text.take 8 . display
+
+--------------------------------------------------------------------------------
+
+-- | Configuration for session idle timeout behavior.
+data SessionConfig = SessionConfig
+  { -- | Maximum time a session can be idle before it is considered expired.
+    -- Default: 30 minutes.
+    sessionIdleTimeout :: NominalDiffTime,
+    -- | Minimum interval between @last_activity_at@ updates.
+    -- Prevents a database write on every single authenticated request.
+    -- Default: 5 minutes.
+    sessionActivityThrottle :: NominalDiffTime
+  }
+
+-- | Sensible defaults: 30 minute idle timeout, 5 minute update throttle.
+defaultSessionConfig :: SessionConfig
+defaultSessionConfig =
+  SessionConfig
+    { sessionIdleTimeout = 30 * 60,
+      sessionActivityThrottle = 5 * 60
+    }
 
 --------------------------------------------------------------------------------
 
@@ -130,7 +162,7 @@ getSessionUser sId =
       [sql|
     SELECT
       u.id as user_id, u.email, u.password,
-      s.id as server_session_id, s.user_id as session_user_id, s.ip_address, s.user_agent, s.expires_at
+      s.id as server_session_id, s.user_id as session_user_id, s.ip_address, s.user_agent, s.expires_at, s.last_activity_at
     FROM server_sessions s
     JOIN users u ON u.id = s.user_id
     WHERE s.id = #{sId}
@@ -145,6 +177,7 @@ getSessionUser sId =
         User.Id,
         Maybe IPRange,
         Maybe Text,
+        UTCTime,
         UTCTime
       ) ->
       (User.Model, ServerSessions.Model)
@@ -156,7 +189,8 @@ getSessionUser sId =
         sessionUserId,
         mIpAddress,
         mUserAgent,
-        mExpiresAt
+        mExpiresAt,
+        mLastActivityAt
         ) = (User.Model {..}, ServerSessions.Model {mUserId = sessionUserId, ..})
 
 --------------------------------------------------------------------------------
@@ -187,7 +221,10 @@ instance ToServerError AuthErr where
     MalformedSessionId -> ("Malformed Session Id", Just (Aeson.object [("details", "Bad session data")]))
 
 authHandler :: HSQL.Pool -> Environment -> Servant.AuthHandler Request Authz
-authHandler pool env = mkAuthHandler $ \req ->
+authHandler pool env = authHandlerWith pool env defaultSessionConfig
+
+authHandlerWith :: HSQL.Pool -> Environment -> SessionConfig -> Servant.AuthHandler Request Authz
+authHandlerWith pool env cfg = mkAuthHandler $ \req ->
   let cookieName = sessionCookieName env
       eSession = do
         cookie <- note MissingCookieHeader $ lookup "cookie" $ requestHeaders req
@@ -208,9 +245,30 @@ authHandler pool env = mkAuthHandler $ \req ->
               -- Note: this is a 307 because we redirect on auth failure.
               Right Nothing ->
                 Servant.throwError Servant.err401 --  $ Servant.err307 {Servant.errHeaders = [("Location", redirect)]}
-                -- Auth Success
-              Right (Just (userModel, sessionModel)) ->
-                pure $ Authz userModel sessionModel
+                -- Auth Success: check idle timeout, then throttle activity update.
+              Right (Just (userModel, sessionModel)) -> do
+                now <- liftIO getCurrentTime
+                let timeSinceActivity = diffUTCTime now (ServerSessions.mLastActivityAt sessionModel)
+                -- Idle timeout exceeded:
+                if timeSinceActivity > sessionIdleTimeout cfg
+                  then do
+                    liftIO $ Log.withJsonStdOutLogger $ \stdOutLogger ->
+                      Log.runLogT "webserver-backend" stdOutLogger Log.LogInfo $
+                        Log.logInfo "Session Idle Timeout" $
+                          Aeson.toJSON $
+                            KeyMap.fromList
+                              [ "session" .= truncateSessionId sessionId,
+                                "user_id" .= display (User.mId userModel),
+                                "idle_seconds" .= (round timeSinceActivity :: Int)
+                              ]
+                    Servant.throwError Servant.err401
+                  else do
+                    -- Throttled activity update:
+                    when (timeSinceActivity > sessionActivityThrottle cfg) $
+                      void $
+                        liftIO $
+                          HSQL.use pool (HSQL.statement () $ ServerSessions.touchSession sessionId)
+                    pure $ Authz userModel sessionModel
           -- Auth Failure: Invalid or missing auth session_id in user's cookie:
           Left MissingCookieHeader -> Servant.throwError Servant.err307 {Servant.errBody = "No cookie sent in request", Servant.errHeaders = [("Location", redirect)]}
           Left MissingCookieValue -> Servant.throwError Servant.err307 {Servant.errBody = "Invalid cookie", Servant.errHeaders = [("Location", redirect)]}
@@ -256,7 +314,19 @@ login uid sockAddr mUserAgent = do
   now <- liftIO getCurrentTime
   let sessionExpiration = addUTCTime nominalDay now
       sessionToInsert = ServerSessions.ServerSessionInsert uid (mkIpRange sockAddr) mUserAgent sessionExpiration
-  fmap (fmap (ServerSessions.mSessionId . getOneRow)) $ execStatement $ ServerSessions.insertServerSession sessionToInsert
+  result <- fmap (fmap (ServerSessions.mSessionId . getOneRow)) $ execStatement $ ServerSessions.insertServerSession sessionToInsert
+  case result of
+    Right sId ->
+      Log.logInfo "Session Created" $
+        Aeson.toJSON $
+          KeyMap.fromList
+            [ "session" .= truncateSessionId sId,
+              "user_id" .= display uid,
+              "ip" .= show sockAddr,
+              "user_agent" .= mUserAgent
+            ]
+    Left _ -> pure ()
+  pure result
 
 mkIpRange :: SockAddr -> Maybe IPRange
 mkIpRange sockAddr =
@@ -272,7 +342,15 @@ expireServerSession ::
   ) =>
   ServerSessions.Id ->
   m (Either HSQL.UsageError ())
-expireServerSession = execStatement . ServerSessions.expireSession
+expireServerSession sId = do
+  result <- execStatement $ ServerSessions.expireSession sId
+  case result of
+    Right () ->
+      Log.logInfo "Session Logout" $
+        Aeson.toJSON $
+          KeyMap.fromList ["session" .= truncateSessionId sId]
+    Left _ -> pure ()
+  pure result
 
 lookupSessionId :: Environment -> Text -> Maybe ServerSessions.Id
 lookupSessionId env =
@@ -320,5 +398,24 @@ mkCookieSession env mDomain sId =
       "HttpOnly",
       "; ",
       "Secure"
+    ]
+      <> maybe [] (\domain -> ["; ", "Domain=", domain]) mDomain
+
+-- | Build a @Set-Cookie@ header value that clears the session cookie.
+-- Use this in logout responses to remove the cookie from the browser.
+mkCookieSessionExpired :: Environment -> Maybe Text -> Text
+mkCookieSessionExpired env mDomain =
+  fold $
+    [ sessionCookieNameText env,
+      "=; ",
+      "SameSite=lax",
+      "; ",
+      "Path=/",
+      "; ",
+      "HttpOnly",
+      "; ",
+      "Secure",
+      "; ",
+      "Max-Age=0"
     ]
       <> maybe [] (\domain -> ["; ", "Domain=", domain]) mDomain

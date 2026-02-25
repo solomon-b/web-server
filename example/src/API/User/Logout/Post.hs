@@ -5,6 +5,7 @@ module API.User.Logout.Post
 where
 
 import App.Auth qualified as Auth
+import App.Config (Environment)
 import App.Errors (InternalServerError (..), throwErr)
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.IO.Class (MonadIO)
@@ -28,7 +29,9 @@ type Route =
     :> Servant.Post
          '[HTML]
          ( Servant.Headers
-             '[Servant.Header "Location" Text]
+             '[ Servant.Header "Location" Text,
+                Servant.Header "Set-Cookie" Text
+              ]
              Servant.NoContent
          )
 
@@ -41,15 +44,18 @@ handler ::
     MonadThrow m,
     MonadIO m
   ) =>
+  Environment ->
   Auth.Authz ->
   m
     ( Servant.Headers
-        '[Servant.Header "Location" Text]
+        '[ Servant.Header "Location" Text,
+           Servant.Header "Set-Cookie" Text
+         ]
         Servant.NoContent
     )
-handler Auth.Authz {authzSession} = do
+handler env Auth.Authz {authzSession} = do
   Auth.expireServerSession (Session.mSessionId authzSession) >>= \case
     Left err -> do
       throwErr $ InternalServerError $ Text.pack $ show err
     Right _ ->
-      pure $ Servant.addHeader "/" Servant.NoContent
+      pure $ Servant.addHeader "/" $ Servant.addHeader (Auth.mkCookieSessionExpired env Nothing) Servant.NoContent

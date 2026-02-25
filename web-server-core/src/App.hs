@@ -24,6 +24,7 @@ where
 --------------------------------------------------------------------------------
 
 import App.Auth (Authz, authHandler, execStatement, healthCheck)
+import App.Auth qualified as Auth
 import App.Config
 import App.Context
 import App.Monad
@@ -51,6 +52,7 @@ import Hasql.Pool qualified as HSQL.Pool
 import Hasql.Pool.Config as HSQL.Pool.Config
 import Log qualified
 import Log.Backend.StandardOutput qualified as Log
+import Network.HTTP.Types.Header qualified as Header
 import Network.HTTP.Types.Status qualified as Status
 import Network.Wai (Request)
 import Network.Wai qualified as Wai
@@ -59,6 +61,7 @@ import Servant (Context ((:.)))
 import Servant qualified
 import Servant.Server.Experimental.Auth (AuthHandler)
 import System.Posix.Signals qualified as Posix
+import Web.Cookie (parseCookies)
 
 --------------------------------------------------------------------------------
 
@@ -200,9 +203,23 @@ mkApp ::
   AppContext ctx ->
   Servant.Application
 mkApp server fullCtx appCtx =
-  Servant.serveWithContext (Proxy @api) fullCtx $
-    Servant.hoistServerWithContext
-      (Proxy @api)
-      (Proxy @ServerContext)
-      (interpret appCtx)
-      (server $ appEnvironment appCtx)
+  noCacheAuthenticated (appEnvironment appCtx) $
+    Servant.serveWithContext (Proxy @api) fullCtx $
+      Servant.hoistServerWithContext
+        (Proxy @api)
+        (Proxy @ServerContext)
+        (interpret appCtx)
+        (server $ appEnvironment appCtx)
+
+-- | Middleware that adds @Cache-Control: no-store@ to responses for
+-- authenticated requests (those carrying a session cookie), preventing
+-- proxies and browsers from caching session-bound content.
+noCacheAuthenticated :: Environment -> Wai.Middleware
+noCacheAuthenticated env app req respond =
+  let hasSession = any ((== cookieName) . fst) cookies
+      cookies = maybe [] parseCookies $ lookup "cookie" (Wai.requestHeaders req)
+      cookieName = Auth.sessionCookieName env
+   in app req $ \response ->
+        if hasSession
+          then respond $ Wai.mapResponseHeaders ((Header.hCacheControl, "no-store") :) response
+          else respond response
