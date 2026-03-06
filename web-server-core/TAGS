@@ -486,7 +486,7 @@ module App.Config App.Config6,7
 data Environment Environment24,25
 data Environment = Development Development24,25
 data Environment = Development | ProductionProduction24,25
-isProduction isProduction28,29
+isDevelopment isDevelopment28,29
 newtype Hostname Hostname35,36
 newtype Hostname = Hostname {getHostName getHostName35,36
 data WarpConfig WarpConfig41,42

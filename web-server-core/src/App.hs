@@ -79,7 +79,7 @@ withAppResources ctx action = do
         Log.logMessageIO logEnv time Log.LogAttention "Config Failure" (Aeson.toJSON ())
         error "Failed to load configuration"
       Just AppConfig {..} -> do
-        let hostname = if isProduction appConfigEnvironment then appConfigHostname else Hostname $ "localhost:" <> display (warpConfigPort appConfigWarpSettings)
+        let hostname = if isDevelopment appConfigEnvironment then Hostname ("localhost:" <> display (warpConfigPort appConfigWarpSettings)) else appConfigHostname
 
         -- Log Env
         let maxLogLevel = mkLogLevel $ verbosityConfigVerbosity appConfigVerbosity
