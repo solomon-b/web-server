@@ -24,11 +24,11 @@ data Environment = Development | Staging | Production
   deriving (Generic, Show)
   deriving anyclass (ToJSON)
 
-isProduction :: Environment -> Bool
-isProduction = \case
-  Development -> False
+isDevelopment :: Environment -> Bool
+isDevelopment = \case
+  Development -> True
   Staging -> False
-  Production -> True
+  Production -> False
 
 --------------------------------------------------------------------------------
 
