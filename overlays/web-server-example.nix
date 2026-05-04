@@ -3,24 +3,14 @@
 final: prev: {
   haskellPackages = prev.haskellPackages.override {
     overrides = hfinal: hprev: {
-      hasql = final.haskell.lib.dontCheck final.haskellPackages.hasql_1_9_1_2;
+      # These pin hs-opentelemetry-api ==0.2.* but nixpkgs 25.11 ships 0.3.0.0.
+      # They compile fine against 0.3; the bounds are just overly tight upstream.
+      hs-opentelemetry-exporter-handle = final.haskell.lib.markUnbroken (
+        final.haskell.lib.doJailbreak hprev.hs-opentelemetry-exporter-handle
+      );
 
-      hasql-pool = final.haskell.lib.dontCheck final.haskellPackages.hasql-pool_1_3_0_1;
-
-      # hasql-pool = final.haskell.lib.dontCheck (
-      #   final.haskell.lib.dontCheck (
-      #     hfinal.callHackageDirect {
-      #       pkg = "hasql-pool";
-      #       ver = "1.3.0.2";
-      #       sha256 = "sha256-3tADBDSR7MErgVLzIZdivVqyU99/A7jsRV3qUS7wWns=";
-      #     } { }
-      #   )
-      # );
-
-      hasql-transaction = final.haskell.lib.dontCheck final.haskellPackages.hasql-transaction_1_2_0_1;
-
-      hasql-interpolate = final.haskell.lib.dontCheck (
-        hfinal.callCabal2nix "hasql-interpolate" "${inputs.hasql-interpolate-src}" { }
+      hs-opentelemetry-instrumentation-wai = final.haskell.lib.markUnbroken (
+        final.haskell.lib.doJailbreak hprev.hs-opentelemetry-instrumentation-wai
       );
 
       htmx = final.haskell.lib.dontCheck (
@@ -31,10 +21,12 @@ final: prev: {
         } { }
       );
 
-      text-builder = final.haskell.lib.dontCheck hfinal.text-builder_1_0_0_3;
-
       web-server-core = final.haskell.lib.dontCheck (
         hfinal.callCabal2nix "web-server-core" ../web-server-core { }
+      );
+
+      web-server-otel = final.haskell.lib.dontCheck (
+        hfinal.callCabal2nix "web-server-otel" ../web-server-otel { }
       );
 
       web-server-example = final.haskell.lib.dontCheck (

@@ -2,17 +2,8 @@
   description = "web-server";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
-
-    hasql-interpolate-src = {
-      url = "github:awkward-squad/hasql-interpolate";
-      flake = false;
-    };
-    hasql-src = {
-      url = "github:JonathanLorimer/hasql/expose-hasql-encoders-params";
-      flake = false;
-    };
 
     tmp-postgres-src = {
       url = "github:jfischoff/tmp-postgres";
@@ -25,8 +16,6 @@
       self,
       nixpkgs,
       flake-utils,
-      hasql-interpolate-src,
-      hasql-src,
       tmp-postgres-src,
     }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (
@@ -46,6 +35,7 @@
         devShell = hsPkgs.shellFor {
           packages = p: [
             p.web-server-core
+            p.web-server-otel
             # p.web-server-example  # TODO: recreate simpler example
           ];
           buildInputs = [

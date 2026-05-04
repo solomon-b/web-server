@@ -50,7 +50,7 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Log qualified
 import Network.Wai (Request (..))
-import OpenTelemetry.Attributes (getAttributes)
+import OpenTelemetry.Attributes (getAttributeMap)
 import OpenTelemetry.Exporter.Handle.Span (stdoutExporter')
 import OpenTelemetry.Exporter.Span (ExportResult (..), SpanExporter (..))
 import OpenTelemetry.Processor.Simple (SimpleProcessorConfig (SimpleProcessorConfig), simpleProcessor)
@@ -90,7 +90,7 @@ stdoutFormatter verbosity ImmutableSpan {..} =
           . Trace.timestampNanoseconds
       duration = maybe "" mkDuration spanEnd
       name = Lazy.fromStrict spanName
-      -- attrs = foldMapWithKey (\k v -> L.pack (show k) <> ": " <> printAttribute v <> "\n") (snd $ getAttributes spanAttributes)
+      -- attrs = foldMapWithKey (\k v -> L.pack (show k) <> ": " <> printAttribute v <> "\n") (getAttributeMap spanAttributes)
       spanIdText =
         Lazy.pack (show $ Trace.traceId spanContext)
           <> ":"
@@ -102,7 +102,7 @@ stdoutFormatter verbosity ImmutableSpan {..} =
                   let ts =
                         Lazy.pack . iso8601Show . Time.posixSecondsToUTCTime . secondsToNominalDiffTime $
                           (fromIntegral (Trace.timestampNanoseconds spanStart) :: Pico) / 1000000000
-                      sortedEventList = sortOn fst . HashMap.toList . snd . getAttributes $ eventAttributes
+                      sortedEventList = sortOn fst . HashMap.toList . getAttributeMap $ eventAttributes
                       eventAttrs =
                         foldMap
                           (\(k, v) -> Lazy.pack (show k) <> ": " <> printAttribute v <> "\n")
