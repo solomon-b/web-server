@@ -40,14 +40,13 @@ import Data.Bifunctor (bimap)
 import Data.CaseInsensitive qualified as CI
 import Data.Data (Proxy (..))
 import Data.Function ((&))
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes)
 import Data.Text.Display (display)
 import Data.Text.Encoding qualified as TE
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time (getCurrentTime)
 import Hasql.Connection.Setting qualified as HSQL.Setting
 import Hasql.Connection.Setting.Connection qualified as HSQL.Connection
-import Hasql.Connection.Setting.Connection.Param qualified as HSQL.Params
 import Hasql.Pool qualified as HSQL.Pool
 import Hasql.Pool.Config as HSQL.Pool.Config
 import Log qualified
@@ -132,15 +131,11 @@ runApp server ctx = withAppResources ctx (runServer @api server)
 
 acquirePool :: PostgresConfig -> IO HSQL.Pool.Pool
 acquirePool PostgresConfig {..} = do
-  let hsqlSettings :: Maybe [HSQL.Setting.Setting]
-      hsqlSettings = do
-        host <- HSQL.Params.host . TE.decodeUtf8 <$> postgresConfigHost
-        port <- HSQL.Params.port <$> postgresConfigPort
-        user <- HSQL.Params.user . TE.decodeUtf8 <$> postgresConfigUser
-        password <- HSQL.Params.password . TE.decodeUtf8 <$> postgresConfigPassword
-        db <- HSQL.Params.dbname . TE.decodeUtf8 <$> postgresConfigDB
-        pure [HSQL.Setting.connection $ HSQL.Connection.params [host, port, user, password, db]]
-  let poolSettings = HSQL.Pool.Config.settings $ pure $ staticConnectionSettings $ fromMaybe [] hsqlSettings
+  let connSetting =
+        HSQL.Setting.connection $
+          HSQL.Connection.string $
+            TE.decodeUtf8 postgresConfigConnectionString
+  let poolSettings = HSQL.Pool.Config.settings $ pure $ staticConnectionSettings [connSetting]
   HSQL.Pool.acquire poolSettings
 
 mkLogLevel :: Verbosity -> Log.LogLevel
