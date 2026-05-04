@@ -6,6 +6,7 @@ license:            Apache-2.0
 author:             Solomon Bothwell
 maintainer:         ssbothwell@gmail.com
 build-type:         Simple
+extra-doc-files:    CHANGELOG.md
 
 --------------------------------------------------------------------------------
 
