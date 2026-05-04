@@ -7,7 +7,7 @@ module App.Config where
 
 --------------------------------------------------------------------------------
 
-import App.Config.Fetchers (FetchHKD (..), packText, parseEnvDefault, parseEnvDefaultStr, parseEnvOptional, parseEnvStr, readEnvDefault, readText)
+import App.Config.Fetchers (FetchHKD (..), parseEnvDefault, parseEnvDefaultStr, parseEnvStr, readEnvDefault)
 import Barbies
 import Data.Aeson (ToJSON)
 import Data.ByteString (ByteString)
@@ -15,7 +15,6 @@ import Data.Functor.Compose (Compose (..))
 import Data.String (IsString)
 import Data.Text (Text)
 import Data.Text.Display (Display)
-import Data.Word (Word16)
 import GHC.Generics
 
 --------------------------------------------------------------------------------
@@ -77,21 +76,15 @@ instance FetchHKD WarpConfigF where
 
 --------------------------------------------------------------------------------
 
-data PostgresConfig = PostgresConfig
-  { postgresConfigHost :: Maybe ByteString,
-    postgresConfigPort :: Maybe Word16,
-    postgresConfigDB :: Maybe ByteString,
-    postgresConfigUser :: Maybe ByteString,
-    postgresConfigPassword :: Maybe ByteString
+-- | Postgres connection settings: a libpq connection string read from
+-- @APP_POSTGRES_CONNECTION_STRING@ (e.g. @postgres://user:pw\@host:5432/db@).
+newtype PostgresConfig = PostgresConfig
+  { postgresConfigConnectionString :: ByteString
   }
   deriving stock (Generic, Show)
 
-data PostgresConfigF f = PostgresConfigF
-  { postgresConfigFHost :: f (Maybe ByteString),
-    postgresConfigFPort :: f (Maybe Word16),
-    postgresConfigFDB :: f (Maybe ByteString),
-    postgresConfigFUser :: f (Maybe ByteString),
-    postgresConfigFPassword :: f (Maybe ByteString)
+newtype PostgresConfigF f = PostgresConfigF
+  { postgresConfigFConnectionString :: f ByteString
   }
   deriving stock (Generic)
   deriving anyclass (FunctorB, ApplicativeB, TraversableB, ConstraintsB)
@@ -102,21 +95,13 @@ instance FetchHKD PostgresConfigF where
   fromEnv :: PostgresConfigF (Compose IO Maybe)
   fromEnv =
     PostgresConfigF
-      { postgresConfigFHost = parseEnvOptional packText "APP_POSTGRES_HOST",
-        postgresConfigFPort = parseEnvOptional readText "APP_POSTGRES_PORT",
-        postgresConfigFDB = parseEnvOptional packText "APP_POSTGRES_DB",
-        postgresConfigFUser = parseEnvOptional packText "APP_POSTGRES_USER",
-        postgresConfigFPassword = parseEnvOptional packText "APP_POSTGRES_PASSWORD"
+      { postgresConfigFConnectionString = parseEnvStr "APP_POSTGRES_CONNECTION_STRING"
       }
 
   toConcrete :: PostgresConfigF (Compose IO Maybe) -> IO (Maybe (Concrete PostgresConfigF))
   toConcrete PostgresConfigF {..} = do
-    postgresConfigHost <- getCompose postgresConfigFHost
-    postgresConfigPort <- getCompose postgresConfigFPort
-    postgresConfigDB <- getCompose postgresConfigFDB
-    postgresConfigUser <- getCompose postgresConfigFUser
-    postgresConfigPassword <- getCompose postgresConfigFPassword
-    pure $ PostgresConfig <$> postgresConfigHost <*> postgresConfigPort <*> postgresConfigDB <*> postgresConfigUser <*> postgresConfigPassword
+    postgresConfigConnectionString <- getCompose postgresConfigFConnectionString
+    pure $ PostgresConfig <$> postgresConfigConnectionString
 
 --------------------------------------------------------------------------------
 
