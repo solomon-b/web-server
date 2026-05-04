@@ -99,7 +99,7 @@ handler sockAddr mUserAgent Register {..} = do
           Auth.login uid sockAddr mUserAgent >>= \case
             Left err ->
               throwErr $ InternalServerError $ Text.pack $ show err
-            Right sessionId -> do
+            Right Auth.LoginResult {loginResultSessionId, loginResultDuration} -> do
               pure $
-                Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
+                Servant.addHeader (Auth.mkCookieSessionWithMaxAge loginResultDuration env Nothing loginResultSessionId) $
                   Servant.addHeader "/" Servant.NoContent

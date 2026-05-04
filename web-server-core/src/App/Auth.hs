@@ -7,6 +7,7 @@ module App.Auth
     sessionCookieName,
     sessionCookieNameText,
     mkCookieSession,
+    mkCookieSessionWithMaxAge,
     mkCookieSessionExpired,
     truncateSessionId,
 
@@ -19,6 +20,8 @@ module App.Auth
     AuthErr (..),
     getAuth,
     login,
+    loginWithExpiry,
+    LoginResult (..),
     expireServerSession,
     lookupSessionId,
     userLoginState,
@@ -300,6 +303,15 @@ getAuth sessionId = do
               }
         )
 
+-- | Result of a successful login. Carries the chosen session duration so the
+-- caller can build a matching @Set-Cookie@ via 'mkCookieSessionWithMaxAge'
+-- without re-deriving the value (and risking drift from the DB-side expiry).
+data LoginResult = LoginResult
+  { loginResultSessionId :: ServerSessions.Id,
+    loginResultExpiresAt :: UTCTime,
+    loginResultDuration :: NominalDiffTime
+  }
+
 login ::
   ( MonadIO m,
     MonadReader env m,
@@ -309,10 +321,24 @@ login ::
   User.Id ->
   SockAddr ->
   Maybe Text ->
-  m (Either HSQL.UsageError ServerSessions.Id)
-login uid sockAddr mUserAgent = do
+  m (Either HSQL.UsageError LoginResult)
+login = loginWithExpiry nominalDay
+
+-- | Like 'login' but with a caller-supplied session lifetime.
+loginWithExpiry ::
+  ( MonadIO m,
+    MonadReader env m,
+    Has HSQL.Pool.Pool env,
+    Log.MonadLog m
+  ) =>
+  NominalDiffTime ->
+  User.Id ->
+  SockAddr ->
+  Maybe Text ->
+  m (Either HSQL.UsageError LoginResult)
+loginWithExpiry duration uid sockAddr mUserAgent = do
   now <- liftIO getCurrentTime
-  let sessionExpiration = addUTCTime nominalDay now
+  let sessionExpiration = addUTCTime duration now
       sessionToInsert = ServerSessions.ServerSessionInsert uid (mkIpRange sockAddr) mUserAgent sessionExpiration
   result <- fmap (fmap (ServerSessions.mSessionId . getOneRow)) $ execStatement $ ServerSessions.insertServerSession sessionToInsert
   case result of
@@ -326,7 +352,16 @@ login uid sockAddr mUserAgent = do
               "user_agent" .= mUserAgent
             ]
     Left _ -> pure ()
-  pure result
+  pure $
+    fmap
+      ( \sId ->
+          LoginResult
+            { loginResultSessionId = sId,
+              loginResultExpiresAt = sessionExpiration,
+              loginResultDuration = duration
+            }
+      )
+      result
 
 mkIpRange :: SockAddr -> Maybe IPRange
 mkIpRange sockAddr =
@@ -379,6 +414,11 @@ userLoginState env cookie = do
     _ ->
       pure IsNotLoggedIn
 
+-- | Build a session @Set-Cookie@ header value with no @Max-Age@ — the
+-- browser will treat it as a session cookie and drop it on browser close,
+-- even if the DB-side session is still valid. Prefer
+-- 'mkCookieSessionWithMaxAge' so the browser-side and DB-side lifetimes
+-- stay in sync.
 mkCookieSession :: Environment -> Maybe Text -> ServerSessions.Id -> Text
 mkCookieSession env mDomain sId =
   fold $
@@ -400,6 +440,16 @@ mkCookieSession env mDomain sId =
       "Secure"
     ]
       <> maybe [] (\domain -> ["; ", "Domain=", domain]) mDomain
+
+-- | Like 'mkCookieSession' but appends @Max-Age=<seconds>@ so the browser
+-- forgets the cookie at the same time the DB-side session expires. Pair
+-- with 'loginWithExpiry' (or 'login') by passing the same duration as
+-- 'loginResultDuration'. Negative or zero durations are clamped to 0.
+mkCookieSessionWithMaxAge :: NominalDiffTime -> Environment -> Maybe Text -> ServerSessions.Id -> Text
+mkCookieSessionWithMaxAge duration env mDomain sId =
+  let maxAgeSeconds :: Integer
+      maxAgeSeconds = max 0 (truncate duration)
+   in mkCookieSession env mDomain sId <> "; Max-Age=" <> Text.pack (show maxAgeSeconds)
 
 -- | Build a @Set-Cookie@ header value that clears the session cookie.
 -- Use this in logout responses to remove the cookie from the browser.
