@@ -2,11 +2,12 @@ module App.AuthSpec where
 
 --------------------------------------------------------------------------------
 
-import App.Auth (mkCookieSession, mkCookieSessionExpired, truncateSessionId)
+import App.Auth (mkCookieSession, mkCookieSessionExpired, mkCookieSessionWithMaxAge, truncateSessionId)
 import App.Config (Environment (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Display (display)
+import Data.Time (nominalDay)
 import Data.UUID.V4 (nextRandom)
 import Effects.Database.Tables.ServerSessions qualified as ServerSessions
 import Hedgehog (Gen, MonadTest, annotate, evalIO, failure, forAll, (===))
@@ -44,6 +45,34 @@ spec =
         sId <- ServerSessions.Id <$> evalIO nextRandom
         let cookie = mkCookieSession env (Just "example.com") sId
         assertContains cookie "Domain=example.com"
+
+      it "omits Max-Age" $ hedgehog $ do
+        env <- forAll envGen
+        sId <- ServerSessions.Id <$> evalIO nextRandom
+        let cookie = mkCookieSession env Nothing sId
+        assertNotContains cookie "Max-Age"
+
+    describe "mkCookieSessionWithMaxAge" $ do
+      it "encodes the duration as Max-Age in seconds" $ hedgehog $ do
+        env <- forAll envGen
+        sId <- ServerSessions.Id <$> evalIO nextRandom
+        let cookie = mkCookieSessionWithMaxAge nominalDay env Nothing sId
+        assertContains cookie "Max-Age=86400"
+
+      it "clamps negative durations to 0" $ hedgehog $ do
+        env <- forAll envGen
+        sId <- ServerSessions.Id <$> evalIO nextRandom
+        let cookie = mkCookieSessionWithMaxAge (negate 60) env Nothing sId
+        assertContains cookie "Max-Age=0"
+
+      it "preserves the base cookie attributes" $ hedgehog $ do
+        env <- forAll envGen
+        sId <- ServerSessions.Id <$> evalIO nextRandom
+        let cookie = mkCookieSessionWithMaxAge nominalDay env Nothing sId
+        assertContains cookie "HttpOnly"
+        assertContains cookie "Secure"
+        assertContains cookie "SameSite=lax"
+        assertContains cookie (display sId)
 
     describe "mkCookieSessionExpired" $ do
       it "contains Max-Age=0" $ hedgehog $ do

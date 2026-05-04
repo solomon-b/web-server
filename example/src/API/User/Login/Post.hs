@@ -119,9 +119,9 @@ attemptLogin sockAddr mUserAgent redirectLink user = do
   Auth.login (User.mId user) sockAddr mUserAgent >>= \case
     Left err ->
       throwErr $ InternalServerError $ Text.pack $ show err
-    Right sessionId ->
+    Right Auth.LoginResult {loginResultSessionId, loginResultDuration} ->
       pure $
-        Servant.addHeader (Auth.mkCookieSession env Nothing sessionId) $
+        Servant.addHeader (Auth.mkCookieSessionWithMaxAge loginResultDuration env Nothing loginResultSessionId) $
           Servant.addHeader redirectLink Servant.NoContent
 
 invalidCredentialResponse ::
