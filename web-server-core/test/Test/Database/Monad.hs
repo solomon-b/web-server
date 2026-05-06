@@ -190,7 +190,8 @@ withAuth = beforeWith getAuth
       bracketConn cfg $ do
         pass <- hashPassword $ mkPassword "foo"
         auth <- runDB $ TRX.transaction TRX.ReadCommitted TRX.Write $ do
-          uid <- TRX.statement () $ User.insertUser $ User.ModelInsert (mkEmailAddress "user@host.com") pass
+          let email = either (error "withAuth: invalid test email") id $ mkEmailAddress "user@host.com"
+          uid <- TRX.statement () $ User.insertUser $ User.ModelInsert email pass
           u <- TRX.statement () $ User.getUser $ getOneRow uid
           sm <- TRX.statement () $ ServerSessions.insertServerSession $ ServerSessions.ServerSessionInsert (getOneRow uid) Nothing Nothing (read "2099-01-01 10:30:20 UTC")
           pure $ Authz (fromMaybe (error "withAuth failure: Failed to look up user") u) (getOneRow sm)

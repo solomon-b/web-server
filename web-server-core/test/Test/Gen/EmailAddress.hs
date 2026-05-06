@@ -16,11 +16,15 @@ genEmail = do
   username <- Gen.text (Range.linear 1 10) Gen.alphaNum
   domain <- Gen.text (Range.linear 1 10) Gen.alpha
   tld <- Gen.text (Range.linear 1 10) Gen.alpha
-  pure . mkEmailAddress . toLower $
-    fold
-      [ username,
-        "@",
-        domain,
-        ".",
-        tld
-      ]
+  let raw =
+        toLower $
+          fold
+            [ username,
+              "@",
+              domain,
+              ".",
+              tld
+            ]
+  case mkEmailAddress raw of
+    Left _ -> Gen.discard
+    Right e -> pure e

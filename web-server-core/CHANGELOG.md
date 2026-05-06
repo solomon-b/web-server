@@ -8,6 +8,18 @@ and this project adheres to the
 
 ## Unreleased
 
+### Changed (breaking)
+
+- `Domain.Types.EmailAddress.EmailAddress` now wraps
+  `Text.Email.Validate.EmailAddress` instead of `CI Text`. Construction
+  validates RFC syntax and lowercases the address; all `FromJSON`,
+  `FromHttpApiData`, and Hasql `DecodeValue` instances now reject
+  syntactically invalid addresses.
+- `mkEmailAddress :: Text -> Either ValidationFailure EmailAddress`
+  (previously total: `Text -> EmailAddress`).
+- Removed `isValid` and `validate` — every `EmailAddress` is valid by
+  construction; use `mkEmailAddress` instead.
+
 ## 0.2.0.0 — 2026-05-04
 
 ### Changed (breaking)
