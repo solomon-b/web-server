@@ -9,59 +9,42 @@ This tutorial assumes familiarity with:
 - Servant API types and `HasServer`
 - `AuthProtect` and `AuthHandler` from `servant-server`
 - The `AuthServerData` type family
-- `DataKinds` for promoting constructors to the type level
+- `DataKinds` (role names and auth tags are type-level `Symbol`s)
 
 ## Step 1: Define Your Role Type
 
-Define your role type. If you want a linear hierarchy, derive `Ord` so constructors listed later represent more permissions:
+Define your role type, deriving `Generic` (so the combinator can turn a role *name* into its value) and, for a linear hierarchy, `Ord` (so constructors listed later represent more permissions):
 
 ```haskell
 data UserRole = User | Host | Staff | Admin
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
 ```
 
 With this ordering, `Admin >= Staff >= Host >= User`.
 
-## Step 2: Write CheckRole Instances
+## Step 2: Write a RoleCheck Instance
 
-`CheckRole` defines how each type-level role checks whether a user's actual role is sufficient. You need one instance per constructor, each implementing `checkRole`:
+`RoleCheck` defines how roles are compared. For a linear hierarchy, an empty instance uses the `Ord`-based default, where a role is sufficient when `actual >= required`:
 
 ```haskell
-import App.Auth.Role (CheckRole(..))
+import App.Auth.Role (RoleCheck)
 
-instance CheckRole 'User where
-  type RoleType 'User = UserRole
-  checkRole _ role = role >= User
-
-instance CheckRole 'Host where
-  type RoleType 'Host = UserRole
-  checkRole _ role = role >= Host
-
-instance CheckRole 'Staff where
-  type RoleType 'Staff = UserRole
-  checkRole _ role = role >= Staff
-
-instance CheckRole 'Admin where
-  type RoleType 'Admin = UserRole
-  checkRole _ role = role >= Admin
+instance RoleCheck UserRole
 ```
 
-Each instance declares `RoleType` (the value-level type to check against) and `checkRole` (a predicate that receives the user's actual role and returns whether it satisfies the requirement).
-
-The logic inside `checkRole` is entirely up to you. Using `>=` with a derived `Ord` instance gives a linear hierarchy, but you can use any predicate — exact match, set membership, or custom logic. See [Alternative: Permission Sets](#alternative-permission-sets) below.
+The hierarchy is defined  by your `Ord` instance. For non-hierarchical schemes (permission sets, exact match), override `sufficient` — see [Alternative: Permission Sets](#alternative-permission-sets).
 
 ## Step 3: Write a HasRole Instance
 
-`HasRole` tells the combinator how to extract a role from your authentication result type. If your `AuthHandler` returns an `Authz` that contains a `User` with a `userRole` field:
+`HasRole` tells the combinator how to extract a role from your authentication result type:
 
 ```haskell
 import App.Auth.Role (HasRole(..))
 
-instance HasRole Authz UserRole where
+instance HasRole Authz where
+  type RoleOf Authz = UserRole
   getRole authz = authz.authzUser.userRole
 ```
-
-The functional dependency `auth -> r` means each auth type maps to exactly one role type, so GHC can infer the role type automatically.
 
 ## Step 4: Set Up AuthServerData
 
@@ -75,12 +58,12 @@ type instance AuthServerData (AuthProtect "cookie-auth") = Authz
 
 ## Step 5: Use RequireRole in Your API
 
-`RequireRole` **replaces** `AuthProtect` in routes where you need role checking. It takes two type arguments: the auth tag (a `Symbol`, same as `AuthProtect`) and the required role (a promoted constructor):
+`RequireRole` replaces `AuthProtect` in routes where you need role checking. It takes two type arguments: the auth tag (a `Symbol`, same as `AuthProtect`) and the required role named by its constructor name (also a `Symbol`):
 
 ```haskell
 -- Role-protected route:
 type DashboardAPI =
-  RequireRole "cookie-auth" 'Host
+  RequireRole "cookie-auth" "Host"
     :> "dashboard"
     :> Get '[HTML] (Html ())
 
@@ -91,19 +74,21 @@ type ProfileAPI =
     :> Get '[HTML] (Html ())
 ```
 
+The role name is checked at compile time. `RequireRole "cookie-auth" "Hsot"` (a typo) is a type error (`RequireRole: no constructor "Hsot" in role type UserRole`).
+
 Your handler receives the auth result as its first argument, just like `AuthProtect`:
 
 ```haskell
 dashboardHandler :: Authz -> Handler (Html ())
 dashboardHandler authz = do
   let user = authz.authzUser
-  -- checkRole @'Host already passed at this point
+  -- the "Host" check already passed at this point
   pure (renderDashboard user)
 ```
 
 ## Step 6: Wire Up the Server
 
-The Servant context is identical to what you'd use with `AuthProtect` — an `AuthHandler` keyed by the same tag:
+The Servant context is identical to what you'd use with `AuthProtect`, an `AuthHandler` keyed by the same tag:
 
 ```haskell
 import Servant.Server (Context(..), serveWithContext)
@@ -122,20 +107,20 @@ app =
     server
 ```
 
-Both `RequireRole "cookie-auth" 'Host` and `AuthProtect "cookie-auth"` look up the same `AuthHandler Request Authz` from the context. No extra context entries are needed.
+Both `RequireRole "cookie-auth" "Host"` and `AuthProtect "cookie-auth"` look up the same `AuthHandler Request Authz` from the context. No extra context entries are needed.
 
 ## How It Works
 
 When a request hits a `RequireRole` route:
 
 1. The `AuthHandler` from the Servant context is invoked with the WAI `Request`.
-2. If the auth handler throws an error (e.g. 401), that error is returned to the client **immediately** (fatal — no alternatives are tried).
+2. If the auth handler throws an error (e.g. 401), that error is returned to the client immediately.
 3. If authentication succeeds, the role is extracted from the result via `getRole`.
-4. `checkRole` is called with the user's actual role. The logic is defined by your `CheckRole` instance.
-5. If `checkRole` returns `True`, the auth result is passed to the handler.
-6. If `checkRole` returns `False`, the failure is **non-fatal** — Servant tries the next `:<|>` alternative.
+4. The required role name is demoted to a value of your role type (at compile time, via `Generic`) and `sufficient required actual` is evaluated.
+5. If `sufficient` returns `True`, the auth result is passed to the handler.
+6. If `sufficient` returns `False` Servant tries the next `:<|>` alternative.
 
-All of this happens inside a single `addAuthCheck` in Servant's `Delayed` pipeline — there is no double authentication or extra middleware.
+All of this happens inside a single `addAuthCheck` in Servant's `Delayed` pipeline. There is no double authentication or extra middleware.
 
 ## Route Alternatives (Same Path, Different Roles)
 
@@ -143,18 +128,18 @@ Because role failures are non-fatal, you can serve different handlers for differ
 
 ```haskell
 type API =
-       RequireRole "cookie-auth" 'Admin :> "panel" :> Get '[JSON] AdminView
-  :<|> RequireRole "cookie-auth" 'Host  :> "panel" :> Get '[JSON] HostView
-  :<|> RequireRole "cookie-auth" 'User  :> "panel" :> Get '[JSON] UserView
+       RequireRole "cookie-auth" "Admin" :> "panel" :> Get '[JSON] AdminView
+  :<|> RequireRole "cookie-auth" "Host"  :> "panel" :> Get '[JSON] HostView
+  :<|> RequireRole "cookie-auth" "User"  :> "panel" :> Get '[JSON] UserView
 ```
 
 When a `Host` requests `/panel`:
-1. The `'Admin` route fails `checkRole` (non-fatal) — Servant tries the next alternative.
-2. The `'Host` route passes `checkRole` — that handler runs.
+1. The `"Admin"` route fails the role check (non-fatal) and Servant tries the next alternative.
+2. The `"Host"` route passes so that handler runs.
 
-**Important:** When using `>=` in `checkRole`, routes must be ordered **most-restrictive-first**. A `'User` route whose `checkRole` uses `>=` would match `User`, `Host`, `Staff`, *and* `Admin`, so placing it before a more restrictive route would make the latter unreachable.
+Important: With the `>=` default, routes must be ordered most-restrictive-first. A `"User"` route (which every role satisfies) placed first would make more restrictive routes unreachable.
 
-**Note on re-authentication:** Each `RequireRole` alternative runs the auth handler independently. In the example above, a `Host` request runs the auth handler twice (once for the `'Admin` route that fails, once for the `'Host` route that succeeds). Keep this in mind if your auth handler is expensive.
+**Note on re-authentication:** Each `RequireRole` alternative runs the auth handler independently. In the example above, a `Host` request runs the auth handler twice (once for the `"Admin"` route that fails, once for the `"Host"` route that succeeds). Keep this in mind if your auth handler is expensive.
 
 ## Mixing RequireRole and AuthProtect
 
@@ -162,35 +147,42 @@ You can freely mix both combinators in the same API. They share the same `AuthHa
 
 ```haskell
 type API =
-       RequireRole "cookie-auth" 'Admin :> "admin" :> Get '[JSON] AdminData
-  :<|> RequireRole "cookie-auth" 'Host  :> "dashboard" :> Get '[JSON] Dashboard
-  :<|> AuthProtect "cookie-auth"        :> "profile" :> Get '[JSON] Profile
+       RequireRole "cookie-auth" "Admin" :> "admin" :> Get '[JSON] AdminData
+  :<|> RequireRole "cookie-auth" "Host"  :> "dashboard" :> Get '[JSON] Dashboard
+  :<|> AuthProtect "cookie-auth"         :> "profile" :> Get '[JSON] Profile
   :<|> "public" :> Get '[JSON] PublicInfo
 ```
 
-- `/admin` — requires `Admin` role or higher
-- `/dashboard` — requires `Host` role or higher
-- `/profile` — requires authentication only (any role)
-- `/public` — no authentication
+- `/admin` requires `Admin` role or higher
+- `/dashboard` requires `Host` role or higher
+- `/profile` requires authentication only (any role)
+- `/public` has no authentication
 
 ## Alternative: Permission Sets
 
-`CheckRole` is not limited to linear hierarchies. Because `checkRole` is just a predicate, you can use set membership or any custom logic:
+`RoleCheck` is not limited to linear hierarchies. Override `sufficient` (and, when the required value has a different type than the role, the `Required` associated type) for any scheme. For example, set membership:
 
 ```haskell
+import App.Auth.Role (RoleCheck(..))
+import Data.Set (Set)
+import qualified Data.Set as Set
+
 data Permission = CanRead | CanEdit | CanDelete
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
 
-instance CheckRole 'CanEdit where
-  type RoleType 'CanEdit = Set Permission
-  checkRole _ perms = CanEdit `Set.member` perms
-
-instance CheckRole 'CanDelete where
-  type RoleType 'CanDelete = Set Permission
-  checkRole _ perms = CanDelete `Set.member` perms
+-- The role is a Set of permissions; the *required* value is a single Permission.
+instance RoleCheck (Set Permission) where
+  type Required (Set Permission) = Permission
+  sufficient p perms = p `Set.member` perms
 ```
 
-This works with the same `RequireRole` combinator — no changes needed.
+Your auth type's `RoleOf` would be `Set Permission`, and routes name a single permission constructor:
+
+```haskell
+type EditAPI = RequireRole "cookie-auth" "CanEdit" :> "edit" :> Post '[JSON] ()
+```
+
+This works with the same `RequireRole` combinator. Instances whose head is not a plain data type, like `RoleCheck (Set Permission)`, need `FlexibleInstances`.
 
 ## Complete Minimal Example
 
@@ -198,14 +190,17 @@ A self-contained example you can adapt:
 
 ```haskell
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
-import App.Auth.Role (HasRole(..), RequireRole, CheckRole(..), Proxy(..))
+import App.Auth.Role (HasRole(..), RequireRole, RoleCheck)
 import Control.Monad.Except (throwError)
+import Data.Proxy (Proxy(..))
+import GHC.Generics (Generic)
 import Network.Wai (Request, requestHeaders)
 import Network.Wai.Handler.Warp (run)
 import Servant.API (Get, JSON, type (:<|>) (..), type (:>))
@@ -213,20 +208,18 @@ import Servant.API.Experimental.Auth (AuthProtect)
 import Servant.Server (Context(..), Handler, Server, err401, serveWithContext)
 import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData, mkAuthHandler)
 
--- Role type: Ord encodes the permission hierarchy
+-- Role type: Ord encodes the hierarchy, Generic enables name -> value demotion
 data Role = Member | Moderator | Admin
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
+
+-- Comparison, defined once: the Ord default means "actual >= required"
+instance RoleCheck Role
 
 -- Auth result type
 data Auth = Auth { authUser :: String, authRole :: Role }
 
--- CheckRole instances (checkRole defines what "sufficient" means)
-instance CheckRole 'Member    where type RoleType 'Member    = Role; checkRole _ r = r >= Member
-instance CheckRole 'Moderator where type RoleType 'Moderator = Role; checkRole _ r = r >= Moderator
-instance CheckRole 'Admin     where type RoleType 'Admin     = Role; checkRole _ r = r >= Admin
-
--- HasRole instance
-instance HasRole Auth Role where
+instance HasRole Auth where
+  type RoleOf Auth = Role
   getRole = authRole
 
 -- Map the auth tag to the auth result type
@@ -241,11 +234,12 @@ myAuthHandler = mkAuthHandler $ \req ->
     Just _       -> pure (Auth "carol" Member)
     Nothing      -> throwError err401
 
--- API: same path, different handlers per role level (most restrictive first)
+-- API: same path, different handlers per role level (most restrictive first).
+-- The required role is its constructor NAME; a typo is a compile error.
 type API =
-       RequireRole "my-auth" 'Admin     :> "panel" :> Get '[JSON] String
-  :<|> RequireRole "my-auth" 'Moderator :> "panel" :> Get '[JSON] String
-  :<|> RequireRole "my-auth" 'Member    :> "panel" :> Get '[JSON] String
+       RequireRole "my-auth" "Admin"     :> "panel" :> Get '[JSON] String
+  :<|> RequireRole "my-auth" "Moderator" :> "panel" :> Get '[JSON] String
+  :<|> RequireRole "my-auth" "Member"    :> "panel" :> Get '[JSON] String
 
 server :: Server API
 server = adminPanel :<|> modPanel :<|> memberPanel
@@ -277,10 +271,13 @@ $ curl localhost:3000/panel
 
 **GHC extensions** (most are covered by `GHC2021`):
 
-- `DataKinds` — promote role constructors to types
-- `TypeFamilies` — for `RoleType` and `AuthServerData`
+- `DataKinds` — role names and auth tags are type-level `Symbol`s
+- `DeriveGeneric` — to `deriving Generic` on your role type
+- `TypeFamilies` — for `RoleOf`, `Required`, and `AuthServerData`
 - `TypeOperators` — for `:>`
-- `PolyKinds`, `ScopedTypeVariables`, `FlexibleInstances`, `MultiParamTypeClasses`, `UndecidableInstances` — needed by the library internals; your code typically only needs `DataKinds`, `TypeFamilies`, and `TypeOperators`
+- `FlexibleInstances` — only if a `RoleCheck`/`HasRole` instance head is not a plain data type (e.g. `RoleCheck (Set Permission)`)
+
+Your role type must derive `Generic`. The library's own internals (`PolyKinds`, `AllowAmbiguousTypes`, `DefaultSignatures`, etc.) do not leak into your code.
 
 **Cabal dependencies**:
 
