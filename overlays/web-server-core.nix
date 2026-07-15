@@ -19,6 +19,10 @@ self: final: prev: {
         hfinal.callCabal2nix "web-server-core" "${self}/web-server-core" { }
       );
 
+      web-server-roles = final.haskell.lib.dontCheck (
+        hfinal.callCabal2nix "web-server-roles" "${self}/web-server-roles" { }
+      );
+
       text-builder = final.haskell.lib.dontCheck hfinal.text-builder_1_0_0_3;
     };
   };
