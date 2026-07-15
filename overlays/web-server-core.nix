@@ -8,6 +8,10 @@ self: final: prev: {
       web-server-core = final.haskell.lib.dontCheck (
         hfinal.callCabal2nix "web-server-core" "${self}/web-server-core" { }
       );
+
+      web-server-roles = final.haskell.lib.dontCheck (
+        hfinal.callCabal2nix "web-server-roles" "${self}/web-server-roles" { }
+      );
     };
   };
 }

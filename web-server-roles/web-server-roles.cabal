@@ -1,0 +1,71 @@
+cabal-version: 3.0
+name:          web-server-roles
+version:       0.1.0.0
+synopsis:      Type-level role-based authorization combinators for Servant
+description:
+  This package provides Servant combinators for declarative role-based
+  access control. Define your role type, provide a few instances, and
+  use @RequireRole "tag" 'YourRole@ in your API types to enforce authorization
+  at the type level.
+
+license:       BSD-3-Clause
+license-file:  LICENSE
+author:        KPBJ
+maintainer:    tech@kpbj.fm
+category:      Web
+build-type:    Simple
+
+library
+  exposed-modules:
+    App.Auth.Role
+
+  build-depends:
+    , base           >=4.14 && <5
+    , bytestring     >=0.10 && <0.13
+    , servant        >=0.19 && <0.21
+    , servant-server >=0.19 && <0.21
+    , wai            >=3.2 && <3.3
+
+  hs-source-dirs:   src
+  default-language: GHC2021
+  ghc-options:      -Wall
+
+  default-extensions:
+    DataKinds
+    ExplicitForAll
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    MultiParamTypeClasses
+    OverloadedStrings
+    PolyKinds
+    ScopedTypeVariables
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UndecidableInstances
+
+test-suite web-server-roles-test
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  other-modules:    App.Auth.RoleSpec
+  hs-source-dirs:   test
+  default-language: GHC2021
+  ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
+
+  build-depends:
+    , base           >=4.14 && <5
+    , hspec          >=2.11 && <2.12
+    , hspec-wai      >=0.12 && <0.13
+    , http-types     >=0.12 && <0.13
+    , mtl            >=2.3 && <2.4
+    , servant        >=0.19 && <0.21
+    , servant-server >=0.19 && <0.21
+    , wai            >=3.2 && <3.3
+    , web-server-roles
+
+  default-extensions:
+    DataKinds
+    TypeFamilies
+    TypeOperators
+    OverloadedStrings

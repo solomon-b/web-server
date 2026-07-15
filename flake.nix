@@ -36,6 +36,7 @@
           packages = p: [
             p.web-server-core
             p.web-server-otel
+            p.web-server-roles
             # p.web-server-example  # TODO: recreate simpler example
           ];
           buildInputs = [
@@ -66,6 +67,7 @@
         packages = flake-utils.lib.flattenTree rec {
           # web-server-example = hsPkgs.web-server-example;  # TODO: recreate simpler example
           web-server-core = hsPkgs.web-server-core;
+          web-server-roles = hsPkgs.web-server-roles;
           ngrok-runner = pkgs.writeShellScriptBin "ngrok-runner.sh" ''
             ${pkgs.ngrok}/bin/ngrok http http://localhost:2000
           '';

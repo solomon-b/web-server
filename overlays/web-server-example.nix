@@ -29,6 +29,10 @@ final: prev: {
         hfinal.callCabal2nix "web-server-otel" ../web-server-otel { }
       );
 
+      web-server-roles = final.haskell.lib.dontCheck (
+        hfinal.callCabal2nix "web-server-roles" ../web-server-roles { }
+      );
+
       web-server-example = final.haskell.lib.dontCheck (
         hfinal.callCabal2nix "web-server-example" ../example { }
       );
