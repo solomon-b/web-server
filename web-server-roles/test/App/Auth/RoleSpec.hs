@@ -2,10 +2,14 @@
 
 module App.Auth.RoleSpec (spec) where
 
-import App.Auth.Role (CheckRole (..), HasRole (..), Proxy (..), RequireRole)
+import App.Auth.Role (HasRole (..), RequireRole, RoleCheck (..))
 import Control.Monad.Except (throwError)
 import Control.Monad.IO.Class qualified
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.Proxy (Proxy (..))
+import Data.Set (Set)
+import Data.Set qualified as Set
+import GHC.Generics (Generic)
 import Network.HTTP.Types (hAccept)
 import Network.Wai (Application, Request, requestHeaders)
 import Servant.API (Get, JSON, type (:<|>) (..), type (:>))
@@ -20,19 +24,9 @@ import Test.Hspec.Wai.Internal (runWaiSession)
 -- Mock role type
 
 data TestRole = Viewer | Editor | Admin
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
 
-instance CheckRole 'Viewer where
-  type RoleType 'Viewer = TestRole
-  checkRole _ role = role >= Viewer
-
-instance CheckRole 'Editor where
-  type RoleType 'Editor = TestRole
-  checkRole _ role = role >= Editor
-
-instance CheckRole 'Admin where
-  type RoleType 'Admin = TestRole
-  checkRole _ role = role >= Admin
+instance RoleCheck TestRole
 
 --------------------------------------------------------------------------------
 -- Mock auth type
@@ -40,7 +34,8 @@ instance CheckRole 'Admin where
 newtype TestAuth = TestAuth { testAuthRole :: TestRole }
   deriving (Show)
 
-instance HasRole TestAuth TestRole where
+instance HasRole TestAuth where
+  type RoleOf TestAuth = TestRole
   getRole = testAuthRole
 
 --------------------------------------------------------------------------------
@@ -66,17 +61,17 @@ testAuthHandler = mkAuthHandler $ \req ->
 -- Test API (separate paths)
 
 type AdminAPI =
-  RequireRole "test-auth" 'Admin
+  RequireRole "test-auth" "Admin"
     :> "admin"
     :> Get '[JSON] String
 
 type EditorAPI =
-  RequireRole "test-auth" 'Editor
+  RequireRole "test-auth" "Editor"
     :> "editor"
     :> Get '[JSON] String
 
 type ViewerAPI =
-  RequireRole "test-auth" 'Viewer
+  RequireRole "test-auth" "Viewer"
     :> "viewer"
     :> Get '[JSON] String
 
@@ -111,17 +106,17 @@ testApp =
 --   Viewer -> "viewer panel"
 
 type PanelAdminAPI =
-  RequireRole "test-auth" 'Admin
+  RequireRole "test-auth" "Admin"
     :> "panel"
     :> Get '[JSON] String
 
 type PanelEditorAPI =
-  RequireRole "test-auth" 'Editor
+  RequireRole "test-auth" "Editor"
     :> "panel"
     :> Get '[JSON] String
 
 type PanelViewerAPI =
-  RequireRole "test-auth" 'Viewer
+  RequireRole "test-auth" "Viewer"
     :> "panel"
     :> Get '[JSON] String
 
@@ -210,6 +205,68 @@ anonFallthroughApp =
       anonFallthroughServer
 
 --------------------------------------------------------------------------------
+-- Non-hierarchical example: permission sets
+--
+-- The role type is a Set of permissions, the required value is a single
+-- Permission (a *different* type than the role, via the Required override),
+-- and `sufficient` is set membership rather than Ord. This is a genuinely
+-- non-linear scheme: holding one permission implies nothing about the others.
+
+data Permission = PermRead | PermWrite | PermAdmin
+  deriving (Eq, Ord, Show, Generic)
+
+newtype PermAuth = PermAuth (Set Permission)
+
+instance HasRole PermAuth where
+  type RoleOf PermAuth = Set Permission
+  getRole (PermAuth perms) = perms
+
+instance RoleCheck (Set Permission) where
+  type Required (Set Permission) = Permission
+  sufficient p perms = p `Set.member` perms
+
+type instance AuthServerData (AuthProtect "perm-auth") = PermAuth
+
+-- | "X-Perms" header names a fixed permission set. Missing -> 401.
+-- Note "admin" holds only PermAdmin -- deliberately not PermRead.
+permAuthHandler :: AuthHandler Request PermAuth
+permAuthHandler = mkAuthHandler $ \req ->
+  case lookup "X-Perms" (requestHeaders req) of
+    Nothing -> throwError err401
+    Just "reader" -> pure (PermAuth (Set.fromList [PermRead]))
+    Just "editor" -> pure (PermAuth (Set.fromList [PermRead, PermWrite]))
+    Just "admin" -> pure (PermAuth (Set.fromList [PermAdmin]))
+    Just _ -> throwError err401
+
+type PermReadAPI = RequireRole "perm-auth" "PermRead" :> "read" :> Get '[JSON] String
+
+type PermWriteAPI = RequireRole "perm-auth" "PermWrite" :> "write" :> Get '[JSON] String
+
+type PermManageAPI = RequireRole "perm-auth" "PermAdmin" :> "manage" :> Get '[JSON] String
+
+type PermAPI = PermReadAPI :<|> PermWriteAPI :<|> PermManageAPI
+
+permServer :: Server PermAPI
+permServer = readH :<|> writeH :<|> manageH
+  where
+    readH :: PermAuth -> Handler String
+    readH _ = pure "read ok"
+
+    writeH :: PermAuth -> Handler String
+    writeH _ = pure "write ok"
+
+    manageH :: PermAuth -> Handler String
+    manageH _ = pure "manage ok"
+
+permApp :: IO Application
+permApp =
+  pure $
+    serveWithContext
+      (Proxy @PermAPI)
+      (permAuthHandler :. EmptyContext)
+      permServer
+
+--------------------------------------------------------------------------------
 -- Spec
 
 spec :: Spec
@@ -279,6 +336,35 @@ spec = do
         it "authenticated viewer still matches the viewer gate (public route is dead code)" $ do
           request "GET" "/panel" [("X-Test-Role", "viewer"), (hAccept, "application/json")] ""
             `shouldRespondWith` "\"viewer panel\"" {matchStatus = 200}
+
+    with permApp $ do
+      describe "non-hierarchical roles (permission sets)" $ do
+        describe "reader {PermRead}" $ do
+          it "/read   -> 200" $
+            request "GET" "/read" [("X-Perms", "reader"), (hAccept, "application/json")] "" `shouldRespondWith` 200
+          it "/write  -> 403" $
+            request "GET" "/write" [("X-Perms", "reader"), (hAccept, "application/json")] "" `shouldRespondWith` 403
+          it "/manage -> 403" $
+            request "GET" "/manage" [("X-Perms", "reader"), (hAccept, "application/json")] "" `shouldRespondWith` 403
+
+        describe "editor {PermRead, PermWrite}" $ do
+          it "/read   -> 200" $
+            request "GET" "/read" [("X-Perms", "editor"), (hAccept, "application/json")] "" `shouldRespondWith` 200
+          it "/write  -> 200" $
+            request "GET" "/write" [("X-Perms", "editor"), (hAccept, "application/json")] "" `shouldRespondWith` 200
+          it "/manage -> 403" $
+            request "GET" "/manage" [("X-Perms", "editor"), (hAccept, "application/json")] "" `shouldRespondWith` 403
+
+        describe "admin {PermAdmin} only -- proves it is not a hierarchy" $ do
+          it "/manage -> 200" $
+            request "GET" "/manage" [("X-Perms", "admin"), (hAccept, "application/json")] "" `shouldRespondWith` 200
+          it "/read   -> 403 (holding PermAdmin does NOT imply PermRead)" $
+            request "GET" "/read" [("X-Perms", "admin"), (hAccept, "application/json")] "" `shouldRespondWith` 403
+          it "/write  -> 403" $
+            request "GET" "/write" [("X-Perms", "admin"), (hAccept, "application/json")] "" `shouldRespondWith` 403
+
+        it "unauthenticated -> 401" $
+          get "/read" `shouldRespondWith` 401
 
     describe "auth handler invocation count" $ do
       it "Admin matches first alternative: auth runs 1 time" $ do
