@@ -22,7 +22,7 @@ import Data.Text.Display (Display)
 import Data.Text.Encoding qualified as TE
 import Effects.Database.Class
 import Effects.Database.SerializedStatement (SerializedStatement (..), serializeStatement)
-import qualified Hasql.Pool as HSQL
+import Hasql.Pool qualified as HSQL
 import Hasql.Statement qualified as HSQL
 import Hasql.Transaction qualified as HT
 import Log qualified

@@ -13,15 +13,16 @@ import App.Otel
     runServerWithOtel,
     withOtelResources,
   )
+import Data.Maybe (fromMaybe)
 import "web-server-core" App qualified as Core
 import "web-server-core" App.Context (AppContext (..))
-import Data.Maybe (fromMaybe)
 
 --------------------------------------------------------------------------------
 
 -- | Custom context for the example app.
 -- Contains OTel configuration and initialized resources.
-newtype ExampleContext = ExampleContext { exampleOtel :: OtelContext }
+newtype ExampleContext = ExampleContext {exampleOtel :: OtelContext}
+
 instance HasOtelContext ExampleContext where
   getOtelContext = exampleOtel
 
