@@ -8,6 +8,13 @@ and this project adheres to the
 
 ## Unreleased
 
+- `deriveMemberRole` now also generates a subset relation, so one gate can
+  require a list of permissions (`RequireRole "tag" '[CanRead, CanWrite]`),
+  satisfied when all are held. Adds `<T>AllNil`/`<T>AllCons` witnesses.
+- Membership is now spendable as a constraint. New exports `Member`,
+  `AllMembers`, `withMember`, `withAllMembers`; `deriveMemberRole` also generates
+  `Has<Con>` aliases (`type HasCanWrite ps = Member 'CanWrite ps`).
+
 ## 0.1.0.0 — 2026-07-16
 
 Initial release. Provides `RequireRole`, a Servant combinator for declarative,

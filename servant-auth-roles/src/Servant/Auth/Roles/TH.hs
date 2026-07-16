@@ -28,10 +28,10 @@ module Servant.Auth.Roles.TH
   )
 where
 
-import Servant.Auth.Roles
 import Data.Kind (Type)
 import Data.Singletons.Base.TH
 import Language.Haskell.TH qualified as TH
+import Servant.Auth.Roles
 
 --------------------------------------------------------------------------------
 
@@ -104,15 +104,31 @@ deriveEqRole n = do
   aliases <- mkIsAliases n
   pure (sings ++ proofDec : decidable ++ packer ++ aliases)
 
--- | Permission-set roles. The required constructor must be a member of the held
--- set (@[Role]@). Generates membership witnesses @\<TypeName\>Here@ and
--- @\<TypeName\>There@.
+-- | Permission-set roles. Two requirement forms are generated:
+--
+--   * A single required constructor, sufficient when it is a member of the held
+--     set (@[Role]@). Membership witnesses are @\<TypeName\>Here@ and
+--     @\<TypeName\>There@.
+--   * A required /list/ of constructors, sufficient when every one is a member
+--     of the held set (subset). This lets one gate demand several permissions:
+--     @RequireRole "tag" '[CanRead, CanWrite]@. The subset witnesses are
+--     @\<TypeName\>AllNil@ (empty requirement, vacuously satisfied) and
+--     @\<TypeName\>AllCons@ (head present, rest present); an @AllCons@ carries
+--     one element membership 'Proof' per required permission.
+--
+-- Also generates one constraint alias per constructor, @type Has\<Con\> ps =
+-- Member 'Con ps@ (e.g. @HasCanWrite@), so a permission-gated function can name
+-- the membership constraint. Release it in a handler with 'withMember' (single
+-- permission) or 'withAllMembers' (a required list).
 deriveMemberRole :: TH.Name -> TH.Q [TH.Dec]
 deriveMemberRole n = do
   sings <- concat <$> sequence [genSingletons [n], singDecideInstances [n]]
   let p = TH.conT n
       hereC = TH.mkName (TH.nameBase n ++ "Here")
       thereC = TH.mkName (TH.nameBase n ++ "There")
+      allNilC = TH.mkName (TH.nameBase n ++ "AllNil")
+      allConsC = TH.mkName (TH.nameBase n ++ "AllCons")
+      strict = TH.bangType (TH.bang TH.noSourceUnpackedness TH.noSourceStrictness)
   req <- TH.newName "req"
   ps <- TH.newName "ps"
   hd <- TH.newName "hd"
@@ -126,7 +142,7 @@ deriveMemberRole n = do
       [ TH.gadtC [hereC] [] [t|Proof $(TH.varT req) ($(TH.varT req) ': $(TH.varT ps))|],
         TH.gadtC
           [thereC]
-          [TH.bangType (TH.bang TH.noSourceUnpackedness TH.noSourceStrictness) [t|Proof $(TH.varT req) $(TH.varT rest)|]]
+          [strict [t|Proof $(TH.varT req) $(TH.varT rest)|]]
           [t|Proof $(TH.varT req) ($(TH.varT hd) ': $(TH.varT rest))|]
       ]
       []
@@ -141,8 +157,41 @@ deriveMemberRole n = do
             Proved Refl -> Just $(TH.conE hereC)
             Disproved _ -> $(TH.conE thereC) <$> decideRole rr t
       |]
+  -- Subset form: a required @[Role]@ is satisfied when every element is a
+  -- member of the held set. The proof is one element membership witness per
+  -- required permission, so @decideRole@ over the required list reuses the
+  -- single-permission @decideRole@ above (resolved by the element's kind).
+  subReq <- TH.newName "req"
+  subPs <- TH.newName "ps"
+  hdR <- TH.newName "hd"
+  restR <- TH.newName "rest"
+  subProofDec <-
+    TH.dataInstD
+      (pure [])
+      ''Proof
+      [[t|$(TH.varT subReq) :: [$p]|], [t|$(TH.varT subPs) :: [$p]|]]
+      Nothing
+      [ TH.gadtC [allNilC] [] [t|Proof ('[] :: [$p]) $(TH.varT subPs)|],
+        TH.gadtC
+          [allConsC]
+          [ strict [t|Proof $(TH.varT hdR) $(TH.varT subPs)|],
+            strict [t|Proof $(TH.varT restR) $(TH.varT subPs)|]
+          ]
+          [t|Proof ($(TH.varT hdR) ': $(TH.varT restR)) $(TH.varT subPs)|]
+      ]
+      []
+  subDecidable <-
+    [d|
+      type instance ActualK (rq :: [$p]) = [$p]
+
+      instance Decidable (rq :: [$p]) where
+        decideRole sreq held = case sreq of
+          SNil -> Just $(TH.conE allNilC)
+          SCons h t -> $(TH.conE allConsC) <$> decideRole h held <*> decideRole t held
+      |]
   packer <- mkPacker n [t|[$p]|]
-  pure (sings ++ proofDec : decidable ++ packer)
+  aliases <- mkHasAliases n
+  pure (sings ++ proofDec : decidable ++ subProofDec : subDecidable ++ aliases ++ packer)
 
 --------------------------------------------------------------------------------
 
@@ -190,6 +239,11 @@ mkAtleastAliases = mkAliases "IsAtleast" (\c r -> [t|($c <= $r) ~ 'True|])
 -- | Aliases for the Eq scheme, @type IsAdmin r = (r ~ 'Admin)@.
 mkIsAliases :: TH.Name -> TH.Q [TH.Dec]
 mkIsAliases = mkAliases "Is" (\c r -> [t|$r ~ $c|])
+
+-- | Aliases for the member scheme, @type HasCanWrite ps = Member 'CanWrite ps@.
+-- Names the membership constraint a permission-gated function demands.
+mkHasAliases :: TH.Name -> TH.Q [TH.Dec]
+mkHasAliases = mkAliases "Has" (\c r -> [t|Member $c $r|])
 
 -- | The data constructors of a single @data@ declaration.
 roleConstructors :: TH.Name -> TH.Q [TH.Name]

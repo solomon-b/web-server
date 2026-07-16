@@ -29,6 +29,13 @@ module Servant.Auth.Roles
     ActualK,
     Proof,
 
+    -- * Membership constraints
+    Member,
+    AllMembers,
+    ReflectReqs,
+    withMember,
+    withAllMembers,
+
     -- * Auth wrappers
     SomeRole (..),
     Satisfies (..),
@@ -38,7 +45,7 @@ where
 --------------------------------------------------------------------------------
 
 import Control.Monad.IO.Class (liftIO)
-import Data.Kind (Type)
+import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy (..))
 import Data.Singletons (Sing, SingI (..))
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
@@ -56,6 +63,7 @@ import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData, unAuthHand
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFail, delayedFailFatal, withRequest)
 import Servant.Server.Internal.Handler (runHandler)
+import Unsafe.Coerce (unsafeCoerce)
 
 --------------------------------------------------------------------------------
 -- The decidable relation
@@ -118,6 +126,92 @@ instance
       "No Decidable instance for this role type. Run deriveOrdRole, deriveEqRole, \
       \or deriveMemberRole on it. (Normally a compile-time TypeError; seen at \
       \runtime only under -fdefer-type-errors.)"
+
+--------------------------------------------------------------------------------
+-- Membership as a constraint
+--
+-- 'deriveMemberRole' witnesses membership as a /value/ ('Proof'). These helpers
+-- reflect that value into a /constraint/, so a permission-gated function can
+-- demand membership in its context (@Member 'CanWrite ps =>@) instead of taking
+-- the proof as an argument. This is the member-scheme analogue of the
+-- @IsAtleast\<Con\>@ / @Is\<Con\>@ constraints the other two schemes generate.
+--
+-- Membership over an abstract held set cannot be decided by the constraint
+-- solver, so these helpers reflect the already-decided 'Proof' into a
+-- dictionary with a single, contained 'unsafeCoerce'. It is sound because the
+-- only 'Proof's in play come from 'decideRole', which is total: a proof is a
+-- genuine witness that the membership it reflects actually holds.
+
+-- | Evidence, as a constraint, that @x@ is a member of the type-level list
+-- @xs@. An empty marker class with no instances: it is introduced only by
+-- 'withMember' / 'withAllMembers' from a 'Proof', so a @Member x xs@ constraint
+-- can never be satisfied without a proof that the membership holds.
+class Member (x :: k) (xs :: [k])
+
+-- | Every element of the required list @reqs@ is a member of the held set @ys@.
+-- For a concrete @reqs@ this reduces to a tuple of 'Member' constraints.
+type family AllMembers (reqs :: [k]) (ys :: [k]) :: Constraint where
+  AllMembers '[] ys = ()
+  AllMembers (x ': xs) ys = (Member x ys, AllMembers xs ys)
+
+-- | A reified dictionary for @c@. Internal, not exported.
+data Dict c where
+  Dict :: (c) => Dict c
+
+-- | Trivially satisfied for every argument. Its (empty) dictionary is the
+-- representation-compatible source a 'Member' dictionary is coerced from.
+-- Internal, not exported.
+class Trivial (x :: k) (xs :: [k])
+
+instance Trivial x xs
+
+-- | Reflect a 'Member' dictionary. Unsound on its own; only ever reached behind
+-- a genuine 'Proof', which is what makes the reflected membership true.
+-- Internal, not exported.
+unsafeMemberDict :: forall k (x :: k) (xs :: [k]). Dict (Member x xs)
+unsafeMemberDict = unsafeCoerce (Dict :: Dict (Trivial x xs))
+
+-- | Builds the 'AllMembers' dictionary for a concrete required list by folding
+-- 'unsafeMemberDict' over it. Instances are structural, so any concrete @reqs@
+-- (as at every gate) is solved automatically.
+class ReflectReqs (reqs :: [k]) where
+  reflectReqs :: forall (ys :: [k]). Proxy reqs -> Proxy ys -> Dict (AllMembers reqs ys)
+
+instance ReflectReqs '[] where
+  reflectReqs _ _ = Dict
+
+instance (ReflectReqs xs) => ReflectReqs (x ': xs) where
+  reflectReqs :: forall ys. Proxy (x ': xs) -> Proxy ys -> Dict (AllMembers (x ': xs) ys)
+  reflectReqs _ pys =
+    case (unsafeMemberDict :: Dict (Member x ys), reflectReqs (Proxy :: Proxy xs) pys) of
+      (Dict, Dict) -> Dict
+
+-- | Bring @'Member' x xs@ into scope from a single-element membership 'Proof'.
+-- The proof is forced; soundness rests on it being a real witness, as every
+-- 'Proof' from 'decideRole' is.
+--
+-- @
+-- writeUser :: 'Member' 'CanWrite ps => Auth ps -> IO ()
+-- handler ('Satisfies' proof auth) = 'withMember' proof (writeUser auth)
+-- @
+withMember :: forall k (x :: k) (xs :: [k]) r. Proof x xs -> ((Member x xs) => r) -> r
+withMember p body = p `seq` case (unsafeMemberDict :: Dict (Member x xs)) of Dict -> body
+
+-- | Bring @'AllMembers' reqs ys@ (one 'Member' per required element) into scope
+-- from a subset 'Proof', as produced by a gate on a required list. A handler can
+-- then spend its whole permission set as constraints at once.
+--
+-- @
+-- handler ('Satisfies' proof auth) = 'withAllMembers' proof (writeUser auth)
+-- @
+withAllMembers ::
+  forall k (reqs :: [k]) (ys :: [k]) r.
+  (ReflectReqs reqs) =>
+  Proof reqs ys ->
+  ((AllMembers reqs ys) => r) ->
+  r
+withAllMembers p body =
+  p `seq` case reflectReqs (Proxy :: Proxy reqs) (Proxy :: Proxy ys) of Dict -> body
 
 --------------------------------------------------------------------------------
 -- Auth wrappers

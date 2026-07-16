@@ -145,7 +145,7 @@ Pick the deriver that matches how your roles relate. Each is one splice.
 |------------------------|---------------------------------------------|--------------------|--------------------|
 | `deriveOrdRole ''T`    | `required <= actual` (hierarchy, via `Ord`) | `TProof`           | `IsAtleast<Con> r` |
 | `deriveEqRole ''T`     | `required == actual` (flat, via `Eq`)       | `TProof`           | `Is<Con> r`        |
-| `deriveMemberRole ''T` | `required ∈ actual` (permission set)        | `THere` / `TThere` | —                  |
+| `deriveMemberRole ''T` | `required ∈ actual` (permission set)        | `THere` / `TThere` | `Has<Con> ps`      |
 
 ### Exact match (`deriveEqRole`)
 
@@ -187,9 +187,28 @@ type instance AuthServerData (AuthProtect "perm-auth") = SomeRole PermAuth
 type WriteAPI = RequireRole "perm-auth" 'PermWrite :> "write" :> Post '[JSON] ()
 ```
 
-There is no `Is<Con>` alias for the member scheme. Set membership is not a plain
-type equality, so a gated handler pattern-matches the witness (`Satisfies _ auth`)
-instead of naming a constraint.
+A required list can be used to impose multiple required permissions:
+
+```haskell
+type ReadWriteAPI =
+  RequireRole "perm-auth" '[PermRead, PermWrite] :> "readwrite" :> Post '[JSON] ()
+```
+
+`deriveMemberRole` generates a `Has<Con>` alias (`type HasPermWrite ps = Member
+'PermWrite ps`), and the library provides releasers that turn a proof into that
+constraint. A permission-gated function then demands `Has<Con> ps =>`, and the
+handler releases it:
+
+```haskell
+writeUser :: HasPermWrite ps => PermAuth ps -> IO ()
+
+-- single-permission gate: release from the element proof
+writeH (Satisfies proof auth) = liftIO (withMember proof (writeUser auth))
+
+-- required-list gate: withAllMembers releases every membership at once,
+-- so writeUser (needing HasPermWrite) is callable
+readWriteH (Satisfies proof auth) = withAllMembers proof (liftIO (writeUser auth))
+```
 
 ## Same-path alternatives (fallthrough)
 
@@ -246,7 +265,9 @@ Unpack it with `\(SomeRole _ auth) -> ...`.
   `IsAtleastAdmin`)
 
 `deriveEqRole` is the same with `TProof` and `Is<Con>` aliases. `deriveMemberRole`
-emits `THere`/`TThere` witnesses and no aliases.
+emits `THere`/`TThere` element witnesses, a subset relation for `[Role]`
+requirements (`TAllNil`/`TAllCons`), and `Has<Con>` aliases. Spend a membership
+proof as a constraint with `withMember` (single) or `withAllMembers` (list).
 
 
 # Shout outs

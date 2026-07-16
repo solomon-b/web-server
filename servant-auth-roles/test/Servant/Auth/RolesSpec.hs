@@ -4,8 +4,6 @@
 
 module Servant.Auth.RolesSpec (spec) where
 
-import Servant.Auth.Roles.TH
-import Servant.Auth.RolesErrorFixture (underivedDecidable)
 import Control.Exception (SomeException, evaluate, try)
 import Control.Monad.Except (throwError)
 import Control.Monad.IO.Class (liftIO)
@@ -15,6 +13,8 @@ import Network.HTTP.Types (Header, HeaderName, hAccept)
 import Network.Wai (Application, Request, requestHeaders)
 import Servant.API (Get, JSON, type (:<|>) (..), type (:>))
 import Servant.API.Experimental.Auth (AuthProtect)
+import Servant.Auth.Roles.TH
+import Servant.Auth.RolesErrorFixture (underivedDecidable)
 import Servant.Server (Context (..), Handler, Server, err401, serveWithContext)
 import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData, mkAuthHandler)
 import Test.Hspec (Spec, describe, expectationFailure, it, shouldContain, shouldReturn)
@@ -155,25 +155,38 @@ permAuthHandler = mkAuthHandler $ \req ->
     Just "manager" -> pure (somePermission [PermManage] PermAuth) -- deliberately not PermRead
     _ -> throwError err401
 
+-- Demands the membership constraint (the generated HasPermWrite alias), not a
+-- Proof value. Callable from any handler that can release Member 'PermWrite ps.
+writeUser :: (HasPermWrite ps) => PermAuth ps -> IO ()
+writeUser PermAuth = pure ()
+
 type PermReadAPI = RequireRole "perm-auth" 'PermRead :> "read" :> Get '[JSON] String
 
 type PermWriteAPI = RequireRole "perm-auth" 'PermWrite :> "write" :> Get '[JSON] String
 
 type PermManageAPI = RequireRole "perm-auth" 'PermManage :> "manage" :> Get '[JSON] String
 
-type PermAPI = PermReadAPI :<|> PermWriteAPI :<|> PermManageAPI
+type PermReadWriteAPI = RequireRole "perm-auth" '[PermRead, PermWrite] :> "readwrite" :> Get '[JSON] String
+
+type PermAPI = PermReadAPI :<|> PermWriteAPI :<|> PermManageAPI :<|> PermReadWriteAPI
 
 permServer :: Server PermAPI
-permServer = readH :<|> writeH :<|> manageH
+permServer = readH :<|> writeH :<|> manageH :<|> readWriteH
   where
     readH :: Satisfies 'PermRead PermAuth -> Handler String
     readH _ = pure "read ok"
 
     writeH :: Satisfies 'PermWrite PermAuth -> Handler String
-    writeH _ = pure "write ok"
+    writeH (Satisfies proof auth) = liftIO (withMember proof (writeUser auth)) >> pure "write ok"
 
     manageH :: Satisfies 'PermManage PermAuth -> Handler String
     manageH _ = pure "manage ok"
+
+    -- The subset proof releases BOTH memberships, so writeUser (which needs
+    -- HasPermWrite) is callable with no re-check.
+    readWriteH :: Satisfies '[PermRead, PermWrite] PermAuth -> Handler String
+    readWriteH (Satisfies proof auth) =
+      liftIO (withAllMembers proof (writeUser auth) >> pure "read+write ok")
 
 permApp :: IO Application
 permApp = pure $ serveWithContext (Proxy @PermAPI) (permAuthHandler :. EmptyContext) permServer
@@ -223,7 +236,6 @@ regionServer = usH :<|> euH :<|> apacH
 
     euH :: Satisfies 'EU RegionAuth -> Handler String
     euH (Satisfies RegionProof auth) = pure (gdprExport auth) -- exact proof flows into gdprExport
-
     apacH :: Satisfies 'APAC RegionAuth -> Handler String
     apacH _ = pure "apac ok"
 
@@ -307,30 +319,39 @@ spec = do
         flip runWaiSession app $ role "viewer" "/panel" `shouldRespondWith` 200
         readIORef c `shouldReturn` 3
 
-    -- Non-hierarchical permission-set matrix (membership, not order)
-    --          | /read | /write | /manage
-    -- reader   |  200  |  403   |  403
-    -- editor   |  200  |  200   |  403
-    -- manager  |  403  |  403   |  200
-    -- No auth  |  401  |  401   |  401
+    -- Non-hierarchical permission-set matrix (membership, not order).
+    -- /readwrite requires a list '[PermRead, PermWrite]: needs BOTH (subset).
+    --          | /read | /write | /manage | /readwrite
+    -- reader   |  200  |  403   |  403    |    403
+    -- editor   |  200  |  200   |  403    |    200
+    -- manager  |  403  |  403   |  200    |    403
+    -- No auth  |  401  |  401   |  401    |    401
     with permApp $ do
       describe "non-hierarchical: reader holds {PermRead}" $ do
-        it "/read   -> 200" $ perms "reader" "/read" `shouldRespondWith` 200
-        it "/write  -> 403" $ perms "reader" "/write" `shouldRespondWith` 403
-        it "/manage -> 403" $ perms "reader" "/manage" `shouldRespondWith` 403
+        it "/read      -> 200" $ perms "reader" "/read" `shouldRespondWith` 200
+        it "/write     -> 403" $ perms "reader" "/write" `shouldRespondWith` 403
+        it "/manage    -> 403" $ perms "reader" "/manage" `shouldRespondWith` 403
+        it "/readwrite -> 403 (holds PermRead but not PermWrite)" $
+          perms "reader" "/readwrite" `shouldRespondWith` 403
 
       describe "non-hierarchical: editor holds {PermRead, PermWrite}" $ do
-        it "/read   -> 200" $ perms "editor" "/read" `shouldRespondWith` 200
-        it "/write  -> 200" $ perms "editor" "/write" `shouldRespondWith` 200
-        it "/manage -> 403" $ perms "editor" "/manage" `shouldRespondWith` 403
+        it "/read      -> 200" $ perms "editor" "/read" `shouldRespondWith` 200
+        it "/write     -> 200" $ perms "editor" "/write" `shouldRespondWith` 200
+        it "/manage    -> 403" $ perms "editor" "/manage" `shouldRespondWith` 403
+        it "/readwrite -> 200 (holds both PermRead and PermWrite)" $
+          perms "editor" "/readwrite" `shouldRespondWith` "\"read+write ok\"" {matchStatus = 200}
 
       describe "non-hierarchical: manager holds {PermManage} only" $ do
-        it "/manage -> 200" $ perms "manager" "/manage" `shouldRespondWith` 200
-        it "/read   -> 403 (PermManage does NOT imply PermRead)" $
+        it "/manage    -> 200" $ perms "manager" "/manage" `shouldRespondWith` 200
+        it "/read      -> 403 (PermManage does NOT imply PermRead)" $
           perms "manager" "/read" `shouldRespondWith` 403
-        it "/write  -> 403" $ perms "manager" "/write" `shouldRespondWith` 403
+        it "/write     -> 403" $ perms "manager" "/write" `shouldRespondWith` 403
+        it "/readwrite -> 403 (holds neither PermRead nor PermWrite)" $
+          perms "manager" "/readwrite" `shouldRespondWith` 403
 
       it "no auth -> 401" $ get "/read" `shouldRespondWith` 401
+      it "no auth -> 401 (/readwrite)" $
+        get "/readwrite" `shouldRespondWith` 401
 
     -- Flat exact-match region matrix (equality, not hierarchy or membership)
     --          | /us | /eu | /apac
