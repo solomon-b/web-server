@@ -1,6 +1,6 @@
-# web-server-roles Tutorial
+# servant-auth-roles Tutorial
 
-`web-server-roles` gives Servant a `RequireRole` combinator for declarative,
+`servant-auth-roles` gives Servant a `RequireRole` combinator for declarative,
 type-level role authorization. Instead of checking permissions inside handlers,
 you declare the required role in the API type.
 
@@ -40,7 +40,7 @@ One Template Haskell splice builds all role machinery.
 
 module MyProject where
 
-import App.Auth.Role.TH
+import Servant.Auth.Roles.TH
 import Control.Monad.Except (throwError)
 import Network.Wai (Application, Request, requestHeaders)
 import Servant.API (Get, JSON, Post, type (:<|>), type (:>))

@@ -6,7 +6,7 @@
 -- singletons knowledge required.
 --
 -- @
--- import App.Auth.Role.TH
+-- import Servant.Auth.Roles.TH
 --
 -- data UserRole   = Viewer | Editor | Admin
 -- data Region     = US | EU | APAC
@@ -17,18 +17,18 @@
 -- \$(deriveMemberRole ''Permission)   -- permission-set (required is a member)
 -- @
 --
--- A single @import App.Auth.Role.TH@ brings the combinator, the classes, the
+-- A single @import Servant.Auth.Roles.TH@ brings the combinator, the classes, the
 -- derivers, and the (unqualified) singletons Prelude the generated code needs.
-module App.Auth.Role.TH
+module Servant.Auth.Roles.TH
   ( deriveOrdRole,
     deriveEqRole,
     deriveMemberRole,
-    module App.Auth.Role,
+    module Servant.Auth.Roles,
     module Data.Singletons.Base.TH,
   )
 where
 
-import App.Auth.Role
+import Servant.Auth.Roles
 import Data.Kind (Type)
 import Data.Singletons.Base.TH
 import Language.Haskell.TH qualified as TH
@@ -197,7 +197,7 @@ roleConstructors n = do
   info <- TH.reify n
   case info of
     TH.TyConI (TH.DataD _ _ _ _ cons _) -> pure (concatMap conNames cons)
-    _ -> fail ("App.Auth.Role.TH: expected a data type, got " ++ show n)
+    _ -> fail ("Servant.Auth.Roles.TH: expected a data type, got " ++ show n)
   where
     conNames (TH.NormalC c _) = [c]
     conNames (TH.RecC c _) = [c]
