@@ -4,7 +4,7 @@
 -- the handler a 'Proof' of it. The relation is arbitrary, so hierarchies,
 -- permission sets, and exact match all work.
 --
--- This module is the low-level interface. Most users want "App.Auth.Role.TH",
+-- This module is the low-level interface. Most users want "Servant.Auth.Roles.TH",
 -- whose derivers generate the 'Decidable' instance, 'ActualK', 'Proof', and
 -- singletons for a role type. Working against this module directly, a downstream
 -- app provides:
@@ -20,7 +20,7 @@
 -- 3. A 'Decidable' instance saying what "sufficient" means.
 -- 4. An 'AuthHandler' that reflects the runtime role into the index with
 --    @toSing@ and packs it as 'SomeRole'.
-module App.Auth.Role
+module Servant.Auth.Roles
   ( -- * Combinator
     RequireRole,
 
@@ -76,7 +76,7 @@ type family ActualK (req :: kr) :: Type
 -- differ. A required @'Permission@, for instance, is checked against an actual
 -- @[Permission]@, which is how non-hierarchical schemes fit.
 --
--- You do not normally write this. 'App.Auth.Role.TH.deriveOrdRole',
+-- You do not normally write this. 'Servant.Auth.Roles.TH.deriveOrdRole',
 -- @deriveEqRole@, and @deriveMemberRole@ generate the instance, its 'ActualK',
 -- and the 'Proof' witness. Spelled out, a hierarchical relation is:
 --

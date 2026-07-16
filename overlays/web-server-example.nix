@@ -37,8 +37,8 @@ final: prev: {
         hfinal.callCabal2nix "web-server-core" ../web-server-core { }
       );
 
-      web-server-roles = final.haskell.lib.dontCheck (
-        hfinal.callCabal2nix "web-server-roles" ../web-server-roles { }
+      servant-auth-roles = final.haskell.lib.dontCheck (
+        hfinal.callCabal2nix "servant-auth-roles" ../servant-auth-roles { }
       );
 
       web-server-example = final.haskell.lib.dontCheck (

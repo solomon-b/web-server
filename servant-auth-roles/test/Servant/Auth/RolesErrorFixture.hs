@@ -6,9 +6,9 @@
 -- @-fdefer-type-errors@ so the deliberately-missing 'Decidable' instance becomes
 -- a runtime 'Control.Exception.TypeError' the spec can catch and inspect,
 -- instead of a compile error that would fail the build.
-module App.Auth.RoleErrorFixture (underivedDecidable) where
+module Servant.Auth.RolesErrorFixture (underivedDecidable) where
 
-import App.Auth.Role.TH
+import Servant.Auth.Roles.TH
 
 data Undrived = Foo | Bar
 

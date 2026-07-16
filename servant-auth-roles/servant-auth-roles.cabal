@@ -1,5 +1,5 @@
 cabal-version: 3.0
-name:          web-server-roles
+name:          servant-auth-roles
 version:       0.1.0.0
 synopsis:      Type-level role-based authorization combinators for Servant
 description:
@@ -20,8 +20,8 @@ build-type:    Simple
 
 library
   exposed-modules:
-    App.Auth.Role
-    App.Auth.Role.TH
+    Servant.Auth.Roles
+    Servant.Auth.Roles.TH
 
   build-depends:
     , base             >=4.14 && <5
@@ -57,12 +57,12 @@ library
     TypeOperators
     UndecidableInstances
 
-test-suite web-server-roles-test
+test-suite servant-auth-roles-test
   type:             exitcode-stdio-1.0
   main-is:          Spec.hs
   other-modules:
-    App.Auth.RoleErrorFixture
-    App.Auth.RoleSpec
+    Servant.Auth.RolesErrorFixture
+    Servant.Auth.RolesSpec
   hs-source-dirs:   test
   default-language: GHC2021
   ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
@@ -80,7 +80,7 @@ test-suite web-server-roles-test
     , singletons-base >=3.3 && <3.4
     , singletons-th   >=3.3 && <3.4
     , wai             >=3.2 && <3.3
-    , web-server-roles
+    , servant-auth-roles
 
   default-extensions:
     DataKinds

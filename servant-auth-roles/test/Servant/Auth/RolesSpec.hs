@@ -2,10 +2,10 @@
 -- singletons emits defunctionalization symbols (FooSym0) we don't use.
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module App.Auth.RoleSpec (spec) where
+module Servant.Auth.RolesSpec (spec) where
 
-import App.Auth.Role.TH
-import App.Auth.RoleErrorFixture (underivedDecidable)
+import Servant.Auth.Roles.TH
+import Servant.Auth.RolesErrorFixture (underivedDecidable)
 import Control.Exception (SomeException, evaluate, try)
 import Control.Monad.Except (throwError)
 import Control.Monad.IO.Class (liftIO)

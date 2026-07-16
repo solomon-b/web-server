@@ -46,7 +46,7 @@
         devShell = hsPkgs.shellFor {
           packages = p: [
             p.web-server-core
-            p.web-server-roles
+            p.servant-auth-roles
             # p.web-server-example  # TODO: recreate simpler example
           ];
           buildInputs = [
@@ -77,7 +77,7 @@
         packages = flake-utils.lib.flattenTree rec {
           # web-server-example = hsPkgs.web-server-example;  # TODO: recreate simpler example
           web-server-core = hsPkgs.web-server-core;
-          web-server-roles = hsPkgs.web-server-roles;
+          servant-auth-roles = hsPkgs.servant-auth-roles;
           ngrok-runner = pkgs.writeShellScriptBin "ngrok-runner.sh" ''
             ${pkgs.ngrok}/bin/ngrok http http://localhost:2000
           '';
