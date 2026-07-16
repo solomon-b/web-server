@@ -17,6 +17,7 @@ author:        KPBJ
 maintainer:    tech@kpbj.fm
 category:      Web
 build-type:    Simple
+extra-doc-files: CHANGELOG.md
 
 library
   exposed-modules:
