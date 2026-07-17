@@ -55,13 +55,16 @@ import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData)
 -- @Viewer < Editor < Admin@, so a gate on @'Editor@ is satisfied by @Editor@
 -- and @Admin@ but not @Viewer@.
 data Role = Viewer | Editor | Admin
+  deriving (Show)
 
 $(deriveOrdRole ''Role)
 
--- | The app's auth principal: a validated user and session, indexed by the
--- caller's 'Role' as a phantom so 'Servant.Auth.Roles.RequireRole' can gate on
--- it. Core defines no principal of its own, so the app owns this one.
-data RoleAuth (r :: Role) = RoleAuth User.Model ServerSessions.Model
+-- | The app's auth principal: the caller's role as a value (for display), plus
+-- their validated user and session. It is also indexed by the 'Role' as a
+-- phantom so 'Servant.Auth.Roles.RequireRole' can gate on it. (The library's
+-- proof carries no role value, so a handler that wants to show the role reads it
+-- from here.) Core defines no principal of its own, so the app owns this one.
+data RoleAuth (r :: Role) = RoleAuth {raRole :: Role, raUser :: User.Model, raSession :: ServerSessions.Model}
 
 -- | Point core's 'CookieAuth' scheme at this app's role-indexed principal. Every
 -- route on the tag is then served by one handler: plain 'CookieAuth' routes
@@ -104,7 +107,7 @@ roleAuthHandler pool env =
     ( \user session -> do
         result <- liftIO $ HSQL.use pool (HSQL.statement () (getUserRole (User.mId user)))
         let role = either (const Viewer) roleFromText result
-        pure (someRole role (RoleAuth user session))
+        pure (someRole role (RoleAuth role user session))
     )
     pool
     env

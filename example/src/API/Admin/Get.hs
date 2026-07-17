@@ -32,11 +32,11 @@ handler ::
   (Applicative m) =>
   Satisfies 'Editor RoleAuth ->
   m (Lucid.Html ())
-handler (Satisfies _ (RoleAuth user _)) =
-  pure $ adminPage user
+handler (Satisfies _ (RoleAuth role user _)) =
+  pure $ adminPage role user
 
-adminPage :: User.Model -> Lucid.Html ()
-adminPage user =
+adminPage :: Role -> User.Model -> Lucid.Html ()
+adminPage role user =
   Lucid.doctypehtml_ $ do
     Lucid.head_ $ Lucid.title_ "Admin"
     Lucid.body_ $ do
@@ -44,4 +44,7 @@ adminPage user =
       Lucid.p_ $ do
         "Signed in as "
         Lucid.toHtml (display (User.mEmail user))
+      Lucid.p_ $ do
+        "Your role: "
+        Lucid.toHtml (show role)
       Lucid.p_ "This page requires the Editor role (or higher)."

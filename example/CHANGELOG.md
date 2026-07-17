@@ -16,6 +16,8 @@ and this project adheres to the
   `servant-auth-roles`' `RequireRole` serves a per-role dashboard on one path
   (`/dashboard`) via non-fatal-403 fallthrough — Admin, Editor, and Viewer each
   get their own view at the same URL — plus an `/admin` panel (Editor and up).
+  `RoleAuth` carries the caller's role as a value (the library's proof doesn't),
+  which the `/admin` panel displays.
 
 ### Fixed
 

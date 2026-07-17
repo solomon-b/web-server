@@ -43,10 +43,10 @@ type AdminRoute =
 --------------------------------------------------------------------------------
 
 viewerHandler :: (Applicative m) => Satisfies 'Viewer RoleAuth -> m (Lucid.Html ())
-viewerHandler (Satisfies _ (RoleAuth user _)) = pure $ viewerDashboardPage user
+viewerHandler (Satisfies _ (RoleAuth _ user _)) = pure $ viewerDashboardPage user
 
 editorHandler :: (Applicative m) => Satisfies 'Editor RoleAuth -> m (Lucid.Html ())
-editorHandler (Satisfies _ (RoleAuth user _)) = pure $ editorDashboardPage user
+editorHandler (Satisfies _ (RoleAuth _ user _)) = pure $ editorDashboardPage user
 
 adminHandler :: (Applicative m) => Satisfies 'Admin RoleAuth -> m (Lucid.Html ())
-adminHandler (Satisfies _ (RoleAuth user _)) = pure $ adminDashboardPage user
+adminHandler (Satisfies _ (RoleAuth _ user _)) = pure $ adminDashboardPage user
