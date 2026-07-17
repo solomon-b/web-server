@@ -3,7 +3,9 @@ module View
     homePage,
     loginPage,
     registerPage,
-    dashboardPage,
+    viewerDashboardPage,
+    editorDashboardPage,
+    adminDashboardPage,
   )
 where
 
@@ -131,19 +133,35 @@ registerPage mEmail = frame $ do
         a_ [href_ "/user/login", class_ "text-blue-500 hover:underline"] "Login"
 
 --------------------------------------------------------------------------------
--- Dashboard page (protected)
+-- Role dashboards (protected)
 
-dashboardPage :: User.Model -> Html ()
-dashboardPage user = frame $ do
+-- | Shared chrome for the per-role dashboards. Every role hits the same
+-- @\/dashboard@ URL and is served its own view by 'RequireRole' fallthrough.
+roleDashboard :: Text -> User.Model -> Html () -> Html ()
+roleDashboard tier user body = frame $ do
   div_ [class_ "max-w-2xl mx-auto"] $ do
-    h1_ [class_ "text-3xl font-bold mb-6 text-center"] "Dashboard"
-    div_ [class_ "bg-white p-6 rounded-lg shadow"] $ do
-      p_ [class_ "text-lg mb-4"] $ do
-        "Welcome to your dashboard, "
+    h1_ [class_ "text-3xl font-bold mb-6 text-center"] (toHtml (tier <> " Dashboard"))
+    div_ [class_ "bg-white p-6 rounded-lg shadow space-y-4"] $ do
+      p_ [class_ "text-lg"] $ do
+        "Signed in as "
         toHtml (display $ User.mEmail user)
-        "!"
-      p_ [class_ "text-gray-600 mb-4"] "This is a protected page. Only logged-in users can see this."
-      div_ [class_ "flex gap-4"] $ do
-        a_ [href_ "/", class_ "px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"] "Back to Home"
-        form_ [action_ "/user/logout", method_ "post", class_ "inline"] $ do
+      body
+      div_ [class_ "flex flex-wrap gap-3 pt-2"] $ do
+        a_ [href_ "/", class_ "px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"] "Home"
+        form_ [action_ "/user/logout", method_ "post", class_ "inline"] $
           button_ [type_ "submit", class_ "px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"] "Logout"
+
+viewerDashboardPage :: User.Model -> Html ()
+viewerDashboardPage user =
+  roleDashboard "Viewer" user $
+    p_ [class_ "text-gray-600"] "Read-only access. Every signed-in user can see this dashboard."
+
+editorDashboardPage :: User.Model -> Html ()
+editorDashboardPage user =
+  roleDashboard "Editor" user $
+    p_ [class_ "text-gray-600"] "Editing tools. Requires the Editor role (or higher)."
+
+adminDashboardPage :: User.Model -> Html ()
+adminDashboardPage user =
+  roleDashboard "Admin" user $
+    p_ [class_ "text-gray-600"] "Administrative controls. Requires the Admin role."

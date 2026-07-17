@@ -35,9 +35,12 @@ type API =
     :<|> User.Login.Post.Route
     :<|> User.Register.Get.Route
     :<|> User.Register.Post.Route
-    -- Protected routes (Dashboard is traced with WithSpan)
-    :<|> WithSpan "Dashboard" Dashboard.Get.Route
-    -- Role-gated route: RequireRole on the same cookie-auth tag/handler
+    -- One dashboard per role on ONE path (/dashboard), dispatched by RequireRole
+    -- fallthrough. Most-restrictive-first (Admin, Editor, Viewer).
+    :<|> WithSpan "Dashboard" Dashboard.Get.AdminRoute
+    :<|> WithSpan "Dashboard" Dashboard.Get.EditorRoute
+    :<|> WithSpan "Dashboard" Dashboard.Get.ViewerRoute
+    -- Role-gated admin panel: RequireRole on the same cookie-auth tag/handler
     :<|> Admin.Get.Route
     :<|> User.Logout.Post.Route
 
@@ -62,9 +65,9 @@ server appCtx =
     :<|> User.Login.Post.handler
     :<|> User.Register.Get.handler
     :<|> User.Register.Post.handler
-    -- WithSpan provides the Tracer to the handler; we ignore it here
-    -- since Dashboard.Get.handler doesn't use tracing internally.
-    -- The span is automatically created by the WithSpan combinator.
-    :<|> (\_tracer -> Dashboard.Get.handler)
+    -- WithSpan provides the Tracer to each handler; we ignore it here.
+    :<|> (\_tracer -> Dashboard.Get.adminHandler)
+    :<|> (\_tracer -> Dashboard.Get.editorHandler)
+    :<|> (\_tracer -> Dashboard.Get.viewerHandler)
     :<|> Admin.Get.handler
     :<|> User.Logout.Post.handler (appEnvironment appCtx)
