@@ -8,6 +8,14 @@ and this project adheres to the
 
 ## Unreleased
 
+### Changed (breaking)
+
+- Removed `OtelServerContext` and the fixed `runServerWithOtel`.
+  `runServerWithOtelContext` is now the sole server entry point: the app supplies
+  its own Servant auth `Context` (its own handler and principal), and the OTel
+  tracer is prepended automatically. Follows `web-server-core` making the auth
+  principal downstream-defined.
+
 ## 0.1.0.0 — 2026-01-30
 
 Initial release, factored out of `web-server-core`. Provides

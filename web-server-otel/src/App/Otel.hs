@@ -1,11 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module App.Otel
   ( -- * OTel-enabled server
-    runServerWithOtel,
-    OtelServerContext,
+    runServerWithOtelContext,
 
     -- * Resource management
     withOtelResources,
@@ -20,7 +20,6 @@ where
 --------------------------------------------------------------------------------
 
 import App (interpret, mkWarpSettings)
-import App.Auth (Authz, authHandler)
 import App.Config (Verbosity)
 import App.Context (AppContext (..))
 import App.Context.Otel
@@ -30,20 +29,14 @@ import Control.Monad.Reader qualified as Reader
 import Data.Data (Proxy (..))
 import Effects.Observability
 import Log qualified
-import Network.Wai (Request)
 import Network.Wai.Handler.Warp qualified as Warp
 import OpenTelemetry.Instrumentation.Wai (newOpenTelemetryWaiMiddleware')
 import OpenTelemetry.Trace qualified as OTEL
 import OpenTelemetry.Trace.Monad (MonadTracer (..))
 import Servant (Context ((:.)))
 import Servant qualified
-import Servant.Server.Experimental.Auth (AuthHandler)
 
 --------------------------------------------------------------------------------
-
--- | Server context for OTel-enabled servers.
--- Includes the tracer in the Servant context for use with WithSpan combinator.
-type OtelServerContext = '[OTEL.Tracer, AuthHandler Request Authz]
 
 -- | Initialize OTel resources in a bracket pattern.
 -- Provides an OtelContext that can be composed with user's custom context.
@@ -63,49 +56,46 @@ withOtelResources logEnv verbosity otelConfig action =
             }
     action otelCtx
 
--- | Run the HTTP server with OpenTelemetry tracing enabled.
--- This adds OTel middleware and includes the tracer in the Servant context.
---
--- The context type must provide access to OtelContext via HasOtelContext.
--- Typically users will store OtelContext in their custom context:
---
--- @
--- data MyContext = MyContext
---   { myOtel :: OtelContext
---   , myOtherStuff :: ...
---   }
---
--- instance HasOtelContext MyContext where
---   getOtelContext = myOtel
--- @
-runServerWithOtel ::
-  forall api ctx.
-  ( Servant.HasServer api OtelServerContext,
+-- | Run an OpenTelemetry-traced HTTP server. The caller supplies the Servant
+-- auth 'Context' (its own auth handlers); the OTel tracer is prepended
+-- automatically, so the served context is @OTEL.Tracer ': authCtx@. The context
+-- must reach 'OtelContext' via 'HasOtelContext' (typically stored in the app's
+-- custom context). This is the sole server entry point. The app owns the auth
+-- principal, so plain and role-gated routes can share one handler.
+runServerWithOtelContext ::
+  forall api authCtx ctx.
+  ( Servant.HasServer api (OTEL.Tracer ': authCtx),
+    Servant.HasContextEntry ((OTEL.Tracer ': authCtx) Servant..++ Servant.DefaultErrorFormatters) Servant.ErrorFormatters,
     HasOtelContext ctx
   ) =>
+  Servant.Context authCtx ->
   (AppContext ctx -> Servant.ServerT api (AppM ctx)) ->
   AppContext ctx ->
   IO ()
-runServerWithOtel server appCtx = do
+runServerWithOtelContext callerCtx server appCtx = do
   let otelCtx = getOtelContext (appCustom appCtx)
       otelMiddleware = newOpenTelemetryWaiMiddleware' (otelTracerProvider otelCtx)
-      servantContext = otelTracer otelCtx :. authHandler (appDbPool appCtx) (appEnvironment appCtx) :. Servant.EmptyContext
+      fullCtx = otelTracer otelCtx :. callerCtx
       warpSettings = mkWarpSettings (appLoggerEnv appCtx) (appWarpConfig appCtx)
-  Warp.runSettings warpSettings (otelMiddleware $ mkAppWithOtel @api server servantContext appCtx)
+  Warp.runSettings warpSettings (otelMiddleware $ mkAppWithOtelContext @api @authCtx server fullCtx appCtx)
 
--- | Create a Servant application with OTel context.
-mkAppWithOtel ::
-  forall api ctx.
-  (Servant.HasServer api OtelServerContext) =>
+-- | Create a Servant application with the OTel tracer prepended to a
+-- caller-supplied auth context. Hoists the handler monad with the full
+-- @OTEL.Tracer ': authCtx@ context.
+mkAppWithOtelContext ::
+  forall api authCtx ctx.
+  ( Servant.HasServer api (OTEL.Tracer ': authCtx),
+    Servant.HasContextEntry ((OTEL.Tracer ': authCtx) Servant..++ Servant.DefaultErrorFormatters) Servant.ErrorFormatters
+  ) =>
   (AppContext ctx -> Servant.ServerT api (AppM ctx)) ->
-  Context OtelServerContext ->
+  Context (OTEL.Tracer ': authCtx) ->
   AppContext ctx ->
   Servant.Application
-mkAppWithOtel server fullCtx appCtx =
+mkAppWithOtelContext server fullCtx appCtx =
   Servant.serveWithContext (Proxy @api) fullCtx $
     Servant.hoistServerWithContext
       (Proxy @api)
-      (Proxy @OtelServerContext)
+      (Proxy @(OTEL.Tracer ': authCtx))
       (interpret appCtx)
       (server appCtx)
 
