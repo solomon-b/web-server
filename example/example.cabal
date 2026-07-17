@@ -55,6 +55,7 @@ library
                   , bytestring
                   , data-has
                   , exceptions
+                  , hasql
                   , hasql-interpolate
                   , hasql-pool
                   , hs-opentelemetry-api
@@ -65,15 +66,18 @@ library
                   , network
                   , password
                   , servant
+                  , servant-auth-roles
                   , servant-server
                   , text
                   , text-display
                   , unliftio-core
+                  , wai
                   , web-server-core
                   , web-server-otel
   exposed-modules:
     App
     API
+    API.Admin.Get
     API.Home.Get
     API.Dashboard.Get
     API.User.Login.Get
@@ -81,4 +85,5 @@ library
     API.User.Logout.Post
     API.User.Register.Get
     API.User.Register.Post
+    Auth.Roles
     View

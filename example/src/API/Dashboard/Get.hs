@@ -4,25 +4,29 @@ module API.Dashboard.Get
   )
 where
 
-import App.Auth (Authz (..))
+import App.Auth (CookieAuth)
+import Auth.Roles (RoleAuth (..))
 import Lucid qualified
 import Servant ((:>))
 import Servant qualified
+import Servant.Auth.Roles (SomeRole (..))
 import Text.HTML (HTML)
 import View (dashboardPage)
 
 --------------------------------------------------------------------------------
 
 type Route =
-  Servant.AuthProtect "cookie-auth"
+  CookieAuth
     :> "dashboard"
     :> Servant.Get '[HTML] (Lucid.Html ())
 
 --------------------------------------------------------------------------------
 
+-- | A plain authenticated route on the shared cookie-auth tag. It receives the
+-- existential 'SomeRole' (the role is not needed here) and unpacks the user.
 handler ::
   (Applicative m) =>
-  Authz ->
+  SomeRole RoleAuth ->
   m (Lucid.Html ())
-handler Authz {authzUser} =
-  pure $ dashboardPage authzUser
+handler (SomeRole _ (RoleAuth user _)) =
+  pure $ dashboardPage user

@@ -4,6 +4,7 @@ module API
   )
 where
 
+import API.Admin.Get qualified as Admin.Get
 import API.Dashboard.Get qualified as Dashboard.Get
 import API.Home.Get qualified as Home.Get
 import API.User.Login.Get qualified as User.Login.Get
@@ -36,6 +37,8 @@ type API =
     :<|> User.Register.Post.Route
     -- Protected routes (Dashboard is traced with WithSpan)
     :<|> WithSpan "Dashboard" Dashboard.Get.Route
+    -- Role-gated route: RequireRole on the same cookie-auth tag/handler
+    :<|> Admin.Get.Route
     :<|> User.Logout.Post.Route
 
 --------------------------------------------------------------------------------
@@ -63,4 +66,5 @@ server appCtx =
     -- since Dashboard.Get.handler doesn't use tracing internally.
     -- The span is automatically created by the WithSpan combinator.
     :<|> (\_tracer -> Dashboard.Get.handler)
+    :<|> Admin.Get.handler
     :<|> User.Logout.Post.handler (appEnvironment appCtx)

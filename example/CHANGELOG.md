@@ -8,6 +8,14 @@ and this project adheres to the
 
 ## Unreleased
 
+### Added
+
+- Role-based authorization demo. A `Role` hierarchy (`Viewer < Editor < Admin`)
+  with a `users.role` column (new migration) and a `/admin` route gated on
+  `Editor` via `servant-auth-roles`' `RequireRole`. One role-indexed auth handler
+  (`Auth.Roles.roleAuthHandler`, built on core's `authHandlerFor`) backs both the
+  gated route and the plain cookie-auth Dashboard routes.
+
 ### Fixed
 
 - `POST /user/logout` is no longer behind the cookie-auth handler. Because a
@@ -26,6 +34,10 @@ and this project adheres to the
 
 ### Changed
 
+- Adopted `web-server-core`'s downstream-owned auth principal: the app defines its
+  own `RoleAuth` principal and the `AuthServerData CookieAuth` instance, and serves
+  via `runServerWithOtelContext` with its own auth `Context`. The Dashboard routes
+  now unpack `SomeRole RoleAuth` instead of taking the removed `Authz`.
 - Login and registration flows now use `Auth.loginWithExpiry`
   (via `Auth.login`) and `Auth.mkCookieSessionWithMaxAge`, so the
   session cookie's `Max-Age` matches the DB-side session expiry.

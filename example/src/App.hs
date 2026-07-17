@@ -10,10 +10,12 @@ import App.Otel
     ObservabilityConfig (..),
     ObservabilityConfigF,
     OtelContext,
-    runServerWithOtel,
+    runServerWithOtelContext,
     withOtelResources,
   )
+import Auth.Roles (roleAuthHandler)
 import Data.Maybe (fromMaybe)
+import Servant (Context (..))
 import "web-server-core" App qualified as Core
 import "web-server-core" App.Context (AppContext (..))
 
@@ -41,4 +43,6 @@ runApp = do
 
     withOtelResources (appLoggerEnv coreCtx) verbosity obsConfig $ \otelCtx -> do
       let exampleCtx = coreCtx {appCustom = ExampleContext otelCtx}
-      runServerWithOtel @API server exampleCtx
+          pool = appDbPool exampleCtx
+          env = appEnvironment exampleCtx
+      runServerWithOtelContext @API (roleAuthHandler pool env :. EmptyContext) server exampleCtx
