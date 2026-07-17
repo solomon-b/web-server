@@ -5,7 +5,6 @@ module App.Context where
 
 --------------------------------------------------------------------------------
 
-import App.Auth (Authz)
 import App.Config (Environment, Hostname, Verbosity, WarpConfig)
 import Data.Has qualified as Has
 import Data.Kind (Constraint, Type)
@@ -67,7 +66,3 @@ appendContext (x :. xs) ys = x :. appendContext xs ys
 type family Append (xs :: [k]) (ys :: [k]) :: [k] where
   Append '[] ys = ys
   Append (x ': xs) ys = x ': Append xs ys
-
-type AuthContext = AuthHandler Wai.Request Authz
-
-type ServantContext = '[AuthContext]

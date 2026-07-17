@@ -2,16 +2,15 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 
 module App
   ( -- * Application Entry Points
-    runApp,
     withAppResources,
-    runServer,
+    runServerWithContext,
 
     -- * Server Configuration
-    ServerContext,
-    mkApp,
+    mkAppWithContext,
     interpret,
 
     -- * Utility Functions
@@ -23,7 +22,7 @@ where
 
 --------------------------------------------------------------------------------
 
-import App.Auth (Authz, authHandler, execStatement, healthCheck)
+import App.Auth (execStatement, healthCheck)
 import App.Auth qualified as Auth
 import App.Config
 import App.Context
@@ -53,12 +52,10 @@ import Log qualified
 import Log.Backend.StandardOutput qualified as Log
 import Network.HTTP.Types.Header qualified as Header
 import Network.HTTP.Types.Status qualified as Status
-import Network.Wai (Request)
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
-import Servant (Context ((:.)))
+import Servant (Context)
 import Servant qualified
-import Servant.Server.Experimental.Auth (AuthHandler)
 import System.Posix.Signals qualified as Posix
 import Web.Cookie (parseCookies)
 
@@ -105,29 +102,22 @@ withAppResources ctx action = do
                 }
         action appContext
 
--- | Run the HTTP server with an already-initialized AppContext.
--- Useful when you need to coordinate the server with other subsystems
--- or run it alongside background jobs.
-runServer ::
-  forall api ctx.
-  (Servant.HasServer api ServerContext) =>
+-- | Run the HTTP server with an already-initialized 'AppContext' and a
+-- caller-supplied Servant 'Context'. The app builds that context (its own auth
+-- handler) from the pool in the 'AppContext'. This is the non-otel entry point;
+-- @web-server-otel@ layers its tracer on top of it.
+runServerWithContext ::
+  forall api authCtx ctx.
+  ( Servant.HasServer api authCtx,
+    Servant.HasContextEntry (authCtx Servant..++ Servant.DefaultErrorFormatters) Servant.ErrorFormatters
+  ) =>
+  Context authCtx ->
   (Environment -> Servant.ServerT api (AppM ctx)) ->
   AppContext ctx ->
   IO ()
-runServer server appCtx = do
-  let servantContext = authHandler (appDbPool appCtx) (appEnvironment appCtx) :. Servant.EmptyContext
-      warpSettings = mkWarpSettings (appLoggerEnv appCtx) (appWarpConfig appCtx)
-  Warp.runSettings warpSettings (mkApp @api server servantContext appCtx)
-
--- | Run the application server. This is the main entry point that combines
--- resource acquisition with server execution.
-runApp ::
-  forall api ctx.
-  (Servant.HasServer api ServerContext) =>
-  (Environment -> Servant.ServerT api (AppM ctx)) ->
-  ctx ->
-  IO ()
-runApp server ctx = withAppResources ctx (runServer @api server)
+runServerWithContext fullCtx server appCtx = do
+  let warpSettings = mkWarpSettings (appLoggerEnv appCtx) (appWarpConfig appCtx)
+  Warp.runSettings warpSettings (mkAppWithContext @api @authCtx fullCtx server appCtx)
 
 acquirePool :: PostgresConfig -> IO HSQL.Pool.Pool
 acquirePool PostgresConfig {..} = do
@@ -181,8 +171,6 @@ shutdownHandler closeSocket =
 
 --------------------------------------------------------------------------------
 
-type ServerContext = '[AuthHandler Request Authz]
-
 interpret :: AppContext ctx -> AppM ctx x -> Servant.Handler x
 interpret ctx (AppM appM) =
   Servant.Handler $
@@ -190,19 +178,21 @@ interpret ctx (AppM appM) =
       catch (Right <$> appM ctx) $
         \e -> pure $ Left e
 
-mkApp ::
-  forall api ctx.
-  (Servant.HasServer api ServerContext) =>
+mkAppWithContext ::
+  forall api authCtx ctx.
+  ( Servant.HasServer api authCtx,
+    Servant.HasContextEntry (authCtx Servant..++ Servant.DefaultErrorFormatters) Servant.ErrorFormatters
+  ) =>
+  Context authCtx ->
   (Environment -> Servant.ServerT api (AppM ctx)) ->
-  Context ServerContext ->
   AppContext ctx ->
   Servant.Application
-mkApp server fullCtx appCtx =
+mkAppWithContext fullCtx server appCtx =
   noCacheAuthenticated (appEnvironment appCtx) $
     Servant.serveWithContext (Proxy @api) fullCtx $
       Servant.hoistServerWithContext
         (Proxy @api)
-        (Proxy @ServerContext)
+        (Proxy @authCtx)
         (interpret appCtx)
         (server $ appEnvironment appCtx)
 

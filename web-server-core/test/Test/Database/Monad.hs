@@ -18,7 +18,6 @@ where
 
 --------------------------------------------------------------------------------
 
-import App.Auth (Authz (..))
 import Control.Concurrent (MVar, newEmptyMVar)
 import Control.Concurrent.MVar (readMVar, tryPutMVar)
 import Control.Exception (Exception, throw, throwIO)
@@ -181,6 +180,10 @@ bracketConn perTestConfig actionTestDB =
     )
     release
     (\connection -> runTestDB actionTestDB connection loggerEnv)
+
+-- | A test-local principal. Core no longer defines an auth principal (it is
+-- downstream-owned now), so the test suite supplies its own for 'withAuth'.
+data Authz = Authz User.Model ServerSessions.Model
 
 withAuth :: SpecWith (Authz, TestDBConfig) -> SpecWith TestDBConfig
 withAuth = beforeWith getAuth

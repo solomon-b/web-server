@@ -10,6 +10,15 @@ and this project adheres to the
 
 ### Changed (breaking)
 
+- Auth is now principal-polymorphic. Removed `Authz`, `authHandler`,
+  `authHandlerWith`, the fixed
+  `AuthServerData (AuthProtect "cookie-auth") = Authz` instance, and the
+  `ServerContext`/`AuthContext`/`ServantContext` aliases. Core now owns only the
+  cookie-session *mechanism*: build a handler for your own principal with the new
+  `authHandlerFor`, name the scheme with the exported `CookieAuth`/`CookieAuthTag`
+  synonyms, and serve with the context-generic `mkAppWithContext` /
+  `runServerWithContext` (which replace `mkApp`/`runServer`/`runApp`). `getAuth`
+  now returns `Maybe (User.Model, ServerSessions.Model)` instead of `Maybe Authz`.
 - The exported `overlays.web-server-core` Nix overlay no longer provides
   `servant-auth-roles`. That package moved to its own repository
   (<https://github.com/solomon-b/servant-auth-roles>); downstream flakes

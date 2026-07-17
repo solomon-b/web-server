@@ -12,11 +12,11 @@ module App.Auth
     truncateSessionId,
 
     -- * Authentication
-    authHandler,
-    authHandlerWith,
+    CookieAuth,
+    CookieAuthTag,
+    authHandlerFor,
     SessionConfig (..),
     defaultSessionConfig,
-    Authz (..),
     AuthErr (..),
     getAuth,
     login,
@@ -198,14 +198,14 @@ getSessionUser sId =
 
 --------------------------------------------------------------------------------
 
--- NOTE: If we remove this we could allow downstream consumers of the library to
--- define their own Authz type.
-type instance Servant.AuthServerData (Servant.AuthProtect "cookie-auth") = Authz
+-- | The cookie-session auth scheme. Core owns the /mechanism/ (this tag plus the
+-- 'authHandlerFor' pipeline); the downstream app owns the /principal/ by
+-- declaring @type instance AuthServerData CookieAuth = YourPrincipal@ and
+-- registering its handler, so plain 'Servant.AuthProtect' routes and
+-- @servant-auth-roles@ RequireRole routes can share one handler on one tag.
+type CookieAuthTag = "cookie-auth"
 
-data Authz = Authz
-  { authzUser :: User.Model,
-    authzSession :: ServerSessions.Model
-  }
+type CookieAuth = Servant.AuthProtect CookieAuthTag
 
 data AuthErr
   = MissingCookieHeader
@@ -223,11 +223,21 @@ instance ToServerError AuthErr where
     MissingCookieValue -> ("Missing Cookie Value", Just (Aeson.object [("details", "Invalid cookie")]))
     MalformedSessionId -> ("Malformed Session Id", Just (Aeson.object [("details", "Bad session data")]))
 
-authHandler :: HSQL.Pool -> Environment -> Servant.AuthHandler Request Authz
-authHandler pool env = authHandlerWith pool env defaultSessionConfig
-
-authHandlerWith :: HSQL.Pool -> Environment -> SessionConfig -> Servant.AuthHandler Request Authz
-authHandlerWith pool env cfg = mkAuthHandler $ \req ->
+-- | Build a Servant 'Servant.AuthHandler' for a custom principal from the
+-- validated user and session. It runs the full cookie-session validation
+-- pipeline (cookie parsing, session lookup, idle-timeout enforcement, and
+-- throttled @last_activity_at@ updates) and, on success, hands the validated
+-- 'User.Model' and 'ServerSessions.Model' to the supplied continuation.
+-- Downstream consumers attach their own role- or claim-indexed principal this
+-- way without reimplementing (or weakening) the security-sensitive session
+-- checks.
+authHandlerFor ::
+  (User.Model -> ServerSessions.Model -> Servant.Handler a) ->
+  HSQL.Pool ->
+  Environment ->
+  SessionConfig ->
+  Servant.AuthHandler Request a
+authHandlerFor k pool env cfg = mkAuthHandler $ \req ->
   let cookieName = sessionCookieName env
       eSession = do
         cookie <- note MissingCookieHeader $ lookup "cookie" $ requestHeaders req
@@ -271,7 +281,7 @@ authHandlerWith pool env cfg = mkAuthHandler $ \req ->
                       void $
                         liftIO $
                           HSQL.use pool (HSQL.statement () $ ServerSessions.touchSession sessionId)
-                    pure $ Authz userModel sessionModel
+                    k userModel sessionModel
           -- Auth Failure: Invalid or missing auth session_id in user's cookie:
           Left MissingCookieHeader -> Servant.throwError Servant.err307 {Servant.errBody = "No cookie sent in request", Servant.errHeaders = [("Location", redirect)]}
           Left MissingCookieValue -> Servant.throwError Servant.err307 {Servant.errBody = "Invalid cookie", Servant.errHeaders = [("Location", redirect)]}
@@ -290,18 +300,8 @@ getAuth ::
     Has HSQL.Pool.Pool r
   ) =>
   ServerSessions.Id ->
-  m (Either HSQL.UsageError (Maybe Authz))
-getAuth sessionId = do
-  eSessionData <- runDB . HSQL.statement () $ getSessionUser sessionId
-  pure $
-    eSessionData
-      <&> fmap
-        ( \(user, serverSession) ->
-            Authz
-              { authzUser = user,
-                authzSession = serverSession
-              }
-        )
+  m (Either HSQL.UsageError (Maybe (User.Model, ServerSessions.Model)))
+getAuth sessionId = runDB . HSQL.statement () $ getSessionUser sessionId
 
 -- | Result of a successful login. Carries the chosen session duration so the
 -- caller can build a matching @Set-Cookie@ via 'mkCookieSessionWithMaxAge'
@@ -409,8 +409,8 @@ userLoginState ::
 userLoginState env cookie = do
   let mSessionId = cookie >>= lookupSessionId env
   traverse getAuth mSessionId >>= \case
-    Just (Right (Just Authz {..})) ->
-      pure $ IsLoggedIn authzUser
+    Just (Right (Just (user, _session))) ->
+      pure $ IsLoggedIn user
     _ ->
       pure IsNotLoggedIn
 
