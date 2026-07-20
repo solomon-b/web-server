@@ -8,6 +8,22 @@ and this project adheres to the
 
 ## Unreleased
 
+### Fixed
+
+- `POST /user/logout` is no longer behind the cookie-auth handler. Because a
+  session past its idle timeout fails authentication, logout previously
+  returned 401 for exactly the sessions that most needed clearing, leaving a
+  dead cookie in the browser with no way to shed it short of clearing cookies
+  by hand. The route now reads the `Cookie` header directly, expires the named
+  server session on a best-effort basis, and always responds with the clearing
+  `Set-Cookie`, making logout idempotent and unable to fail.
+
+### Changed (breaking)
+
+- `API.User.Logout.Post.Route` no longer carries the auth combinator and
+  `handler`'s second argument is now `Maybe Text` (the raw `Cookie` header)
+  rather than the auth principal.
+
 ### Changed
 
 - Login and registration flows now use `Auth.loginWithExpiry`
