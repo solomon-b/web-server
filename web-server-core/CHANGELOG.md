@@ -10,6 +10,11 @@ and this project adheres to the
 
 ### Changed (breaking)
 
+- The exported `overlays.web-server-core` Nix overlay no longer provides
+  `servant-auth-roles`. That package moved to its own repository
+  (<https://github.com/solomon-b/servant-auth-roles>); downstream flakes
+  that relied on this overlay to supply it must now add it as their own
+  input.
 - `Domain.Types.EmailAddress.EmailAddress` now wraps
   `Text.Email.Validate.EmailAddress` instead of `CI Text`. Construction
   validates RFC syntax and lowercases the address; all `FromJSON`,

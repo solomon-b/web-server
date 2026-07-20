@@ -2,7 +2,6 @@ packages:
   example/
   web-server-core/
   web-server-otel/
-  servant-auth-roles/
   xmlhtml-lens/
   xmlhtml-qq/
 
