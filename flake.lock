@@ -38,7 +38,24 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
+        "servant-auth-roles-src": "servant-auth-roles-src",
         "tmp-postgres-src": "tmp-postgres-src"
+      }
+    },
+    "servant-auth-roles-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784522730,
+        "narHash": "sha256-6RgxT7lgWYnphMpQXh4VvQ/mqPwbWL73brEsyF1WSk4=",
+        "owner": "solomon-b",
+        "repo": "servant-auth-roles",
+        "rev": "6bc838e06f04310d587f1cd37b81cd80de101bad",
+        "type": "github"
+      },
+      "original": {
+        "owner": "solomon-b",
+        "repo": "servant-auth-roles",
+        "type": "github"
       }
     },
     "systems": {

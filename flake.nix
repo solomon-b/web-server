@@ -9,6 +9,11 @@
       url = "github:jfischoff/tmp-postgres";
       flake = false;
     };
+
+    servant-auth-roles-src = {
+      url = "github:solomon-b/servant-auth-roles";
+      flake = false;
+    };
   };
 
   outputs =
@@ -17,6 +22,7 @@
       nixpkgs,
       flake-utils,
       tmp-postgres-src,
+      servant-auth-roles-src,
     }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (
       system:

@@ -40,6 +40,10 @@ final: prev: {
       tmp-postgres = final.haskell.lib.dontCheck (
         hfinal.callCabal2nix "tmp-postgres" inputs.tmp-postgres-src { }
       );
+
+      servant-auth-roles = final.haskell.lib.dontCheck (
+        hfinal.callCabal2nix "servant-auth-roles" inputs.servant-auth-roles-src { }
+      );
     };
   };
 }
