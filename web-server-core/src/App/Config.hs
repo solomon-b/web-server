@@ -8,12 +8,14 @@ module App.Config where
 --------------------------------------------------------------------------------
 
 import App.Config.Fetchers (FetchHKD (..), parseEnvDefault, parseEnvDefaultStr, parseEnvStr, readEnvDefault)
+import App.Redact (redacted)
 import Barbies
 import Data.Aeson (ToJSON)
 import Data.ByteString (ByteString)
 import Data.Functor.Compose (Compose (..))
 import Data.String (IsString)
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Display (Display)
 import GHC.Generics
 
@@ -78,10 +80,20 @@ instance FetchHKD WarpConfigF where
 
 -- | Postgres connection settings: a libpq connection string read from
 -- @APP_POSTGRES_CONNECTION_STRING@ (e.g. @postgres://user:pw\@host:5432/db@).
+--
+-- The connection string can hold a password, thus 'Show' does not give it.
+-- 'Show' for 'AppConfig' uses this instance.
 newtype PostgresConfig = PostgresConfig
   { postgresConfigConnectionString :: ByteString
   }
-  deriving stock (Generic, Show)
+  deriving stock (Generic)
+
+instance Show PostgresConfig where
+  showsPrec d _ =
+    showParen (d > 10) $
+      showString "PostgresConfig {postgresConfigConnectionString = "
+        . showString (Text.unpack redacted)
+        . showString "}"
 
 newtype PostgresConfigF f = PostgresConfigF
   { postgresConfigFConnectionString :: f ByteString

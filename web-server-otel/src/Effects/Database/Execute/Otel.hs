@@ -14,6 +14,7 @@ where
 --------------------------------------------------------------------------------
 
 import App.Errors (InternalServerError (..), ToServerError, throwErr)
+import App.Redact (redactSql, redacted, renderCommandError, renderUsageError)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader qualified as Reader
@@ -26,7 +27,7 @@ import Data.HashMap.Strict qualified as HMS
 import Data.List (intersperse)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Display (Display, display)
+import Data.Text.Display (Display)
 import Data.Text.Encoding qualified as TE
 import Effects.Database.Class (MonadDB)
 import Effects.Database.Class qualified as DB
@@ -75,8 +76,8 @@ execTransaction transaction = do
             { newEventName = "logical_query_error",
               newEventAttributes =
                 HMS.fromList
-                  [ ("cmd-error", Trace.toAttribute . Text.pack . show $ cmdError),
-                    ("params", Trace.toAttribute . fold . intersperse " " $ params)
+                  [ ("cmd-error", Trace.toAttribute . renderCommandError $ cmdError),
+                    ("params", Trace.toAttribute . fold . intersperse " " $ redacted <$ params)
                   ],
               newEventTimestamp = Nothing
             }
@@ -84,14 +85,15 @@ execTransaction transaction = do
         Trace.addEvent reqSpan $
           Trace.NewEvent
             { newEventName = "unexpected_query_error",
-              newEventAttributes = HMS.fromList [("error", Trace.toAttribute . Text.pack . show $ err)],
+              newEventAttributes = HMS.fromList [("error", Trace.toAttribute . renderUsageError $ err)],
               newEventTimestamp = Nothing
             }
-      Right result ->
+      Right _ ->
         Trace.addEvent reqSpan $
           Trace.NewEvent
             { newEventName = "execution_result",
-              newEventAttributes = HMS.fromList [("result", Trace.toAttribute . display $ result)],
+              -- A result can hold a secret, for example a token or a session id.
+              newEventAttributes = HMS.fromList [("result", Trace.toAttribute redacted)],
               newEventTimestamp = Nothing
             }
 
@@ -110,7 +112,7 @@ execQuery ::
 execQuery statement@(HSQL.Statement bs _ _ _) = do
   tracer <- Reader.asks Has.getter
   Trace.inSpan' tracer "database_session" Trace.defaultSpanArguments $ \reqSpan -> do
-    Log.logInfo "db query" $ KeyMap.singleton "query" (TE.decodeUtf8 bs)
+    Log.logInfo "db query" $ KeyMap.singleton "query" (redactSql (TE.decodeUtf8 bs))
     Trace.addEvent reqSpan $
       Trace.NewEvent
         { newEventName = "statement",
@@ -129,8 +131,8 @@ execQuery statement@(HSQL.Statement bs _ _ _) = do
             { newEventName = "logical_query_error",
               newEventAttributes =
                 HMS.fromList
-                  [ ("cmd-error", Trace.toAttribute . Text.pack . show $ cmdError),
-                    ("params", Trace.toAttribute . fold . intersperse " " $ params)
+                  [ ("cmd-error", Trace.toAttribute . renderCommandError $ cmdError),
+                    ("params", Trace.toAttribute . fold . intersperse " " $ redacted <$ params)
                   ],
               newEventTimestamp = Nothing
             }
@@ -138,14 +140,15 @@ execQuery statement@(HSQL.Statement bs _ _ _) = do
         Trace.addEvent reqSpan $
           Trace.NewEvent
             { newEventName = "unexpected_query_error",
-              newEventAttributes = HMS.fromList [("error", Trace.toAttribute . Text.pack . show $ err)],
+              newEventAttributes = HMS.fromList [("error", Trace.toAttribute . renderUsageError $ err)],
               newEventTimestamp = Nothing
             }
-      Right result ->
+      Right _ ->
         Trace.addEvent reqSpan $
           Trace.NewEvent
             { newEventName = "execution_result",
-              newEventAttributes = HMS.fromList [("result", Trace.toAttribute . display $ result)],
+              -- A result can hold a secret, for example a token or a session id.
+              newEventAttributes = HMS.fromList [("result", Trace.toAttribute redacted)],
               newEventTimestamp = Nothing
             }
     pure eQueryResult
@@ -155,15 +158,15 @@ toStatementAttributes ss =
   let params' =
         zip @Natural [1 ..] (params ss)
           & foldMap
-            ( \(n, p') ->
+            ( \(n, _) ->
                 mconcat
                   [ "\n  $",
                     Text.pack . show $ n,
                     " = ",
-                    p'
+                    redacted
                   ]
             )
-   in [("sql", Trace.toAttribute (sql ss)), ("params", Trace.toAttribute params')]
+   in [("sql", Trace.toAttribute (redactSql (sql ss))), ("params", Trace.toAttribute params')]
 
 -- | Helper to convert a database result to throw on error.
 -- Note: throwErr already logs the error, so we don't need additional logging.
@@ -186,7 +189,7 @@ execQueryThrow ::
   HSQL.Statement () result ->
   m result
 execQueryThrow statement =
-  execQuery statement `orThrowErr` (InternalServerError . Text.pack . show)
+  execQuery statement `orThrowErr` (InternalServerError . renderUsageError)
 
 execQueryThrowMessage ::
   ( Log.MonadLog m,
@@ -204,7 +207,7 @@ execQueryThrowMessage msg statement = do
   execQuery statement >>= \case
     Left err -> do
       -- Log the actual error for debugging, but throw a custom user message
-      Log.logAttention "Query Execution Error" (show err)
+      Log.logAttention "Query Execution Error" (renderUsageError err)
       throwErr Servant.err500 {Servant.errBody = msg}
     Right res -> pure res
 
@@ -220,4 +223,4 @@ execTransactionThrow ::
   HT.Transaction result ->
   m result
 execTransactionThrow transaction =
-  execTransaction transaction `orThrowErr` (InternalServerError . Text.pack . show)
+  execTransaction transaction `orThrowErr` (InternalServerError . renderUsageError)

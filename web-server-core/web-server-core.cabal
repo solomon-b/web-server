@@ -88,6 +88,7 @@ library
       App.Context
       App.Errors
       App.Monad
+      App.Redact
       Domain.Types.AdminStatus
       Domain.Types.DisplayName
       Domain.Types.EmailAddress
@@ -121,8 +122,11 @@ test-suite web-server-core-test
     ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N -O0
     build-depends:    base >=4.19.2.0
                     , web-server-core
+                    , aeson
                     , bytestring
+                    , case-insensitive
                     , containers
+                    , contravariant
                     , exceptions
                     , data-has
                     , hasql
@@ -136,12 +140,14 @@ test-suite web-server-core-test
                     , hspec-discover
                     , hspec-expectations
                     , hspec-hedgehog
+                    , http-types
                     , HUnit
                     , iproute
                     , log-base
                     , mtl
                     , password
                     , postgres-options
+                    , servant-server
                     , string-interpolate
                     , text
                     , text-display >= 1.0.0.0
@@ -150,8 +156,12 @@ test-suite web-server-core-test
                     , typed-process
                     , unliftio-core
                     , uuid
+                    , wai
+                    , warp
     other-modules:
        App.AuthSpec
+       App.LogLeakSpec
+       App.RedactSpec
        Effects.Database.Tables.ServerSessionsSpec
        Effects.Database.Tables.UserSpec
        Test.Database.Expectation

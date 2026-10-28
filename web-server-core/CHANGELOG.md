@@ -33,6 +33,45 @@ and this project adheres to the
   (previously total: `Text -> EmailAddress`).
 - Removed `isValid` and `validate` — every `EmailAddress` is valid by
   construction; use `mkEmailAddress` instead.
+- `Show` and `Display` no longer give secrets. `Show` for
+  `ServerSessions.Id` gives only the first 8 characters, followed by
+  `<redacted>`. `Display` for `ServerSessions.Id` does not change, because
+  the session cookie needs the full id. `Show` and `Display` for
+  `ServerSessions.Model` and `ServerSessions.Domain` use the short id.
+  `Show` for `User.Model` and `User.ModelInsert` does not give the password
+  hash. `Show` for `PostgresConfig`, and thus for `AppConfig`, does not give
+  the connection string.
+
+### Added
+
+- New module `App.Redact`. It has functions that replace a secret with the
+  fixed marker `<redacted>` and keep the rest of the text: `redactSql`,
+  `redactHeaders`, `redactQuery`, `redactUrl`, `redactBody`,
+  `redactRequest`, `redactServerError`, `renderUsageError`,
+  `renderCommandError`, and `isSecretName`.
+
+### Security
+
+- The request logger in `mkWarpSettings` no longer writes secrets. It
+  replaces the value of each secret header and query parameter with
+  `<redacted>`. A name is secret if it contains `auth`, `cookie`,
+  `credential`, `csrf`, `key`, `passwd`, `password`, `secret`, `session`,
+  `signature`, or `token`, or if it is `code`, `jwt`, `otp`, `pass`, `pwd`, or
+  `sig`. In the `Referer`, `HX-Current-URL`, `X-Forwarded-URI`, and
+  `X-Original-URL` headers, and in a query value that is a URL, the logger
+  replaces the secret query parameters. The `requestBody` field is
+  `<redacted>` if the body is not empty. All fields and the log level do not
+  change.
+- The "db query" log no longer writes literal values. Rel8 puts values into
+  the SQL text, for example `CAST(E'token' AS "text")`. The log now gives
+  `CAST('<redacted>' AS "text")`. String, dollar-quoted, and numeric literals
+  are replaced. The field and the log level do not change.
+- Database error logs no longer write parameter values. The `show` text of a
+  hasql `UsageError` holds the SQL text and each parameter value.
+  `execQueryThrow`, `execQueryThrowMessage`, `execTransactionThrow`, the
+  cookie auth handler, and the startup health check now use
+  `renderUsageError`. Before this change, a database error in the auth
+  handler wrote the full session id to the log.
 
 ## 0.2.0.0 — 2026-05-04
 

@@ -15,6 +15,7 @@ where
 --------------------------------------------------------------------------------
 
 import App.Errors (InternalServerError (..), throwErr)
+import App.Redact (redactSql, renderUsageError)
 import Control.Monad.Catch (MonadThrow (..))
 import Data.ByteString.Lazy qualified as BL
 import Data.Text qualified as Text
@@ -40,7 +41,7 @@ execQuery ::
   HSQL.Statement () result ->
   m (Either HSQL.UsageError result)
 execQuery statement@(HSQL.Statement bs _ _ _) = do
-  Log.logInfo "db query" (TE.decodeUtf8 bs)
+  Log.logInfo "db query" (redactSql (TE.decodeUtf8 bs))
   execStatement statement
 
 execQueryThrow ::
@@ -52,9 +53,9 @@ execQueryThrow ::
   HSQL.Statement () result ->
   m result
 execQueryThrow statement@(HSQL.Statement bs _ _ _) = do
-  Log.logInfo "db query" (TE.decodeUtf8 bs)
+  Log.logInfo "db query" (redactSql (TE.decodeUtf8 bs))
   execStatement statement >>= \case
-    Left err -> throwErr $ InternalServerError $ Text.pack $ show err
+    Left err -> throwErr $ InternalServerError $ renderUsageError err
     Right res -> pure res
 
 execQueryThrowMessage ::
@@ -67,10 +68,10 @@ execQueryThrowMessage ::
   HSQL.Statement () result ->
   m result
 execQueryThrowMessage msg statement@(HSQL.Statement bs _ _ _) = do
-  Log.logInfo "db query" (TE.decodeUtf8 bs)
+  Log.logInfo "db query" (redactSql (TE.decodeUtf8 bs))
   execStatement statement >>= \case
     Left err -> do
-      Log.logAttention "Query Execution Error" (show err)
+      Log.logAttention "Query Execution Error" (renderUsageError err)
       throwErr Servant.err500 {Servant.errBody = msg}
     Right res -> pure res
 
@@ -85,5 +86,5 @@ execTransactionThrow ::
 execTransactionThrow transaction = do
   Log.logInfo "db transaction" ("running transaction" :: Text.Text)
   execTransaction transaction >>= \case
-    Left err -> throwErr $ InternalServerError $ Text.pack $ show err
+    Left err -> throwErr $ InternalServerError $ renderUsageError err
     Right res -> pure res

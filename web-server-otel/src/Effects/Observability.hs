@@ -26,8 +26,9 @@ where
 --------------------------------------------------------------------------------
 
 import App.Config (Verbosity (..))
+import App.Redact (redactRequest, redactServerError, redacted)
 import Config.Otel (AppExporter (..), ObservabilityConfig (..))
-import Control.Exception (bracket)
+import Control.Exception (SomeException, bracket, fromException)
 import Control.Monad.Catch (MonadCatch, MonadThrow (..), catchAll)
 import Control.Monad.Except (ExceptT (..))
 import Control.Monad.IO.Unlift
@@ -41,7 +42,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.List (sortOn)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Display (Display, display)
+import Data.Text.Display (Display)
 import Data.Text.Lazy qualified as Lazy
 import Data.Time (getCurrentTime)
 import Data.Time.Clock (secondsToNominalDiffTime)
@@ -173,10 +174,18 @@ handlerSpan handlerName handlerAction = do
       OTEL.addEvent reqSpan $
         OTEL.NewEvent
           { newEventName = "handler error",
-            newEventAttributes = HashMap.fromList [("error", OTEL.toAttribute . Text.pack . show $ exception)],
+            newEventAttributes = HashMap.fromList [("error", OTEL.toAttribute . Text.pack $ showException exception)],
             newEventTimestamp = Nothing
           }
       throwM exception
+
+-- | Show an exception for a span. If the exception is a Servant error,
+-- remove the secrets from its headers first.
+showException :: SomeException -> String
+showException exception =
+  case fromException exception of
+    Just err -> show (redactServerError err)
+    Nothing -> show exception
 
 --------------------------------------------------------------------------------
 
@@ -202,7 +211,7 @@ instance
                   OTEL.addEvent reqSpan $
                     OTEL.NewEvent
                       { newEventName = "handler request",
-                        newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack $ show req)],
+                        newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack . show $ redactRequest req)],
                         newEventTimestamp = Nothing
                       }
 
@@ -220,7 +229,7 @@ wrapInSpan tracer handlerName req (Servant.Handler (ExceptT action)) =
         OTEL.addEvent reqSpan $
           OTEL.NewEvent
             { newEventName = "handler request",
-              newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack $ show req)],
+              newEventAttributes = HashMap.fromList [("request", OTEL.toAttribute . Text.pack . show $ redactRequest req)],
               newEventTimestamp = Nothing
             }
 
@@ -231,17 +240,18 @@ wrapInSpan tracer handlerName req (Servant.Handler (ExceptT action)) =
             OTEL.addEvent reqSpan $
               OTEL.NewEvent
                 { newEventName = "handler error",
-                  newEventAttributes = HashMap.fromList [("error", OTEL.toAttribute . Text.pack $ show err)],
+                  newEventAttributes = HashMap.fromList [("error", OTEL.toAttribute . Text.pack . show $ redactServerError err)],
                   newEventTimestamp = Nothing
                 }
             pure response
-          Right success -> do
+          Right _ -> do
             OTEL.addEvent reqSpan $
               OTEL.NewEvent
                 { newEventName = "handler result",
+                  -- A response can hold a secret, for example a session id.
                   newEventAttributes =
                     HashMap.fromList
-                      [("result", OTEL.toAttribute (display success))],
+                      [("result", OTEL.toAttribute redacted)],
                   newEventTimestamp = Nothing
                 }
             pure response

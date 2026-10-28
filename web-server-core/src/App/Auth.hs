@@ -45,6 +45,7 @@ where
 
 import App.Config (Environment (..))
 import App.Errors (InternalServerError (..), ToServerError (..), throwErr, toErrorBody)
+import App.Redact (renderUsageError)
 import Control.Error (note)
 import Control.Monad (void, when, (>=>))
 import Control.Monad.IO.Class (MonadIO (..))
@@ -253,7 +254,7 @@ authHandlerFor k pool env cfg = mkAuthHandler $ \req ->
               Left err -> do
                 -- TODO: Propagate logger to here:
                 liftIO $ Log.withJsonStdOutLogger $ \stdOutLogger ->
-                  Log.runLogT "webserver-backend" stdOutLogger Log.LogAttention $ throwErr $ InternalServerError $ Text.pack $ show err
+                  Log.runLogT "webserver-backend" stdOutLogger Log.LogAttention $ throwErr $ InternalServerError $ renderUsageError err
               -- Auth Failure: Auth session or user do not exist in the DB:
               -- Note: this is a 307 because we redirect on auth failure.
               Right Nothing ->

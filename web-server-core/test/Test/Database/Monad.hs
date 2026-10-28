@@ -8,6 +8,7 @@ module Test.Database.Monad
     withTestDB,
     withAuth,
     bracketConn,
+    bracketConnWithLogger,
     dbit,
     TestDBInitConfig (..),
     TestDBConfig (..),
@@ -170,7 +171,12 @@ loggerEnv = Log.LoggerEnv logger "test-suite" [] [] Log.defaultLogLevel
 --------------------------------------------------------------------------------
 
 bracketConn :: TestDBConfig -> TestDB a -> IO a
-bracketConn perTestConfig actionTestDB =
+bracketConn = bracketConnWithLogger loggerEnv
+
+-- | Like 'bracketConn', but the test action logs to the given 'Log.LoggerEnv'.
+-- Use it to examine the log output of a test.
+bracketConnWithLogger :: Log.LoggerEnv -> TestDBConfig -> TestDB a -> IO a
+bracketConnWithLogger env perTestConfig actionTestDB =
   bracket
     ( do
         connection <- acquire $ toSettingString perTestConfig
@@ -179,7 +185,7 @@ bracketConn perTestConfig actionTestDB =
           Right conn -> pure conn
     )
     release
-    (\connection -> runTestDB actionTestDB connection loggerEnv)
+    (\connection -> runTestDB actionTestDB connection env)
 
 -- | A test-local principal. Core no longer defines an auth principal (it is
 -- downstream-owned now), so the test suite supplies its own for 'withAuth'.

@@ -15,6 +15,25 @@ and this project adheres to the
   its own Servant auth `Context` (its own handler and principal), and the OTel
   tracer is prepended automatically. Follows `web-server-core` making the auth
   principal downstream-defined.
+- `toStatementAttributes` now gives `<redacted>` for each parameter value,
+  and it removes the literals from the `sql` attribute with `redactSql`.
+
+### Security
+
+- Logs and trace spans no longer hold secrets. With the `StdOut` exporter,
+  spans go to the same output as the logs.
+  - The "db query" log and the `sql` span attribute use `redactSql`.
+  - Database error logs and span events use `renderUsageError` and
+    `renderCommandError` in place of `show`. The `params` attribute of a
+    `logical_query_error` event gives `<redacted>` for each value.
+  - The `result` attribute of the `execution_result` and `handler result`
+    events is now `<redacted>`. A query result or a response can hold a token
+    or a session id.
+  - `WithSpan` and `wrapInSpan` remove secrets from the request with
+    `redactRequest` before they show it. The request held all headers, with
+    the session cookie.
+  - `wrapInSpan` and `handlerSpan` remove secret headers from a Servant error,
+    for example `Set-Cookie`, before they show it.
 
 ## 0.1.0.0 — 2026-01-30
 
