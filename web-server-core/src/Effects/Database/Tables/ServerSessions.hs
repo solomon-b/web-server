@@ -4,14 +4,17 @@ module Effects.Database.Tables.ServerSessions where
 
 --------------------------------------------------------------------------------
 
+import App.Redact (redacted)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString (ByteString)
 import Data.IP (IPRange)
 import Data.Password.Argon2 (Argon2, PasswordHash)
 import Data.Text (Text)
-import Data.Text.Display (Display, RecordInstance (..))
+import Data.Text qualified as Text
+import Data.Text.Display (Display, RecordInstance (..), ShowInstance (..))
 import Data.Time (UTCTime)
 import Data.UUID (UUID, fromASCIIBytes)
+import Data.UUID qualified as UUID
 import Domain.Types.EmailAddress (EmailAddress)
 import Effects.Database.Tables.User qualified as User
 import GHC.Generics
@@ -28,11 +31,16 @@ import Servant qualified
 parseSessionId :: ByteString -> Maybe Id
 parseSessionId = fmap Id . fromASCIIBytes
 
+-- | A session id. The id is the value of the session cookie, thus it is a
+-- secret.
+--
+-- 'Display' gives the full id, because the @Set-Cookie@ header needs it.
+-- Do not use 'Display' in a log. Use 'App.Auth.truncateSessionId'. 'Show'
+-- gives only the first 8 characters, followed by 'redacted'.
 newtype Id = Id UUID
   deriving stock (Generic)
   deriving newtype
-    ( Show,
-      Eq,
+    ( Eq,
       Ord,
       Servant.FromHttpApiData,
       ToJSON,
@@ -42,6 +50,12 @@ newtype Id = Id UUID
       EncodeValue
     )
 
+instance Show Id where
+  showsPrec d (Id uuid) =
+    showParen (d > 10) $
+      showString "Id " . showString (take 8 (UUID.toString uuid)) . showString (Text.unpack redacted)
+
+-- | 'Show' and 'Display' give only the first 8 characters of the session id.
 data Model = Model
   { mSessionId :: Id,
     mUserId :: User.Id,
@@ -51,9 +65,10 @@ data Model = Model
     mLastActivityAt :: UTCTime
   }
   deriving stock (Eq, Show, Generic)
-  deriving (Display) via (RecordInstance Model)
+  deriving (Display) via (ShowInstance Model)
   deriving anyclass (DecodeRow)
 
+-- | 'Show' and 'Display' give only the first 8 characters of the session id.
 data Domain = Domain
   { dSessionId :: Id,
     dUserId :: User.Id,
@@ -63,7 +78,7 @@ data Domain = Domain
     dLastActivityAt :: UTCTime
   }
   deriving stock (Show, Generic, Eq)
-  deriving (Display) via (RecordInstance Domain)
+  deriving (Display) via (ShowInstance Domain)
 
 toDomain :: Model -> Domain
 toDomain Model {..} =

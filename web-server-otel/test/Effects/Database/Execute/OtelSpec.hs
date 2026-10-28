@@ -13,17 +13,22 @@ spec = describe "toStatementAttributes" $ do
         attrs = toStatementAttributes ss
     lookup "sql" attrs `shouldBe` Just (Trace.toAttribute ("SELECT * FROM users" :: Text))
 
-  it "includes params attribute" $ do
+  it "includes params attribute with each value redacted" $ do
     let ss = SerializedStatement "SELECT * FROM users WHERE id = $1" ["123"]
         attrs = toStatementAttributes ss
-        expected = "\n  $1 = 123" :: Text
+        expected = "\n  $1 = <redacted>" :: Text
     lookup "params" attrs `shouldBe` Just (Trace.toAttribute expected)
 
   it "formats multiple params correctly" $ do
     let ss = SerializedStatement "INSERT INTO users (name, email) VALUES ($1, $2)" ["alice", "alice@example.com"]
         attrs = toStatementAttributes ss
-        expected = "\n  $1 = alice\n  $2 = alice@example.com" :: Text
+        expected = "\n  $1 = <redacted>\n  $2 = <redacted>" :: Text
     lookup "params" attrs `shouldBe` Just (Trace.toAttribute expected)
+
+  it "redacts literals in the sql attribute" $ do
+    let ss = SerializedStatement "SELECT * FROM t WHERE token = CAST(E'canary-secret-123' AS \"text\")" []
+        attrs = toStatementAttributes ss
+    lookup "sql" attrs `shouldBe` Just (Trace.toAttribute ("SELECT * FROM t WHERE token = CAST('<redacted>' AS \"text\")" :: Text))
 
   it "handles empty params" $ do
     let ss = SerializedStatement "SELECT 1" []

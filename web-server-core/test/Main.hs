@@ -3,6 +3,8 @@ module Main where
 --------------------------------------------------------------------------------
 
 import App.AuthSpec qualified as Auth
+import App.LogLeakSpec qualified as LogLeak
+import App.RedactSpec qualified as Redact
 import Data.Maybe (fromMaybe)
 import Effects.Database.Tables.ServerSessionsSpec qualified as ServerSessions
 import Effects.Database.Tables.UserSpec qualified as User
@@ -30,6 +32,9 @@ main = do
   withTmpPG $ hspecWith cfg $ parallel $ do
     -- Pure tests
     Auth.spec
+    Redact.spec
     -- DB Models
     User.spec
     ServerSessions.spec
+    -- Log output
+    LogLeak.spec

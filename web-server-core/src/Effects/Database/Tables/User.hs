@@ -5,9 +5,11 @@ module Effects.Database.Tables.User where
 
 --------------------------------------------------------------------------------
 
+import App.Redact (redacted)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
 import Data.Password.Argon2 (Argon2, PasswordHash)
+import Data.Text qualified as Text
 import Data.Text.Display (Display, RecordInstance (..))
 import Domain.Types.EmailAddress (EmailAddress)
 import GHC.Generics
@@ -36,15 +38,27 @@ newtype Id = Id Int64
       EncodeValue
     )
 
--- | Database Model for the @user@ table.
+-- | Database Model for the @user@ table. 'Show' and 'Display' do not give
+-- the password hash.
 data Model = Model
   { mId :: Id,
     mEmail :: EmailAddress,
     mPassword :: PasswordHash Argon2
   }
-  deriving stock (Generic, Show, Eq)
+  deriving stock (Generic, Eq)
   deriving anyclass (DecodeRow)
   deriving (Display) via (RecordInstance Model)
+
+instance Show Model where
+  showsPrec d Model {..} =
+    showParen (d > 10) $
+      showString "Model {mId = "
+        . shows mId
+        . showString ", mEmail = "
+        . shows mEmail
+        . showString ", mPassword = "
+        . showString (Text.unpack redacted)
+        . showString "}"
 
 -- | API Domain Type for @Users@.
 data Domain = Domain
@@ -103,13 +117,23 @@ getUserByCredential email password =
       WHERE email = #{email} AND password = #{password}
     |]
 
+-- | 'Show' and 'Display' do not give the password hash.
 data ModelInsert = ModelInsert
   { miEmail :: EmailAddress,
     miPassword :: PasswordHash Argon2
   }
-  deriving stock (Generic, Show, Eq)
+  deriving stock (Generic, Eq)
   deriving (EncodeRow) via ModelInsert
   deriving (Display) via (RecordInstance ModelInsert)
+
+instance Show ModelInsert where
+  showsPrec d ModelInsert {..} =
+    showParen (d > 10) $
+      showString "ModelInsert {miEmail = "
+        . shows miEmail
+        . showString ", miPassword = "
+        . showString (Text.unpack redacted)
+        . showString "}"
 
 insertUser :: ModelInsert -> Hasql.Statement () (OneRow Id)
 insertUser ModelInsert {..} =

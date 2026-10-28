@@ -27,6 +27,7 @@ import App.Auth qualified as Auth
 import App.Config
 import App.Context
 import App.Monad
+import App.Redact (redactBody, redactHeaders, redactQuery, renderUsageError)
 import Control.Error (isLeft)
 import Control.Exception (catch)
 import Control.Monad (void, when)
@@ -88,7 +89,7 @@ withAppResources ctx action = do
         -- DB Healthcheck
         healthCheckResult <- flip runReaderT pgPool $ execStatement healthCheck
         when (isLeft healthCheckResult) $
-          Log.logMessageIO logEnv time Log.LogAttention "webserver-backend: Postres healthcheck failed" (Aeson.toJSON $ KeyMap.fromList ["error" .= show healthCheckResult])
+          Log.logMessageIO logEnv time Log.LogAttention "webserver-backend: Postres healthcheck failed" (Aeson.toJSON $ KeyMap.fromList ["error" .= either renderUsageError (const "") healthCheckResult])
 
         let appContext =
               AppContext
@@ -146,6 +147,9 @@ mkWarpSettings logEnv WarpConfig {..} =
     & Warp.setInstallShutdownHandler shutdownHandler
     & Warp.setTimeout warpConfigRequestTimeout
 
+-- | Log one request. The logger replaces secret header values, secret query
+-- parameter values, and a non-empty body with a fixed marker. See
+-- "App.Redact".
 mkWarpLogger :: Log.LoggerEnv -> Wai.Request -> Status.Status -> Maybe Integer -> IO ()
 mkWarpLogger logEnv req s sz = do
   time <- getCurrentTime
@@ -157,11 +161,11 @@ mkWarpLogger logEnv req s sz = do
           "method" .= Text.Encoding.decodeUtf8 (Wai.requestMethod req),
           "httpVersion" .= show (Wai.httpVersion req),
           "path" .= Text.Encoding.decodeUtf8 (Wai.rawPathInfo req),
-          "queryString" .= fmap (bimap Text.Encoding.decodeUtf8 (fmap Text.Encoding.decodeUtf8)) (Wai.queryString req),
-          "headers" .= fmap (bimap (Text.Encoding.decodeUtf8 . CI.foldedCase) Text.Encoding.decodeUtf8) (Wai.requestHeaders req),
+          "queryString" .= fmap (bimap Text.Encoding.decodeUtf8 (fmap Text.Encoding.decodeUtf8)) (redactQuery (Wai.queryString req)),
+          "headers" .= fmap (bimap (Text.Encoding.decodeUtf8 . CI.foldedCase) Text.Encoding.decodeUtf8) (redactHeaders (Wai.requestHeaders req)),
           "isSecure" .= Wai.isSecure req,
           "remoteHost" .= show (Wai.remoteHost req),
-          "requestBody" .= Text.Encoding.decodeUtf8 reqBody
+          "requestBody" .= redactBody reqBody
         ]
           <> catMaybes [fmap ("requestSize" .=) sz]
 
